@@ -9,6 +9,52 @@
  * @param client_socket The socket of the connected client.
  * @param buffer The command buffer, starting with "READ...".
  */
+int check_permissions(int client_socket, const char *filename, const char *mode) {
+    // 1. Get Client IP Address
+    struct sockaddr_in addr;
+    socklen_t addr_size = sizeof(struct sockaddr_in);
+    if (getpeername(client_socket, (struct sockaddr *)&addr, &addr_size) < 0) {
+        perror("getpeername failed");
+        return 0; // Fail safe
+    }
+    char client_ip[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &addr.sin_addr, client_ip, INET_ADDRSTRLEN);
+
+    // 2. Connect to NM
+    int nm_sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (nm_sock < 0) return 0;
+
+    struct sockaddr_in nm_addr;
+    nm_addr.sin_family = AF_INET;
+    nm_addr.sin_port = htons(NM_PORT);
+    if (inet_pton(AF_INET, NM_IP, &nm_addr.sin_addr) <= 0) {
+        close(nm_sock);
+        return 0;
+    }
+
+    if (connect(nm_sock, (struct sockaddr *)&nm_addr, sizeof(nm_addr)) < 0) {
+        logger("[AccessControl] Could not reach NM to verify permissions.\n");
+        close(nm_sock);
+        return 0; // If NM is down, deny access for security
+    }
+
+    // 3. Send Query: CHECK_ACCESS <IP> <FILENAME> <MODE>
+    char query[512];
+    sprintf(query, "CHECK_ACCESS %s %s %s\n", client_ip, filename, mode);
+    write(nm_sock, query, strlen(query));
+
+    // 4. Read Response
+    char response[64] = {0};
+    read(nm_sock, response, 63);
+    close(nm_sock);
+
+    if (strncmp(response, "ACK:YES", 7) == 0) {
+        return 1; // Allowed
+    }
+
+    logger("[AccessControl] Denied access to %s for %s on file %s\n", client_ip, mode, filename);
+    return 0; // Denied
+}
 void handle_read_command(int client_socket, char* buffer) {
     char filename[256]; // Use 256 for a standard filename buffer
 
@@ -22,16 +68,11 @@ void handle_read_command(int client_socket, char* buffer) {
 
     logger("[SS-Thread] Read request for: %s\n", filename);
 
-    // 2. --- TODO: Check Permissions ---
-    // This is the spot. You will need to ask the Name Server
-    // (on the private command line) if this client
-    // has permission to read this file. For now, we'll assume yes.
-    //
-    // if (!check_permissions(client_username, filename, "READ")) {
-    //     char *err = "ERR:401:UNAUTHORIZED_ACCESS\n";
-    //     write(client_socket, err, strlen(err));
-    //     return;
-    // }
+    if (!check_permissions(client_socket, filename, "READ")) {
+        char *err = "ERR:403:ACCESS_DENIED\n";
+        write(client_socket, err, strlen(err));
+        return;
+    }
 
     // 3. --- Read the file ---
     long file_size = 0;
@@ -60,168 +101,155 @@ void handle_read_command(int client_socket, char* buffer) {
  * @brief Handles the logic for a "WRITE" command (with word_index).
  * This function is called by handle_client_request.
  */
-
 void handle_write_command(int client_socket, char* buffer) {
-    
-    // 1. --- Parse the command ---
-    // Command format: WRITE <filename> <sentence_num> <word_index> <content...>\n
     char filename[256];
     int sentence_num, word_index;
-    char *new_content = NULL;
-
-    // Use sscanf to parse the first *three* parts
+    // 1. Parse
+    // Command: WRITE <filename> <sentence_num> <word_index> <content...>
     if (sscanf(buffer, "WRITE %255s %d %d", filename, &sentence_num, &word_index) != 3) {
-        char *err = "ERR:400:BAD_WRITE_COMMAND\n";
-        write(client_socket, err, strlen(err));
+        write(client_socket, "ERR:400:BAD_REQUEST\n", 20);
         return;
     }
-    
-    // Find the start of the actual content (after the 3rd space)
-    char *first_space = strchr(buffer, ' ');
-    if (!first_space) { /*... error ...*/ return; }
-    
-    char *second_space = strchr(first_space + 1, ' ');
-    if (!second_space) { /*... error ...*/ return; }
 
-    char *third_space = strchr(second_space + 1, ' ');
-    if (!third_space) {
-        char *err = "ERR:400:BAD_WRITE_COMMAND (missing content)\n";
-        write(client_socket, err, strlen(err));
+    // Find start of content
+    char *content = buffer;
+    int spaces = 0;
+    while(*content && spaces < 3) { if(*content++ == ' ') spaces++; }
+    // Trim newline
+    char *nl = strrchr(content, '\n');
+    if(nl) *nl = '\0';
+
+    // 2. ACCESS CONTROL
+    if (!check_permissions(client_socket, filename, "WRITE")) {
+        write(client_socket, "ERR:403:ACCESS_DENIED\n", 22);
         return;
     }
-    
-    new_content = third_space + 1; // Content starts after the 3rd space
-    
-    // Trim trailing newline from new_content if it exists
-    char *newline = strrchr(new_content, '\n');
-    if (newline) *newline = '\0';
-    
-    // 2. --- Get the file-level lock ---
-    pthread_mutex_t* file_lock = get_lock_for_file(filename);
-    if (file_lock == NULL) {
-        char *err = "ERR:500:LOCK_MANAGER_FAILURE\n";
+
+    // 3. SENTENCE LOCK (The Critical Requirement)
+    // This check ensures no one else is editing THIS sentence right now.
+    if (!acquire_sentence_lock(filename, sentence_num)) {
+        // Fulfills "Attempting to write a locked sentence" error requirement
+        char *err = "ERR:503:SENTENCE_LOCKED_BY_ANOTHER_USER\n";
         write(client_socket, err, strlen(err));
         return;
     }
 
-    // 3. --- LOCK (This is the Level 2 "Room Key" lock) ---
-    logger("[SS-Thread] WRITE: Attempting to lock file %s...\n", filename);
-    pthread_mutex_lock(file_lock);
-    logger("[SS-Thread] WRITE: Locked file %s.\n", filename);
+    // 4. Perform the Read-Modify-Write
+    // We grab the physical file mutex now.
+    // Even though this part is serialized, the "Sentence Lock" above allowed
+    // us to conceptually separate the locking domains.
+    pthread_mutex_t* f_mutex = get_file_mutex(filename);
+    pthread_mutex_lock(f_mutex); 
 
-    // --- CRITICAL SECTION STARTS ---
-
-    // 4. --- Start Atomic Swap ---
-    long file_size = 0;
-    char *original_content = read_file_to_string(filename, &file_size);
+    long fsize;
+    char* file_data = read_file_to_string(filename, &fsize);
     
-    if (original_content == NULL) {
-        char *err = "ERR:404:FILE_NOT_FOUND\n";
-        write(client_socket, err, strlen(err));
-        pthread_mutex_unlock(file_lock);
-        return;
-    }
-
-    int sent_start_index = 0, sent_end_index = 0;
-    char *modified_content = NULL;
-    if (file_size == 0 && sentence_num == 1 && word_index == 1) {
-
-        logger("[SS-Thread] WRITE: Handling empty file case.\n");
-        // The file is empty, just make the new content the modified content
-        modified_content = strdup(new_content);
-
-    }
-    // First, find the sentence
-    else if (find_sentence(original_content, sentence_num, &sent_start_index, &sent_end_index)) {
-        
-        int word_start_index = 0, word_end_index = 0;
-        
-        // Second, find the word *within* that sentence
-        if (find_word(original_content, sent_start_index, sent_end_index, 
-                      word_index, &word_start_index, &word_end_index))
-        {
-            // --- Success: Found the word ---
-            int len_before = word_start_index;
-            int len_new = strlen(new_content);
-            int len_after = strlen(original_content + word_end_index + 1);
-
-            modified_content = (char *)malloc(len_before + len_new + len_after + 1);
-            if (modified_content == NULL) { /*... handle alloc error ...*/ }
-
-            // Copy the part *before* the word
-            strncpy(modified_content, original_content, len_before);
-            modified_content[len_before] = '\0';
-
-            // Concatenate the *new* word
-            strcat(modified_content, new_content);
-
-            // Concatenate the part *after* the word
-            strcat(modified_content, original_content + word_end_index + 1);
-
+    if (!file_data) {
+        if (sentence_num == 0) { // Creating/Appending to empty file allowed?
+             file_data = strdup("");
         } else {
-            // The specified word number wasn't found
-            char *err = "ERR:404:WORD_NOT_FOUND\n";
-            write(client_socket, err, strlen(err));
-            free(original_content);
-            pthread_mutex_unlock(file_lock);
+            pthread_mutex_unlock(f_mutex);
+            release_sentence_lock(filename, sentence_num);
+            write(client_socket, "ERR:404:FILE_NOT_FOUND\n", 23);
+            return;
+        }
+    }
+
+    // --- LOGIC TO REPLACE WORD/SENTENCE ---
+    int s_start, s_end;
+    char *new_file_data = NULL;
+
+    if (find_sentence(file_data, sentence_num, &s_start, &s_end)) {
+        // Sentence found. Now find word? 
+        // Note: Requirement 30 says "update content at a word level".
+        // If word_index is valid, replace word. 
+        // Implementation of string manipulation is standard C (malloc, strncpy, strcat)...
+        // [Omitted for brevity, but assume new_file_data is created here]
+        
+        // Placeholder logic: Append content for testing
+        // Ideally: new_file_data = replace_word_in_str(file_data, s_start, ... content);
+        int w_start, w_end;
+    
+    // Attempt to find the specific word within the found sentence
+    if (find_word(file_data, s_start, s_end, word_index, &w_start, &w_end)) {
+        
+        // --- 1. Calculate new size ---
+        int len_before = w_start;                      // Data before the word
+        int len_new_content = strlen(content);         // The new text
+        int len_after = strlen(file_data + w_end + 1); // Data after the word (including null term)
+        
+        // --- 2. Allocate Memory ---
+        new_file_data = (char *)malloc(len_before + len_new_content + len_after + 1);
+        if (new_file_data == NULL) {
+            write(client_socket, "ERR:500:MEMORY_ALLOC_FAILED\n", 28);
+            pthread_mutex_unlock(f_mutex);
+            release_sentence_lock(filename, sentence_num);
+            free(file_data);
             return;
         }
 
+        // --- 3. Construct New String ---
+        // Copy the part before the word
+        memcpy(new_file_data, file_data, len_before);
+        
+        // Copy the new word/content
+        memcpy(new_file_data + len_before, content, len_new_content);
+        
+        // Copy the part after the word (strcpy handles the null terminator)
+        strcpy(new_file_data + len_before + len_new_content, file_data + w_end + 1);
+
     } else {
-        // The specified sentence number wasn't found
-        char *err = "ERR:404:SENTENCE_NOT_FOUND\n";
-        write(client_socket, err, strlen(err));
-        free(original_content);
-        pthread_mutex_unlock(file_lock);
+        // --- Word Index Not Found ---
+        // As per specifications, this is an error (unless you implement specific append logic)
+        write(client_socket, "ERR:404:WORD_INDEX_OUT_OF_BOUNDS\n", 33);
+        pthread_mutex_unlock(f_mutex);
+        release_sentence_lock(filename, sentence_num);
+        free(file_data);
         return;
     }
-    
-    // We are done with the original string, free it
-    free(original_content);
-
-    // 5. --- Write to a temporary file ---
-    char temp_filename[512];
-    sprintf(temp_filename, "%s.%ld.temp", filename, (long)pthread_self());
-
-    FILE *temp_file = fopen(temp_filename, "wb");
-    if (temp_file == NULL) {
-        char *err = "ERR:500:COULD_NOT_CREATE_TEMP_FILE\n";
-        write(client_socket, err, strlen(err));
-        free(modified_content);
-        pthread_mutex_unlock(file_lock);
-        return;
-    }
-    
-    fwrite(modified_content, 1, strlen(modified_content), temp_file);
-    fclose(temp_file);
-    free(modified_content);
-
-    // 6. --- Backup and Atomic Swap ---
-    // Create the .bak file for the UNDO command
-    char bak_filename[512];
-    sprintf(bak_filename, "%s.bak", filename);
-    rename(filename, bak_filename); // This creates the backup
-
-    // Perform the atomic swap
-    if (rename(temp_filename, filename) != 0) {
-        char *err = "ERR:500:ATOMIC_RENAME_FAILED\n";
-        write(client_socket, err, strlen(err));
-        remove(temp_filename); // Try to clean up
-        rename(bak_filename, filename); // !! Try to restore the backup !!
-        pthread_mutex_unlock(file_lock);
+    } 
+    else {
+        // Error handling for invalid sentence index
+        pthread_mutex_unlock(f_mutex);
+        release_sentence_lock(filename, sentence_num);
+        free(file_data);
+        write(client_socket, "ERR:404:SENTENCE_NOT_FOUND\n", 27);
         return;
     }
 
-    // --- CRITICAL SECTION ENDS ---
+    // 5. Create Backup (For UNDO)
+    char bak_name[300];
+    sprintf(bak_name, "%s.bak", filename);
+    FILE *bak = fopen(bak_name, "w");
+    if (bak) { fprintf(bak, "%s", file_data); fclose(bak); }
 
-    // 7. --- UNLOCK ---
-    pthread_mutex_unlock(file_lock);
-    logger("[SS-Thread] WRITE: Unlocked file %s.\n", filename);
+    // 6. Write New Data
+    // 6. Write New Data to Disk
+    FILE *fp = fopen(filename, "w");
+    if (fp) {
+        // Use the new constructed string
+        if (new_file_data) {
+            fprintf(fp, "%s", new_file_data);
+        } else {
+            // Fallback for empty file creation cases if necessary
+            fprintf(fp, "%s", file_data); 
+        }
+        fclose(fp);
+        write(client_socket, "ACK:WRITE_SUCCESS\n", 18);
+    } else {
+        write(client_socket, "ERR:500:WRITE_FAILED\n", 21);
+    }
 
-    // 8. --- Send Success ---
-    char *success_msg = "ACK:WRITE_OK\n";
-    write(client_socket, success_msg, strlen(success_msg));
+    // Clean up
+    if (file_data) free(file_data);
+    if (new_file_data) free(new_file_data);
+    // if(new_file_data) free(new_file_data);
+
+    // 7. RELEASE LOCKS
+    pthread_mutex_unlock(f_mutex);
+    release_sentence_lock(filename, sentence_num);
 }
+
 void handle_stream_command(int client_socket, char* buffer) {
     char filename[256];
     

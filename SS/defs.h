@@ -1,9 +1,6 @@
-// defs.h
-
 #ifndef DEFS_H
 #define DEFS_H
 
-// 1. Include all system headers here
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,34 +12,43 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <time.h>
-#include <stdarg.h>
-#include <errno.h> // Good to have for strerror()
+#include <errno.h>
 
-// 2. Define Types
-typedef struct FileLockNode {
-    char* filename;
-    pthread_mutex_t file_lock;
-    struct FileLockNode* next;
-} FileLockNode;
-
-typedef struct {
-    FileLockNode* head;
-    pthread_mutex_t list_lock;
-} LockManager;
-
-// 3. Define Constants
 #define NM_IP "127.0.0.1"
 #define NM_PORT 8080
-#define BUFFER_SIZE 2048 // I saw you changed this, good idea
+#define BUFFER_SIZE 4096 // Increased for larger files
 #define MAX_CLIENTS 10
 
-// 4. Declare Global Variables
-// 'extern' says "this variable exists, but is *defined* in a .c file"
-extern LockManager* g_lock_manager;
+// --- NEW LOCKING STRUCTURES ---
+
+// A node representing ONE locked sentence
+typedef struct SentenceLockNode {
+    char filename[256];
+    int sentence_id;
+    struct SentenceLockNode* next;
+} SentenceLockNode;
+
+// A simplified manager that tracks ALL active sentence locks
+typedef struct {
+    SentenceLockNode* head;
+    pthread_mutex_t manager_lock; // Protects the linked list itself
+} SentenceLockManager;
+
+// Global pointers
+extern SentenceLockManager* g_sentence_lock_manager; 
+
+// Function Prototypes
+void logger(const char* format, ...); // Assuming log.h exists
 char* read_file_to_string(const char *filename, long *out_size);
 int find_sentence(const char *content, int sentence_num, int *start, int *end);
-int find_word(const char *content, int sent_start, int sent_end, int word_index, 
-              int *word_start, int *word_end);
-void lock_manager_init(void);
-pthread_mutex_t* get_lock_for_file(const char *filename);
-#endif // DEFS_H
+int find_word(const char *content, int sent_start, int sent_end, int word_index, int *word_start, int *word_end);
+
+// Locking Functions
+void init_sentence_locks();
+int acquire_sentence_lock(const char* filename, int sentence_id);
+void release_sentence_lock(const char* filename, int sentence_id);
+
+// We still need a way to get a physical mutex for the file to prevent data corruption
+pthread_mutex_t* get_file_mutex(const char* filename);
+
+#endif

@@ -7,7 +7,19 @@
 #include "client_handler.h" // <-- Include your new handler
 #include "nm_handler.h"
 // 2. --- Global Variable DEFINITION ---
-LockManager* g_lock_manager;
+// LockManager* g_lock_manager;
+// Global Instances
+SentenceLockManager* g_sentence_lock_manager;
+
+// A simple list to hold physical file mutexes
+typedef struct FileMutexNode {
+    char filename[256];
+    pthread_mutex_t mutex;
+    struct FileMutexNode* next;
+} FileMutexNode;
+
+FileMutexNode* g_file_mutexes = NULL;
+pthread_mutex_t g_file_mutex_list_lock = PTHREAD_MUTEX_INITIALIZER;
 
 char* read_file_to_string(const char *filename, long *out_size) {
     FILE *fp = fopen(filename, "rb"); // 1. Open in "read binary" mode
@@ -148,86 +160,82 @@ int find_word(const char *content, int sent_start, int sent_end, int word_index,
 
     return 0; // Word not found
 }
-// -----------------------------------------------------------------
-//  LOCK MANAGER (The "Key Cabinet")
-// -----------------------------------------------------------------
-
-// This is the node for our linked list of locks
-/**
- * @brief Initializes the global lock manager.
- * !! Call this *once* in main() before starting the server loop. !!
- */
-void lock_manager_init() {
-    g_lock_manager = (LockManager*)malloc(sizeof(LockManager));
-    if (g_lock_manager == NULL) {
-        perror("Failed to allocate memory for Lock Manager");
-        exit(EXIT_FAILURE);
-    }
-    g_lock_manager->head = NULL; // List starts empty
-    pthread_mutex_init(&g_lock_manager->list_lock, NULL);
-    printf("Lock Manager Initialized (using Linked List).\n");
+//     return &new_node->file_lock;
+// }
+void init_sentence_locks() {
+    g_sentence_lock_manager = malloc(sizeof(SentenceLockManager));
+    g_sentence_lock_manager->head = NULL;
+    pthread_mutex_init(&g_sentence_lock_manager->manager_lock, NULL);
 }
 
 /**
- * @brief Helper function to find-or-create a mutex for a given file.
- * This is the implementation of our "Key Cabinet" logic.
- *
- * @param filename The name of the file to get a lock for.
- * @return A pointer to the file's specific mutex.
+ * @brief Tries to lock a specific sentence.
+ * @return 1 if successful, 0 if ALREADY LOCKED (Access Denied).
  */
-pthread_mutex_t* get_lock_for_file(const char *filename) {
-    FileLockNode* current = NULL;
-
-    // 1. Lock the global list (Lock the cabinet)
-    pthread_mutex_lock(&g_lock_manager->list_lock);
-
-    // 2. Search the list for the file
-    current = g_lock_manager->head;
-    while (current != NULL) {
-        if (strcmp(current->filename, filename) == 0) {
-            // --- Found it! ---
-            // We found the key. Unlock the cabinet and return
-            // the room key.
-            pthread_mutex_unlock(&g_lock_manager->list_lock);
-            return &current->file_lock;
+int acquire_sentence_lock(const char* filename, int sentence_id) {
+    pthread_mutex_lock(&g_sentence_lock_manager->manager_lock);
+    
+    SentenceLockNode* curr = g_sentence_lock_manager->head;
+    while (curr) {
+        if (strcmp(curr->filename, filename) == 0 && curr->sentence_id == sentence_id) {
+            // Already locked!
+            pthread_mutex_unlock(&g_sentence_lock_manager->manager_lock);
+            return 0; 
         }
-        current = current->next;
+        curr = curr->next;
     }
 
-    // --- Not Found. We must create it. ---
-    // (We are still inside the locked "cabinet")
-    
-    printf("[LockManager] Creating new lock for file: %s\n", filename);
+    // Not locked, create new lock node
+    SentenceLockNode* new_node = malloc(sizeof(SentenceLockNode));
+    strcpy(new_node->filename, filename);
+    new_node->sentence_id = sentence_id;
+    new_node->next = g_sentence_lock_manager->head;
+    g_sentence_lock_manager->head = new_node;
 
-    // 3. Create a new node (a new "key" and "hook")
-    FileLockNode* new_node = (FileLockNode*)malloc(sizeof(FileLockNode));
-    if (new_node == NULL) {
-        perror("Failed to allocate memory for new lock node");
-        pthread_mutex_unlock(&g_lock_manager->list_lock); // Unlock before failing
-        return NULL; // This will cause a crash later, but it's a critical error
-    }
-    
-    new_node->filename = strdup(filename); // Copy the filename
-    if (new_node->filename == NULL) {
-        perror("Failed to strdup filename for lock");
-        free(new_node);
-        pthread_mutex_unlock(&g_lock_manager->list_lock);
-        return NULL;
-    }
-    
-    pthread_mutex_init(&new_node->file_lock, NULL);
-    
-    // 4. Add it to the front of the list
-    new_node->next = g_lock_manager->head;
-    g_lock_manager->head = new_node;
-
-    // 5. Unlock the global list (Unlock the cabinet)
-    pthread_mutex_unlock(&g_lock_manager->list_lock);
-
-    // 6. Return the new mutex
-    return &new_node->file_lock;
+    pthread_mutex_unlock(&g_sentence_lock_manager->manager_lock);
+    return 1;
 }
 
+void release_sentence_lock(const char* filename, int sentence_id) {
+    pthread_mutex_lock(&g_sentence_lock_manager->manager_lock);
+
+    SentenceLockNode* curr = g_sentence_lock_manager->head;
+    SentenceLockNode* prev = NULL;
+
+    while (curr) {
+        if (strcmp(curr->filename, filename) == 0 && curr->sentence_id == sentence_id) {
+            if (prev) prev->next = curr->next;
+            else g_sentence_lock_manager->head = curr->next;
+            
+            free(curr);
+            break;
+        }
+        prev = curr;
+        curr = curr->next;
+    }
+    pthread_mutex_unlock(&g_sentence_lock_manager->manager_lock);
+}
+
+// Standard File Mutex (to prevent corrupt writes)
+pthread_mutex_t* get_file_mutex(const char* filename) {
+    pthread_mutex_lock(&g_file_mutex_list_lock);
+    FileMutexNode* curr = g_file_mutexes;
+    while (curr) {
+        if (strcmp(curr->filename, filename) == 0) {
+            pthread_mutex_unlock(&g_file_mutex_list_lock);
+            return &curr->mutex;
+        }
+        curr = curr->next;
+    }
+    // Create new
+    FileMutexNode* node = malloc(sizeof(FileMutexNode));
+    strcpy(node->filename, filename);
+    pthread_mutex_init(&node->mutex, NULL);
+    node->next = g_file_mutexes;
+    g_file_mutexes = node;
+    pthread_mutex_unlock(&g_file_mutex_list_lock);
+    return &node->mutex;
+}
 int main(int argc, char *argv[]) {
     if (argc < 2) {
         printf("Usage: ./storage_server <port>\n");
