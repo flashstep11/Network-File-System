@@ -2,7 +2,7 @@
 
 #include "defs.h" // Includes all system headers
 #include "log.h"  // Includes its own declarations
-
+#include <stdarg.h>
 // Make these variables STATIC so they are private to this file.
 static FILE* g_log_file = NULL;
 static pthread_mutex_t g_log_lock = PTHREAD_MUTEX_INITIALIZER;

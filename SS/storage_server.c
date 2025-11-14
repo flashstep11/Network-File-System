@@ -113,17 +113,7 @@ int find_sentence(const char *content, int sentence_num, int *start, int *end) {
     
     return 0; // Sentence not found
 }
-/**
- * @brief Finds the start and end index of the Nth word *within* a specific sentence.
- *
- * @param content The full, original file content.
- * @param sent_start The starting index of the sentence.
- * @param sent_end The ending index of the sentence.
- * @param word_index The 1-based index of the word to find.
- * @param word_start A pointer to store the word's absolute start index.
- * @param word_end A pointer to store the word's absolute end index.
- * @return 1 on success, 0 on failure (word not found).
- */
+
 int find_word(const char *content, int sent_start, int sent_end, int word_index,  int *word_start, int *word_end) {
     
     const char *delims = " \t\n\r";
@@ -160,8 +150,7 @@ int find_word(const char *content, int sent_start, int sent_end, int word_index,
 
     return 0; // Word not found
 }
-//     return &new_node->file_lock;
-// }
+
 void init_lock_systems() {
     // 1. Init Sentence Lock Manager
     g_sentence_lock_manager = malloc(sizeof(SentenceLockManager));
@@ -179,10 +168,6 @@ void init_lock_systems() {
     logger("Lock systems initialized.\n");
 }
 
-/**
- * @brief Tries to lock a specific sentence.
- * @return 1 if successful, 0 if ALREADY LOCKED (Access Denied).
- */
 int acquire_sentence_lock(const char* filename, int sentence_id) {
     pthread_mutex_lock(&g_sentence_lock_manager->manager_lock);
     
@@ -227,7 +212,6 @@ void release_sentence_lock(const char* filename, int sentence_id) {
     pthread_mutex_unlock(&g_sentence_lock_manager->manager_lock);
 }
 
-// Standard File Mutex (to prevent corrupt writes)
 pthread_mutex_t* get_file_mutex(const char* filename) {
     pthread_mutex_lock(&g_file_mutex_list_lock);
     FileMutexNode* curr = g_file_mutexes;

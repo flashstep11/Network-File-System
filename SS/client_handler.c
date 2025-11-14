@@ -1,14 +1,7 @@
 #include "defs.h" // This has all your system headers
 #include "log.h"  // For the logger
 #include "client_handler.h" // For its own declaration
-/**
- * @brief Handles the logic for a "READ" command.
- * This function is called by handle_client_request.
- * It sends the full contents of a requested file.
- *
- * @param client_socket The socket of the connected client.
- * @param buffer The command buffer, starting with "READ...".
- */
+
 int check_permissions(int client_socket, const char *filename, const char *mode) {
     // 1. Get Client IP Address
     struct sockaddr_in addr;
@@ -423,16 +416,6 @@ void *handle_client_request(void *arg) {
     pthread_exit(NULL);
 }
 
-// -----------------------------------------------------------------
-//  JOB 2: SERVER - LISTENER LOOP
-// -----------------------------------------------------------------
-
-/**
- * @brief Starts the main server loop for the Storage Server.
- * This function binds, listens, and accepts new client connections,
- * spinning off a new thread for each one.
- * This function does not return.
- */
 void start_client_storage_server_loop(int my_port) {
     int server_fd, client_socket;
     struct sockaddr_in server_addr, client_addr;

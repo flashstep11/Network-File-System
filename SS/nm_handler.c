@@ -3,20 +3,7 @@
 #include "defs.h"
 #include "log.h"
 #include "nm_handler.h"
-/**
- * @brief Handles the logic for a "CREATE" command from the NS.
- *
- * @param nm_socket The socket of the (private) Name Server connection.
- * @param buffer The command buffer, starting with "CREATE...".
- */
-// nm_handler.c
 
-/**
- * @brief Handles the logic for a "CREATE" command from the NS.
- *
- * @param nm_socket The socket of the (private) Name Server connection.
- * @param buffer The command buffer, starting with "CREATE...".
- */
 void handle_create_command(int nm_socket, char* buffer) {
     char filename[256];
     
@@ -57,12 +44,7 @@ void handle_create_command(int nm_socket, char* buffer) {
         write(nm_socket, err, strlen(err));
     }
 }
-/**
- * @brief Handles the logic for a "DELETE" command from the NS.
- *
- * @param nm_socket The socket of the (private) Name Server connection.
- * @param buffer The command buffer, starting with "DELETE...".
- */
+
 void handle_delete_command(int nm_socket, char* buffer) {
     char filename[256];
 
@@ -98,14 +80,6 @@ void handle_delete_command(int nm_socket, char* buffer) {
     // --- ADD THIS UNLOCK ---
     pthread_mutex_unlock(file_lock);
 }
-/**
- * @brief Handles the logic for a "GET_INFO" command from the NS.
- * This is used by the NS to get file size and timestamps.
- *
- * @param nm_socket The socket of the (private) Name Server connection.
- * @param buffer The command buffer, starting with "GET_INFO...".
- */
-// nm_handler.c
 
 void handle_get_info_command(int nm_socket, char* buffer) {
     char filename[256];
