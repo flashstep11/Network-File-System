@@ -9,71 +9,52 @@
  * @param nm_socket The socket of the (private) Name Server connection.
  * @param buffer The command buffer, starting with "CREATE...".
  */
+// nm_handler.c
+
+/**
+ * @brief Handles the logic for a "CREATE" command from the NS.
+ *
+ * @param nm_socket The socket of the (private) Name Server connection.
+ * @param buffer The command buffer, starting with "CREATE...".
+ */
 void handle_create_command(int nm_socket, char* buffer) {
     char filename[256];
     
     // 1. Parse the filename
-    // Command from NS: "CREATE <filename>\n"
     if (sscanf(buffer, "CREATE %255s", filename) != 1) {
-        // If parsing fails, it's a badly formed command
         char *err = "ERR:400:BAD_CREATE_COMMAND\n";
         logger("[NM-Thread] Failed to parse CREATE command.\n");
         write(nm_socket, err, strlen(err));
-    } else {
-        // 2. Try to create the file
-        FILE *file = fopen(filename, "w"); // "w" = create/overwrite
-        
-        if (file) {
-            // --- Success ---
-            fclose(file); // Immediately close it, we just need it to exist
-            char *ack = "ACK:CREATE_OK\n";
-            logger("[NM-Thread] Successfully created file: %s\n", filename);
-            write(nm_socket, ack, strlen(ack));
-        } else {
-            // --- Failure ---
-            // This could be due to permissions, bad path, etc.
-            char *err = "ERR:500:CREATE_FILE_FAILED (SS)\n";
-            logger("[NM-Thread] Failed to create file %s: %s\n", filename, strerror(errno));
-            write(nm_socket, err, strlen(err));
-        }
+        return;
     }
-}
-/**
- * @brief Handles the logic for an "UNDO" command from the NS.
- *
- * @param nm_socket The socket of the (private) Name Server connection.
- * @param buffer The command buffer, starting with "UNDO...".
- */
-void handle_undo_command(int nm_socket, char* buffer) {
-    char filename[256];
-    char bak_filename[512];
 
-    // 1. --- Parse the command ---
-    // Command from NS: "UNDO <filename>\n"
-    if (sscanf(buffer, "UNDO %255s", filename) != 1) {
-        char *err = "ERR:400:BAD_UNDO_COMMAND\n";
-        logger("[NM-Thread] Failed to parse UNDO command.\n");
+    // 2. --- CHECK FOR EXISTENCE ---
+    // Try to open the file for reading. If this succeeds, the file already exists.
+    FILE *existing_file = fopen(filename, "r");
+    if (existing_file) {
+        // --- Failure: File Exists ---
+        fclose(existing_file);
+        char *err = "ERR:409:FILE_ALREADY_EXISTS\n"; // 409 is HTTP "Conflict"
+        logger("[NM-Thread] CREATE failed: File '%s' already exists.\n", filename);
         write(nm_socket, err, strlen(err));
-    } else {
-        
-        // 2. --- Form the backup file name ---
-        sprintf(bak_filename, "%s.bak", filename);
+        return; // Stop.
+    }
 
-        // 3. --- Perform the Atomic Swap ---
-        // This command renames the backup file, overwriting the
-        // current (and newer) file. This is the UNDO.
-        if (rename(bak_filename, filename) == 0) {
-            // --- Success ---
-            char *ack = "ACK:UNDO_OK\n";
-            logger("[NM-Thread] Successfully restored backup for: %s\n", filename);
-            write(nm_socket, ack, strlen(ack));
-        } else {
-            // --- Failure ---
-            // This most likely means the .bak file doesn't exist
-            char *err = "ERR:404:UNDO_FAILED (No backup found)\n";
-            logger("[NM-Thread] Failed to find backup for %s: %s\n", filename, strerror(errno));
-            write(nm_socket, err, strlen(err));
-        }
+    // 3. --- CREATE THE FILE ---
+    // If we are here, fopen(filename, "r") failed, meaning the file does NOT exist.
+    // Now it is safe to create it with "w".
+    FILE *new_file = fopen(filename, "w"); 
+    if (new_file) {
+        // --- Success ---
+        fclose(new_file); 
+        char *ack = "ACK:CREATE_OK\n";
+        logger("[NM-Thread] Successfully created file: %s\n", filename);
+        write(nm_socket, ack, strlen(ack));
+    } else {
+        // --- Failure (Permissions, etc.) ---
+        char *err = "ERR:500:CREATE_FILE_FAILED (SS)\n";
+        logger("[NM-Thread] Failed to create file %s: %s\n", filename, strerror(errno));
+        write(nm_socket, err, strlen(err));
     }
 }
 /**
@@ -85,29 +66,37 @@ void handle_undo_command(int nm_socket, char* buffer) {
 void handle_delete_command(int nm_socket, char* buffer) {
     char filename[256];
 
-    // 1. Parse the filename
-    // Command from NS: "DELETE <filename>\n"
     if (sscanf(buffer, "DELETE %255s", filename) != 1) {
         char *err = "ERR:400:BAD_DELETE_COMMAND\n";
         logger("[NM-Thread] Failed to parse DELETE command.\n");
         write(nm_socket, err, strlen(err));
-    } else {
-        // 2. Try to delete the file
-        // remove() is the standard C function to delete a file
-        if (remove(filename) == 0) {
-            // --- Success ---
-            // remove() returns 0 on success
-            char *ack = "ACK:DELETE_OK\n";
-            logger("[NM-Thread] Successfully deleted file: %s\n", filename);
-            write(nm_socket, ack, strlen(ack));
-        } else {
-            // --- Failure ---
-            // remove() returns non-zero on failure (e.g., file not found)
-            char *err = "ERR:404:DELETE_FILE_FAILED (SS)\n";
-            logger("[NM-Thread] Failed to delete file %s: %s\n", filename, strerror(errno));
-            write(nm_socket, err, strlen(err));
-        }
+        return; // Return here
     }
+
+    // --- ADD THIS LOCKING SECTION ---
+    pthread_mutex_t* file_lock = get_file_mutex(filename);
+    if (!file_lock) {
+        char *err = "ERR:500:INTERNAL_SERVER_ERROR (LockManager failed)\n";
+        write(nm_socket, err, strlen(err));
+        return;
+    }
+
+    logger("[NM-Thread] DELETE: Locking file %s for deletion\n", filename);
+    pthread_mutex_lock(file_lock);
+    // --- END ADD ---
+
+    if (remove(filename) == 0) {
+        char *ack = "ACK:DELETE_OK\n";
+        logger("[NM-Thread] Successfully deleted file: %s\n", filename);
+        write(nm_socket, ack, strlen(ack));
+    } else {
+        char *err = "ERR:404:DELETE_FILE_FAILED (SS)\n";
+        logger("[NM-Thread] Failed to delete file %s: %s\n", filename, strerror(errno));
+        write(nm_socket, err, strlen(err));
+    }
+    
+    // --- ADD THIS UNLOCK ---
+    pthread_mutex_unlock(file_lock);
 }
 /**
  * @brief Handles the logic for a "GET_INFO" command from the NS.
@@ -116,13 +105,14 @@ void handle_delete_command(int nm_socket, char* buffer) {
  * @param nm_socket The socket of the (private) Name Server connection.
  * @param buffer The command buffer, starting with "GET_INFO...".
  */
+// nm_handler.c
+
 void handle_get_info_command(int nm_socket, char* buffer) {
     char filename[256];
-    char reply_buffer[512]; // Buffer for sending the ACK
-    struct stat file_stat; // The struct to hold file info
+    char reply_buffer[512]; 
+    struct stat file_stat; 
 
     // 1. --- Parse the command ---
-    // Command from NS: "GET_INFO <filename>\n"
     if (sscanf(buffer, "GET_INFO %255s", filename) != 1) {
         char *err = "ERR:400:BAD_INFO_COMMAND\n";
         logger("[NM-Thread] Failed to parse GET_INFO command.\n");
@@ -130,22 +120,22 @@ void handle_get_info_command(int nm_socket, char* buffer) {
     } else {
         
         // 2. --- Use stat() to get file info ---
-        // stat() fills the file_stat struct with metadata
-        // It returns 0 on success, -1 on failure
         if (stat(filename, &file_stat) == 0) {
             
             // --- Success ---
             long file_size = file_stat.st_size;     // Get file size
             long mod_time = file_stat.st_mtime;   // Get modification time
-            
-            // 3. --- Send the info back to the NS ---
-            sprintf(reply_buffer, "ACK:INFO %ld %ld\n", file_size, mod_time);
-            logger("[NM-Thread] Sending info for %s: %ld bytes, %ld mtime\n", filename, file_size, mod_time);
+            long acc_time = file_stat.st_atime;   // <-- ADD THIS: Get last access time
+
+            // 3. --- Send all available info back to the NS ---
+            // The NS will be responsible for formatting this.
+            sprintf(reply_buffer, "ACK:INFO %ld %ld %ld\n", file_size, mod_time, acc_time);
+            logger("[NM-Thread] Sending info for %s: %ld bytes, %ld mtime, %ld atime\n", 
+                   filename, file_size, mod_time, acc_time);
             write(nm_socket, reply_buffer, strlen(reply_buffer));
 
         } else {
             // --- Failure ---
-            // This will fail if the file doesn't exist
             char *err = "ERR:404:INFO_FAILED (File not found)\n";
             logger("[NM-Thread] Failed to get info for %s: %s\n", filename, strerror(errno));
             write(nm_socket, err, strlen(err));
@@ -169,9 +159,6 @@ void *handle_nm_commands(void *arg) {
         // Command: "CREATE <filename>\n"
         if (strncmp(buffer, "CREATE", 6) == 0) {
             handle_create_command(nm_socket, buffer);
-        }
-        else if (strncmp(buffer, "UNDO", 4) == 0) {
-            handle_undo_command(nm_socket, buffer);
         }
         // Command: "DELETE <filename>\n"
         else if (strncmp(buffer, "DELETE", 6) == 0) {

@@ -162,10 +162,21 @@ int find_word(const char *content, int sent_start, int sent_end, int word_index,
 }
 //     return &new_node->file_lock;
 // }
-void init_sentence_locks() {
+void init_lock_systems() {
+    // 1. Init Sentence Lock Manager
     g_sentence_lock_manager = malloc(sizeof(SentenceLockManager));
+    if (g_sentence_lock_manager == NULL) {
+        perror("Failed to alloc SentenceLockManager");
+        exit(EXIT_FAILURE);
+    }
     g_sentence_lock_manager->head = NULL;
     pthread_mutex_init(&g_sentence_lock_manager->manager_lock, NULL);
+
+    // 2. Init File Mutex List (THE MISSING PIECE)
+    g_file_mutexes = NULL; // Initialize the list as empty
+    // g_file_mutex_list_lock is already initialized with PTHREAD_MUTEX_INITIALIZER
+    
+    logger("Lock systems initialized.\n");
 }
 
 /**

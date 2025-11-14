@@ -97,10 +97,6 @@ void handle_read_command(int client_socket, char* buffer) {
         write(client_socket, err, strlen(err));
     }
 }
-/**
- * @brief Handles the logic for a "WRITE" command (with word_index).
- * This function is called by handle_client_request.
- */
 void handle_write_command(int client_socket, char* buffer) {
     char filename[256];
     int sentence_num, word_index;
@@ -114,7 +110,7 @@ void handle_write_command(int client_socket, char* buffer) {
     // Find start of content
     char *content = buffer;
     int spaces = 0;
-    while(*content && spaces < 3) { if(*content++ == ' ') spaces++; }
+    while(*content && spaces < 4){ if(*content++ == ' ') spaces++; }
     // Trim newline
     char *nl = strrchr(content, '\n');
     if(nl) *nl = '\0';
@@ -249,7 +245,56 @@ void handle_write_command(int client_socket, char* buffer) {
     pthread_mutex_unlock(f_mutex);
     release_sentence_lock(filename, sentence_num);
 }
+void handle_undo_command(int client_socket, char* buffer) {
+    char filename[256];
+    char bak_filename[512];
 
+    // 1. --- Parse the command ---
+    // Command from Client: "UNDO <filename>\n"
+    if (sscanf(buffer, "UNDO %255s", filename) != 1) {
+        char *err = "ERR:400:BAD_UNDO_COMMAND\n";
+        logger("[SS-Thread] Failed to parse UNDO command.\n");
+        write(client_socket, err, strlen(err));
+        return;
+    }
+
+    // 2. --- ACCESS CONTROL CHECK ---
+    // A user must have WRITE permission to perform an UNDO
+    if (!check_permissions(client_socket, filename, "WRITE")) {
+        char *err = "ERR:403:ACCESS_DENIED\n";
+        write(client_socket, err, strlen(err));
+        return;
+    }
+    
+    // 3. --- Form the backup file name ---
+    sprintf(bak_filename, "%s.bak", filename);
+
+    // 4. --- Perform the Atomic Swap ---
+    // We lock the file mutex to prevent a race condition with a WRITE
+    pthread_mutex_t* file_lock = get_lock_for_file(filename);
+    if (!file_lock) { char *err = "ERR:500:INTERNAL_SERVER_ERROR (LockManager failed)\n";
+        logger("[SS-Thread] UNDO: CRITICAL: Failed to get/create lock for %s. (Out of memory?)\n", filename);
+        write(client_socket, err, strlen(err));
+        return; }
+
+    logger("[SS-Thread] UNDO: Attempting to lock file %s...\n", filename);
+    pthread_mutex_lock(file_lock);
+
+    if (rename(bak_filename, filename) == 0) {
+        // --- Success ---
+        char *ack = "ACK:UNDO_OK\n";
+        logger("[SS-Thread] Successfully restored backup for: %s\n", filename);
+        write(client_socket, ack, strlen(ack));
+    } else {
+        // --- Failure ---
+        char *err = "ERR:404:UNDO_FAILED (No backup found)\n";
+        logger("[SS-Thread] Failed to find backup for %s: %s\n", filename, strerror(errno));
+        write(client_socket, err, strlen(err));
+    }
+    
+    pthread_mutex_unlock(file_lock);
+    logger("[SS-Thread] UNDO: Unlocked file %s.\n", filename);
+}
 void handle_stream_command(int client_socket, char* buffer) {
     char filename[256];
     
@@ -260,7 +305,11 @@ void handle_stream_command(int client_socket, char* buffer) {
         write(client_socket, err, strlen(err));
         return; // Return from this function
     }
-
+    if (!check_permissions(client_socket, filename, "READ")) {
+        char *err = "ERR:403:ACCESS_DENIED\n";
+        write(client_socket, err, strlen(err));
+        return;
+    }
     logger("[SS-Thread] Stream request for: %s\n", filename);
 
     // 2. --- Read the entire file into memory ---
@@ -337,6 +386,9 @@ void *handle_client_request(void *arg) {
             write(client_socket, err, strlen(err));
             continue; // Ignore and wait for next command
         }
+        else if (strncmp(buffer, "UNDO", 4) == 0) {
+            handle_undo_command(client_socket, buffer);
+        }
         else if (strncmp(buffer, "READ", 4) == 0) {
             handle_read_command(client_socket, buffer);
         }
@@ -354,7 +406,7 @@ void *handle_client_request(void *arg) {
             write(client_socket, err, strlen(err));
         }
          // 3. Send a generic ACK back to the client
-        write(client_socket, "ACK: Command received and processed.\n", 37);
+        // write(client_socket, "ACK: Command received and processed.\n", 37);
         // Clear the buffer for the next read
         memset(buffer, 0, BUFFER_SIZE);
     }
