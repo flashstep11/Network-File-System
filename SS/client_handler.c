@@ -3,24 +3,32 @@
 #include "client_handler.h" // For its own declaration
 
 int check_permissions(int client_socket, const char *filename, const char *mode) {
+    logger("[AccessControl] Checking %s permission for file %s\n", mode, filename);
+    
     // 1. Get Client IP Address
     struct sockaddr_in addr;
     socklen_t addr_size = sizeof(struct sockaddr_in);
     if (getpeername(client_socket, (struct sockaddr *)&addr, &addr_size) < 0) {
+        logger("[AccessControl] getpeername failed\n");
         perror("getpeername failed");
         return 0; // Fail safe
     }
     char client_ip[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &addr.sin_addr, client_ip, INET_ADDRSTRLEN);
+    logger("[AccessControl] Client IP: %s\n", client_ip);
 
     // 2. Connect to NM
     int nm_sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (nm_sock < 0) return 0;
+    if (nm_sock < 0) {
+        logger("[AccessControl] Failed to create socket to NM\n");
+        return 0;
+    }
 
     struct sockaddr_in nm_addr;
     nm_addr.sin_family = AF_INET;
     nm_addr.sin_port = htons(NM_PORT);
     if (inet_pton(AF_INET, NM_IP, &nm_addr.sin_addr) <= 0) {
+        logger("[AccessControl] Invalid NM IP\n");
         close(nm_sock);
         return 0;
     }
@@ -30,18 +38,23 @@ int check_permissions(int client_socket, const char *filename, const char *mode)
         close(nm_sock);
         return 0; // If NM is down, deny access for security
     }
+    
+    logger("[AccessControl] Connected to NM\n");
 
     // 3. Send Query: CHECK_ACCESS <IP> <FILENAME> <MODE>
     char query[512];
     sprintf(query, "CHECK_ACCESS %s %s %s\n", client_ip, filename, mode);
     write(nm_sock, query, strlen(query));
+    logger("[AccessControl] Sent query: %s", query);
 
     // 4. Read Response
     char response[64] = {0};
-    read(nm_sock, response, 63);
+    ssize_t n = read(nm_sock, response, 63);
+    logger("[AccessControl] Received response (%zd bytes): %s\n", n, response);
     close(nm_sock);
 
     if (strncmp(response, "ACK:YES", 7) == 0) {
+        logger("[AccessControl] Access GRANTED\n");
         return 1; // Allowed
     }
 
@@ -68,18 +81,19 @@ void handle_read_command(int client_socket, char* buffer) {
     }
 
     // 3. --- Read the file ---
+    char full_path[512];
+    get_full_path(full_path, sizeof(full_path), filename);
+    
     long file_size = 0;
-    // This assumes you have the read_file_to_string() helper
-    char *file_content = read_file_to_string(filename, &file_size);
+    char *file_content = read_file_to_string(full_path, &file_size);
 
     if (file_content != NULL) {
         // --- Success ---
         // Found the file, send all of its content.
         write(client_socket, file_content, file_size);
         
-        // Send a newline just in case the file doesn't end with one,
-        // to keep the client's prompt clean.
-        write(client_socket, "\n", 1); 
+        // Send EOF marker so client knows to stop reading
+        write(client_socket, "\nEOF\n", 5); 
 
         // Clean up
         free(file_content);
@@ -91,6 +105,249 @@ void handle_read_command(int client_socket, char* buffer) {
     }
 }
 void handle_write_command(int client_socket, char* buffer) {
+    char filename[256];
+    int sentence_num;
+    
+    // 1. Parse - Interactive mode: WRITE <filename> <sentence_num>
+    // Client will then send multiple "<word_index> <content>" lines
+    if (sscanf(buffer, "WRITE %255s %d", filename, &sentence_num) != 2) {
+        write(client_socket, "ERR:400:BAD_REQUEST (Usage: WRITE <filename> <sentence_num>)\n", 61);
+        return;
+    }
+    
+    logger("[SS-Thread] WRITE request: %s sentence %d\n", filename, sentence_num);
+
+    // 2. ACCESS CONTROL
+    if (!check_permissions(client_socket, filename, "WRITE")) {
+        write(client_socket, "ERR:403:ACCESS_DENIED\n", 22);
+        logger("[SS-Thread] WRITE denied - no permission\n");
+        return;
+    }
+
+    // 3. SENTENCE LOCK (The Critical Requirement)
+    if (!acquire_sentence_lock(filename, sentence_num)) {
+        char *err = "ERR:423:SENTENCE_LOCKED_BY_ANOTHER_USER\n";
+        write(client_socket, err, strlen(err));
+        logger("[SS-Thread] WRITE denied - sentence locked\n");
+        return;
+    }
+    
+    logger("[SS-Thread] Sentence lock acquired for %s sentence %d\n", filename, sentence_num);
+    
+    // Send ACK to client to start interactive editing
+    write(client_socket, "ACK:SENTENCE_LOCKED Enter word updates (word_index content) or ETIRW to finish\n", 81);
+
+    // 4. Load file and create backup
+    pthread_mutex_t* f_mutex = get_file_mutex(filename);
+    if (!f_mutex) {
+        write(client_socket, "ERR:500:INTERNAL_ERROR\n", 23);
+        release_sentence_lock(filename, sentence_num);
+        return;
+    }
+    pthread_mutex_lock(f_mutex);
+
+    char full_path[512];
+    get_full_path(full_path, sizeof(full_path), filename);
+
+    long fsize = 0;
+    char* file_data = read_file_to_string(full_path, &fsize);
+    
+    logger("[SS-Thread] Loaded file %s, size=%ld, data=%p\n", filename, fsize, (void*)file_data);
+    
+    if (!file_data) {
+        file_data = strdup(""); // Empty file
+        if (!file_data) {
+            write(client_socket, "ERR:500:MEMORY_ERROR\n", 21);
+            pthread_mutex_unlock(f_mutex);
+            release_sentence_lock(filename, sentence_num);
+            return;
+        }
+        logger("[SS-Thread] File is empty, created empty buffer\n");
+    }
+    
+    // Create backup for UNDO
+    char bak_name[512];
+    snprintf(bak_name, sizeof(bak_name), "%s%s.bak", STORAGE_ROOT, filename);
+    FILE *bak = fopen(bak_name, "w");
+    if (bak) { 
+        fprintf(bak, "%s", file_data); 
+        fclose(bak); 
+        logger("[SS-Thread] Backup created: %s\n", bak_name);
+    }
+    
+    // Make a working copy we'll modify
+    char* working_data = strdup(file_data);
+    if (!working_data) {
+        write(client_socket, "ERR:500:MEMORY_ERROR\n", 21);
+        free(file_data);
+        pthread_mutex_unlock(f_mutex);
+        release_sentence_lock(filename, sentence_num);
+        return;
+    }
+    
+    // 5. Interactive editing loop
+    char edit_buffer[1024];
+    while (1) {
+        memset(edit_buffer, 0, sizeof(edit_buffer));
+        ssize_t n = read(client_socket, edit_buffer, sizeof(edit_buffer) - 1);
+        
+        if (n <= 0) {
+            logger("[SS-Thread] Client disconnected during WRITE\n");
+            break;
+        }
+        
+        edit_buffer[n] = '\0';
+        // Remove trailing newline
+        char* nl = strchr(edit_buffer, '\n');
+        if (nl) *nl = '\0';
+        
+        // Check for ETIRW (end editing)
+        if (strncmp(edit_buffer, "ETIRW", 5) == 0) {
+            logger("[SS-Thread] ETIRW received, finalizing write\n");
+            
+            // Write working data to file
+            FILE *fp = fopen(full_path, "w");
+            if (fp) {
+                fprintf(fp, "%s", working_data);
+                fclose(fp);
+                write(client_socket, "ACK:WRITE_COMPLETE All changes saved\n", 38);
+                logger("[SS-Thread] File %s updated successfully\n", filename);
+            } else {
+                write(client_socket, "ERR:500:WRITE_FAILED Could not save file\n", 42);
+                logger("[SS-Thread] Failed to write file %s\n", filename);
+            }
+            break;
+        }
+        
+        // Parse word update: <word_index> <content>
+        int word_index;
+        char content[900];
+        if (sscanf(edit_buffer, "%d %899[^\n]", &word_index, content) == 2) {
+            logger("[SS-Thread] Parse OK: word_index=%d, content='%s', working_data='%s'\n", 
+                   word_index, content, working_data);
+            
+            // Handle empty file or append operation
+            size_t current_len = strlen(working_data);
+            
+            // Try to find the sentence first
+            int s_start = 0, s_end = 0;
+            int sentence_found = find_sentence(working_data, sentence_num, &s_start, &s_end);
+            
+            logger("[SS-Thread] find_sentence returned %d, s_start=%d, s_end=%d\n", 
+                   sentence_found, s_start, s_end);
+            
+            if (!sentence_found && sentence_num == 0) {
+                // Sentence 0 doesn't exist yet - we're building it from scratch
+                // Just append words with spaces
+                char* new_data;
+                if (current_len == 0) {
+                    // First word in empty file
+                    new_data = (char*)malloc(strlen(content) + 1);
+                    if (new_data) {
+                        strcpy(new_data, content);
+                    }
+                } else {
+                    // Append with space
+                    new_data = (char*)malloc(current_len + strlen(content) + 2);
+                    if (new_data) {
+                        strcpy(new_data, working_data);
+                        strcat(new_data, " ");
+                        strcat(new_data, content);
+                    }
+                }
+                
+                if (new_data) {
+                    free(working_data);
+                    working_data = new_data;
+                    write(client_socket, "ACK:WORD_UPDATED\n", 17);
+                    logger("[SS-Thread] Added word %d to sentence %d\n", word_index, sentence_num);
+                } else {
+                    write(client_socket, "ERR:500:MEMORY_ERROR\n", 21);
+                }
+                continue;
+            }
+            
+            if (!sentence_found) {
+                write(client_socket, "ERR:404:SENTENCE_NOT_FOUND\n", 28);
+                continue;
+            }
+            
+            // Sentence exists, now find the word
+            int w_start, w_end;
+            if (find_word(working_data, s_start, s_end, word_index, &w_start, &w_end)) {
+                // Word exists - replace it
+                int len_before = w_start;
+                int len_new = strlen(content);
+                size_t working_len = strlen(working_data);
+                
+                // Safety check
+                if (w_end >= (int)working_len) {
+                    write(client_socket, "ERR:500:INTERNAL_ERROR Invalid word bounds\n", 44);
+                    logger("[SS-Thread] ERROR: w_end=%d >= working_len=%zu\n", w_end, working_len);
+                    continue;
+                }
+                
+                int len_after = working_len - w_end - 1;
+                
+                char* new_data = (char*)malloc(len_before + len_new + len_after + 1);
+                if (new_data) {
+                    memcpy(new_data, working_data, len_before);
+                    memcpy(new_data + len_before, content, len_new);
+                    if (len_after > 0) {
+                        memcpy(new_data + len_before + len_new, working_data + w_end + 1, len_after);
+                    }
+                    new_data[len_before + len_new + len_after] = '\0';
+                    
+                    free(working_data);
+                    working_data = new_data;
+                    
+                    write(client_socket, "ACK:WORD_UPDATED\n", 17);
+                    logger("[SS-Thread] Replaced word %d in sentence %d\n", word_index, sentence_num);
+                } else {
+                    write(client_socket, "ERR:500:MEMORY_ERROR\n", 21);
+                }
+            } else {
+                // Word doesn't exist in sentence - append it
+                int insert_pos = s_end + 1;
+                int len_new = strlen(content);
+                int new_total = current_len + len_new + 2; // +1 for space, +1 for null
+                
+                char* new_data = (char*)malloc(new_total);
+                if (new_data) {
+                    // Copy up to end of sentence
+                    memcpy(new_data, working_data, insert_pos);
+                    // Add space and new word
+                    new_data[insert_pos] = ' ';
+                    strcpy(new_data + insert_pos + 1, content);
+                    // Copy rest of file
+                    if (insert_pos < (int)current_len) {
+                        strcat(new_data, working_data + insert_pos);
+                    }
+                    
+                    free(working_data);
+                    working_data = new_data;
+                    write(client_socket, "ACK:WORD_UPDATED\n", 17);
+                    logger("[SS-Thread] Appended word %d to sentence %d\n", word_index, sentence_num);
+                } else {
+                    write(client_socket, "ERR:500:MEMORY_ERROR\n", 21);
+                }
+            }
+        } else {
+            write(client_socket, "ERR:400:BAD_FORMAT Use: word_index content\n", 44);
+        }
+    }
+    
+    // Cleanup
+    if (file_data) free(file_data);
+    if (working_data) free(working_data);
+    
+    // Release locks
+    pthread_mutex_unlock(f_mutex);
+    release_sentence_lock(filename, sentence_num);
+    logger("[SS-Thread] Sentence lock released for %s sentence %d\n", filename, sentence_num);
+}
+void handle_write_command_old_single_shot(int client_socket, char* buffer) {
+    // OLD IMPLEMENTATION - KEPT FOR REFERENCE
     char filename[256];
     int sentence_num, word_index;
     // 1. Parse
@@ -259,12 +516,14 @@ void handle_undo_command(int client_socket, char* buffer) {
         return;
     }
     
-    // 3. --- Form the backup file name ---
-    sprintf(bak_filename, "%s.bak", filename);
+    // 3. --- Form the backup file name and real file paths ---
+    char full_path[512], bak_full_path[512];
+    get_full_path(full_path, sizeof(full_path), filename);
+    snprintf(bak_full_path, sizeof(bak_full_path), "%s%s.bak", STORAGE_ROOT, filename);
 
     // 4. --- Perform the Atomic Swap ---
     // We lock the file mutex to prevent a race condition with a WRITE
-    pthread_mutex_t* file_lock = get_lock_for_file(filename);
+    pthread_mutex_t* file_lock = get_file_mutex(filename);
     if (!file_lock) { char *err = "ERR:500:INTERNAL_SERVER_ERROR (LockManager failed)\n";
         logger("[SS-Thread] UNDO: CRITICAL: Failed to get/create lock for %s. (Out of memory?)\n", filename);
         write(client_socket, err, strlen(err));
@@ -273,7 +532,7 @@ void handle_undo_command(int client_socket, char* buffer) {
     logger("[SS-Thread] UNDO: Attempting to lock file %s...\n", filename);
     pthread_mutex_lock(file_lock);
 
-    if (rename(bak_filename, filename) == 0) {
+    if (rename(bak_full_path, full_path) == 0) {
         // --- Success ---
         char *ack = "ACK:UNDO_OK\n";
         logger("[SS-Thread] Successfully restored backup for: %s\n", filename);
@@ -306,9 +565,11 @@ void handle_stream_command(int client_socket, char* buffer) {
     logger("[SS-Thread] Stream request for: %s\n", filename);
 
     // 2. --- Read the entire file into memory ---
+    char full_path[512];
+    get_full_path(full_path, sizeof(full_path), filename);
+    
     long file_size = 0;
-    // This assumes you have the read_file_to_string() helper
-    char *file_content = read_file_to_string(filename, &file_size);
+    char *file_content = read_file_to_string(full_path, &file_size);
 
     if (file_content == NULL) {
         // --- Error Handling: File Not Found ---

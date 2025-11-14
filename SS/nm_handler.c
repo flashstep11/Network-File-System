@@ -15,22 +15,23 @@ void handle_create_command(int nm_socket, char* buffer) {
         return;
     }
 
+    // Build full path in storage_root
+    char full_path[512];
+    get_full_path(full_path, sizeof(full_path), filename);
+
     // 2. --- CHECK FOR EXISTENCE ---
-    // Try to open the file for reading. If this succeeds, the file already exists.
-    FILE *existing_file = fopen(filename, "r");
+    FILE *existing_file = fopen(full_path, "r");
     if (existing_file) {
         // --- Failure: File Exists ---
         fclose(existing_file);
-        char *err = "ERR:409:FILE_ALREADY_EXISTS\n"; // 409 is HTTP "Conflict"
+        char *err = "ERR:409:FILE_ALREADY_EXISTS\n";
         logger("[NM-Thread] CREATE failed: File '%s' already exists.\n", filename);
         write(nm_socket, err, strlen(err));
-        return; // Stop.
+        return;
     }
 
     // 3. --- CREATE THE FILE ---
-    // If we are here, fopen(filename, "r") failed, meaning the file does NOT exist.
-    // Now it is safe to create it with "w".
-    FILE *new_file = fopen(filename, "w"); 
+    FILE *new_file = fopen(full_path, "w"); 
     if (new_file) {
         // --- Success ---
         fclose(new_file); 
@@ -52,10 +53,14 @@ void handle_delete_command(int nm_socket, char* buffer) {
         char *err = "ERR:400:BAD_DELETE_COMMAND\n";
         logger("[NM-Thread] Failed to parse DELETE command.\n");
         write(nm_socket, err, strlen(err));
-        return; // Return here
+        return;
     }
 
-    // --- ADD THIS LOCKING SECTION ---
+    // Build full path
+    char full_path[512];
+    get_full_path(full_path, sizeof(full_path), filename);
+
+    // Lock the file
     pthread_mutex_t* file_lock = get_file_mutex(filename);
     if (!file_lock) {
         char *err = "ERR:500:INTERNAL_SERVER_ERROR (LockManager failed)\n";
@@ -65,9 +70,8 @@ void handle_delete_command(int nm_socket, char* buffer) {
 
     logger("[NM-Thread] DELETE: Locking file %s for deletion\n", filename);
     pthread_mutex_lock(file_lock);
-    // --- END ADD ---
 
-    if (remove(filename) == 0) {
+    if (remove(full_path) == 0) {
         char *ack = "ACK:DELETE_OK\n";
         logger("[NM-Thread] Successfully deleted file: %s\n", filename);
         write(nm_socket, ack, strlen(ack));
@@ -94,24 +98,42 @@ void handle_get_info_command(int nm_socket, char* buffer) {
     } else {
         
         // 2. --- Use stat() to get file info ---
-        if (stat(filename, &file_stat) == 0) {
+        char full_path[512];
+        snprintf(full_path, sizeof(full_path), "%s%s", STORAGE_ROOT, filename);
+        
+        if (stat(full_path, &file_stat) == 0) {
             
             // --- Success ---
-            long file_size = file_stat.st_size;     // Get file size
-            long mod_time = file_stat.st_mtime;   // Get modification time
-            long acc_time = file_stat.st_atime;   // <-- ADD THIS: Get last access time
+            long file_size = file_stat.st_size;
+            long mod_time = file_stat.st_mtime;
+            
+            // Calculate word count
+            int word_count = 0;
+            FILE* fp = fopen(full_path, "r");
+            if (fp) {
+                char ch;
+                int in_word = 0;
+                while ((ch = fgetc(fp)) != EOF) {
+                    if (isspace(ch) || ch == '\n' || ch == '\t') {
+                        in_word = 0;
+                    } else if (!in_word) {
+                        in_word = 1;
+                        word_count++;
+                    }
+                }
+                fclose(fp);
+            }
 
-            // 3. --- Send all available info back to the NS ---
-            // The NS will be responsible for formatting this.
-            sprintf(reply_buffer, "ACK:INFO %ld %ld %ld\n", file_size, mod_time, acc_time);
-            logger("[NM-Thread] Sending info for %s: %ld bytes, %ld mtime, %ld atime\n", 
-                   filename, file_size, mod_time, acc_time);
+            // 3. --- Send all available info back to the NM ---
+            sprintf(reply_buffer, "ACK:INFO %ld %ld %d\n", file_size, mod_time, word_count);
+            logger("[NM-Thread] Sending info for %s: %ld bytes, %ld mtime, %d words\n", 
+                   filename, file_size, mod_time, word_count);
             write(nm_socket, reply_buffer, strlen(reply_buffer));
 
         } else {
             // --- Failure ---
             char *err = "ERR:404:INFO_FAILED (File not found)\n";
-            logger("[NM-Thread] Failed to get info for %s: %s\n", filename, strerror(errno));
+            logger("[NM-Thread] Failed to get info for %s: %s\n", full_path, strerror(errno));
             write(nm_socket, err, strlen(err));
         }
     }

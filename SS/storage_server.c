@@ -67,13 +67,33 @@ char* read_file_to_string(const char *filename, long *out_size) {
     return buffer;
 }
 int find_sentence(const char *content, int sentence_num, int *start, int *end) {
-    int current_sentence = 1;
+    if (!content || !start || !end) return 0;
+    
+    int current_sentence = 0;  // Changed to 0-indexed
     const char *ptr = content;
     *start = 0;
     *end = 0;
 
-    // The first sentence always starts at index 0
-    *start = 0;
+    // Skip leading whitespace for first sentence
+    while (*ptr != '\0' && (*ptr == ' ' || *ptr == '\n' || *ptr == '\r' || *ptr == '\t')) {
+        ptr++;
+    }
+    *start = (int)(ptr - content);
+
+    // If looking for sentence 0 and file is not empty
+    if (sentence_num == 0 && *ptr != '\0') {
+        // Find end of first sentence
+        while (*ptr != '\0') {
+            if (*ptr == '.' || *ptr == '!' || *ptr == '?') {
+                *end = (int)(ptr - content);
+                return 1;
+            }
+            ptr++;
+        }
+        // No delimiter found, treat whole file as one sentence
+        *end = (int)(ptr - content) - 1;
+        return 1;
+    }
 
     while (*ptr != '\0') {
         if (*ptr == '.' || *ptr == '!' || *ptr == '?') {
@@ -88,25 +108,24 @@ int find_sentence(const char *content, int sentence_num, int *start, int *end) {
             current_sentence++;
             
             // Skip over the delimiter and any following whitespace
-            const char *next_char = ptr + 1;
-            while (*next_char != '\0' && (*next_char == ' ' || *next_char == '\n' || *next_char == '\r' || *next_char == '\t')) {
-                next_char++;
+            ptr++;
+            while (*ptr != '\0' && (*ptr == ' ' || *ptr == '\n' || *ptr == '\r' || *ptr == '\t')) {
+                ptr++;
             }
             
-            if (*next_char == '\0') {
+            if (*ptr == '\0') {
                 return 0; // Reached end of string, no next sentence
             }
             
-            *start = (int)(next_char - content);
-            ptr = next_char; // Continue search from new start
-            continue; // Skip the ptr++ at the end
+            *start = (int)(ptr - content);
+            continue;
         }
         ptr++;
     }
 
     // Handle case where the last part of the file is the sentence we want
     // but it doesn't end with a delimiter (e.g., file ends mid-sentence)
-    if (current_sentence == sentence_num && *start < (ptr - content)) {
+    if (current_sentence == sentence_num && *start < (int)(ptr - content)) {
         *end = (int)(ptr - content) - 1; // End of string
         return 1;
     }
@@ -115,26 +134,29 @@ int find_sentence(const char *content, int sentence_num, int *start, int *end) {
 }
 
 int find_word(const char *content, int sent_start, int sent_end, int word_index,  int *word_start, int *word_end) {
+    if (!content || !word_start || !word_end) return 0;
     
     const char *delims = " \t\n\r";
     const char *ptr = content + sent_start; // Start searching from the beginning of the sentence
     const char *end_of_sentence = content + sent_end;
-    int current_word = 1;
+    int current_word = 0;  // Changed to 0-indexed
 
     // Skip any leading whitespace in the sentence
-    ptr += strspn(ptr, delims);
+    while (ptr <= end_of_sentence && *ptr != '\0' && strchr(delims, *ptr)) {
+        ptr++;
+    }
 
     while (ptr <= end_of_sentence && *ptr != '\0') {
         // We are at the start of a word.
         *word_start = (int)(ptr - content);
         
         // Find the length of this word
-        int word_len = strcspn(ptr, delims);
-        
-        // Check if this word goes past the end of the sentence
-        if (ptr + word_len > end_of_sentence) {
-            word_len = (int)(end_of_sentence - ptr) + 1;
+        int word_len = 0;
+        while (ptr + word_len <= end_of_sentence && *(ptr + word_len) != '\0' && !strchr(delims, *(ptr + word_len))) {
+            word_len++;
         }
+        
+        if (word_len == 0) break; // No more words
         
         *word_end = *word_start + word_len - 1;
 
@@ -144,7 +166,9 @@ int find_word(const char *content, int sent_start, int sent_end, int word_index,
 
         // Move to the next word
         ptr += word_len; // Move past the word
-        ptr += strspn(ptr, delims); // Move past the delimiters after it
+        while (ptr <= end_of_sentence && *ptr != '\0' && strchr(delims, *ptr)) {
+            ptr++;
+        }
         current_word++;
     }
 
@@ -238,6 +262,10 @@ int main(int argc, char *argv[]) {
     }
     int my_port = atoi(argv[1]);
     logger_init("storage_server.log");
+    
+    // CRITICAL: Initialize lock systems FIRST
+    init_lock_systems();
+    
     int nm_socket = 0;
     struct sockaddr_in nm_addr;
     char buffer[BUFFER_SIZE] = {0};
@@ -265,13 +293,14 @@ int main(int argc, char *argv[]) {
     // We'll build the message in a large buffer.
     char reg_msg[4096] = {0}; // 4KB buffer for file list
     
-    // Start with the port
-    int current_len = sprintf(reg_msg, "REGISTER_SS %d", my_port);
+    // Start with BOTH ports (nm_port and client_port)
+    // For simplicity, we'll use the same port for both NM and client connections
+    int current_len = sprintf(reg_msg, "REGISTER_SS %d %d", my_port, my_port);
 
-    // Now, scan the current directory for files
+    // Now, scan the storage_root directory for files
     DIR *d;
     struct dirent *dir;
-    d = opendir("."); // "." means the current directory
+    d = opendir("storage_root"); // Look in storage_root folder
     if (d) {
         while ((dir = readdir(d)) != NULL) {
             // Check if it's a regular file (not a directory)

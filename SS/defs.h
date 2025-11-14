@@ -13,11 +13,18 @@
 #include <sys/types.h>
 #include <time.h>
 #include <errno.h>
+#include <ctype.h>
 
 #define NM_IP "127.0.0.1"
 #define NM_PORT 8080
 #define BUFFER_SIZE 4096 // Increased for larger files
 #define MAX_CLIENTS 10
+#define STORAGE_ROOT "storage_root/"
+
+// Helper to get full path
+static inline void get_full_path(char *dest, size_t dest_size, const char *filename) {
+    snprintf(dest, dest_size, "%s%s", STORAGE_ROOT, filename);
+}
 
 // --- NEW LOCKING STRUCTURES ---
 
