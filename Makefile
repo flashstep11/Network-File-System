@@ -1,26 +1,42 @@
 # Master Makefile for Network File System
 
+CC = gcc
+CFLAGS = -Wall -Wextra -pthread -g
+LDFLAGS = -pthread
+
 .PHONY: all clean nm ss client help run-nm run-ss run-client
 
 all: nm ss client
 
-nm:
+# Name Server
+nm: NM/name_server
+
+NM/name_server: NM/nm.c NM/nm.h
 	@echo "Building Name Server..."
-	@cd NM && $(MAKE)
+	$(CC) $(CFLAGS) NM/nm.c -o NM/name_server $(LDFLAGS)
+	@echo "Name Server built successfully!"
 
-ss:
+# Storage Server
+ss: SS/storage_server
+
+SS/storage_server: SS/storage_server.c SS/client_handler.c SS/nm_handler.c SS/log.c SS/defs.h SS/client_handler.h SS/nm_handler.h SS/log.h
 	@echo "Building Storage Server..."
-	@cd SS && $(MAKE)
+	$(CC) $(CFLAGS) SS/storage_server.c SS/client_handler.c SS/nm_handler.c SS/log.c -o SS/storage_server $(LDFLAGS)
+	@echo "Storage Server built successfully!"
 
-client:
+# Client
+client: client/client
+
+client/client: client/client.c
 	@echo "Building Client..."
-	@cd client && $(MAKE)
+	$(CC) $(CFLAGS) client/client.c -o client/client $(LDFLAGS)
+	@echo "Client built successfully!"
 
 clean:
 	@echo "Cleaning all binaries..."
-	@cd NM && $(MAKE) clean
-	@cd SS && $(MAKE) clean
-	@cd client && $(MAKE) clean
+	rm -f NM/name_server NM/*.o NM/*.log
+	rm -f SS/storage_server SS/*.o SS/*.log
+	rm -f client/client client/*.o
 	@echo "Clean complete!"
 
 run-nm:
