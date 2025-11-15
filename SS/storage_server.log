@@ -1,0 +1,2508 @@
+[2025-11-15 20:32:04] 
+--- LOGGING STARTED: Sat Nov 15 20:32:04 2025 ---
+[2025-11-15 20:32:04] Lock systems initialized.
+[2025-11-15 20:32:04] Storage Server (SS) starting up...
+[2025-11-15 20:32:04] Successfully connected to NM!
+[2025-11-15 20:32:04] Sending registration: REGISTER_SS 9001 9001
+[2025-11-15 20:32:04] Received from NM: ACK:SS_REGISTRATION_OK
+
+[2025-11-15 20:32:04] Registration complete. Private command line is active.
+[2025-11-15 20:32:04] [Main Thread] Starting public client server on port 9001...
+[2025-11-15 20:32:04] 
+--- Storage Server is now ONLINE. Listening on port 9001 ---
+
+[2025-11-15 20:32:04] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-15 20:32:32] [NM-Thread] Received trusted command: CREATE dog.txt
+[2025-11-15 20:32:32] [NM-Thread] Failed to create file dog.txt: No such file or directory
+[2025-11-15 20:34:13] 
+--- LOGGING STARTED: Sat Nov 15 20:34:13 2025 ---
+[2025-11-15 20:34:13] Lock systems initialized.
+[2025-11-15 20:34:13] Storage Server (SS) starting up...
+[2025-11-15 20:34:13] Successfully connected to NM!
+[2025-11-15 20:34:13] Sending registration: REGISTER_SS 9001 9001
+[2025-11-15 20:34:13] Received from NM: ACK:SS_REGISTRATION_OK
+
+[2025-11-15 20:34:13] Registration complete. Private command line is active.
+[2025-11-15 20:34:13] [Main Thread] Starting public client server on port 9001...
+[2025-11-15 20:34:13] 
+--- Storage Server is now ONLINE. Listening on port 9001 ---
+
+[2025-11-15 20:34:13] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-15 20:34:24] [NM-Thread] Received trusted command: CREATE dog.txt
+[2025-11-15 20:34:24] [NM-Thread] Failed to create file dog.txt: No such file or directory
+[2025-11-15 20:36:06] [NM-Thread] Received trusted command: CREATE dog.txt
+[2025-11-15 20:36:06] [NM-Thread] Successfully created file: dog.txt
+[2025-11-15 20:36:17] [NM-Thread] Received trusted command: GET_INFO dog.txt
+[2025-11-15 20:36:17] [NM-Thread] Sending info for dog.txt: 0 bytes, 1763219166 mtime, 0 words
+[2025-11-15 20:36:25] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 20:36:25] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 20:36:25] [SS-Thread] Received command: WRITE dog.txt 0
+[2025-11-15 20:36:25] [SS-Thread] WRITE request: dog.txt sentence 0
+[2025-11-15 20:36:25] [AccessControl] Checking WRITE permission for file dog.txt
+[2025-11-15 20:36:25] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 20:36:25] [AccessControl] Connected to NM
+[2025-11-15 20:36:25] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 dog.txt WRITE
+[2025-11-15 20:36:25] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 20:36:25] [AccessControl] Access GRANTED
+[2025-11-15 20:36:25] [SS-Thread] Sentence lock acquired for dog.txt sentence 0
+[2025-11-15 20:36:25] [SS-Thread] Loaded file dog.txt, size=0, data=0x5a3406153cb0
+[2025-11-15 20:36:25] [SS-Thread] Backup created: storage_root/dog.txt.bak
+[2025-11-15 20:36:31] [SS-Thread] Parse OK: word_index=0, content='Hello', working_data=''
+[2025-11-15 20:36:31] [SS-Thread] find_sentence returned 0, s_start=0, s_end=0
+[2025-11-15 20:36:31] [SS-Thread] Added word 0 to sentence 0
+[2025-11-15 20:36:33] [SS-Thread] Parse OK: word_index=1, content='World', working_data='Hello'
+[2025-11-15 20:36:33] [SS-Thread] find_sentence returned 1, s_start=0, s_end=4
+[2025-11-15 20:36:33] [SS-Thread] Appended word 1 to sentence 0
+[2025-11-15 20:36:37] [SS-Thread] Parse OK: word_index=2, content='Havish', working_data='Hello World'
+[2025-11-15 20:36:37] [SS-Thread] find_sentence returned 1, s_start=0, s_end=10
+[2025-11-15 20:36:37] [SS-Thread] Appended word 2 to sentence 0
+[2025-11-15 20:36:44] [SS-Thread] Parse OK: word_index=3, content='Is Gay', working_data='Hello World Havish'
+[2025-11-15 20:36:44] [SS-Thread] find_sentence returned 1, s_start=0, s_end=17
+[2025-11-15 20:36:44] [SS-Thread] Appended word 3 to sentence 0
+[2025-11-15 20:37:22] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 20:37:22] [SS-Thread] File dog.txt updated successfully
+[2025-11-15 20:37:22] [SS-Thread] Sentence lock released for dog.txt sentence 0
+[2025-11-15 20:37:22] [SS-Thread] Client disconnected.
+[2025-11-15 20:37:39] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 20:37:39] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 20:37:39] [SS-Thread] Received command: READ dog.txt
+[2025-11-15 20:37:39] [SS-Thread] Read request for: dog.txt
+[2025-11-15 20:37:39] [AccessControl] Checking READ permission for file dog.txt
+[2025-11-15 20:37:39] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 20:37:39] [AccessControl] Connected to NM
+[2025-11-15 20:37:39] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 dog.txt READ
+[2025-11-15 20:37:39] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 20:37:39] [AccessControl] Access GRANTED
+[2025-11-15 20:37:39] [SS-Thread] Client disconnected.
+[2025-11-15 20:37:53] [NM-Thread] Received trusted command: GET_INFO dog.txt
+[2025-11-15 20:37:53] [NM-Thread] Sending info for dog.txt: 25 bytes, 1763219242 mtime, 5 words
+[2025-11-15 20:38:43] [NM-Thread] Received trusted command: UNDO dog.txt
+[2025-11-15 20:39:24] [NM-Thread] Received trusted command: UNDO dog.txt
+[2025-11-15 20:41:27] 
+--- LOGGING STARTED: Sat Nov 15 20:41:27 2025 ---
+[2025-11-15 20:41:27] Lock systems initialized.
+[2025-11-15 20:41:27] Storage Server (SS) starting up...
+[2025-11-15 20:41:27] Successfully connected to NM!
+[2025-11-15 20:41:27] Sending registration: REGISTER_SS 9001 9001
+[2025-11-15 20:41:27] Received from NM: ACK:SS_REGISTRATION_OK
+
+[2025-11-15 20:41:27] Registration complete. Private command line is active.
+[2025-11-15 20:41:27] [Main Thread] Starting public client server on port 9001...
+[2025-11-15 20:41:27] 
+--- Storage Server is now ONLINE. Listening on port 9001 ---
+
+[2025-11-15 20:41:27] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-15 20:41:40] [NM-Thread] Received trusted command: CREATE dog1.txt
+[2025-11-15 20:41:40] [NM-Thread] Successfully created file: dog1.txt
+[2025-11-15 20:41:49] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 20:41:49] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 20:41:49] [SS-Thread] Received command: WRITE dog1.txt 0
+[2025-11-15 20:41:49] [SS-Thread] WRITE request: dog1.txt sentence 0
+[2025-11-15 20:41:49] [AccessControl] Checking WRITE permission for file dog1.txt
+[2025-11-15 20:41:49] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 20:41:49] [AccessControl] Connected to NM
+[2025-11-15 20:41:49] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 dog1.txt WRITE
+[2025-11-15 20:41:49] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 20:41:49] [AccessControl] Access GRANTED
+[2025-11-15 20:41:49] [SS-Thread] Sentence lock acquired for dog1.txt sentence 0
+[2025-11-15 20:41:49] [SS-Thread] Loaded file dog1.txt, size=0, data=0x647f11ff9cb0
+[2025-11-15 20:41:49] [SS-Thread] Backup created: storage_root/dog1.txt.bak
+[2025-11-15 20:41:52] [SS-Thread] Parse OK: word_index=0, content='Hello', working_data=''
+[2025-11-15 20:41:52] [SS-Thread] find_sentence returned 0, s_start=0, s_end=0
+[2025-11-15 20:41:52] [SS-Thread] Added word 0 to sentence 0
+[2025-11-15 20:41:54] [SS-Thread] Parse OK: word_index=1, content='World', working_data='Hello'
+[2025-11-15 20:41:54] [SS-Thread] find_sentence returned 1, s_start=0, s_end=4
+[2025-11-15 20:41:54] [SS-Thread] Appended word 1 to sentence 0
+[2025-11-15 20:41:59] [SS-Thread] Parse OK: word_index=2, content='Havish is Gay.', working_data='Hello World'
+[2025-11-15 20:41:59] [SS-Thread] find_sentence returned 1, s_start=0, s_end=10
+[2025-11-15 20:41:59] [SS-Thread] Appended word 2 to sentence 0
+[2025-11-15 20:42:02] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 20:42:02] [SS-Thread] File dog1.txt updated successfully
+[2025-11-15 20:42:02] [SS-Thread] Sentence lock released for dog1.txt sentence 0
+[2025-11-15 20:42:02] [SS-Thread] Client disconnected.
+[2025-11-15 20:42:23] [NM-Thread] Received trusted command: UNDO dog1.txt
+[2025-11-15 20:44:22] 
+--- LOGGING STARTED: Sat Nov 15 20:44:22 2025 ---
+[2025-11-15 20:44:22] Lock systems initialized.
+[2025-11-15 20:44:22] Storage Server (SS) starting up...
+[2025-11-15 20:44:22] Successfully connected to NM!
+[2025-11-15 20:44:22] Sending registration: REGISTER_SS 9001 9001
+[2025-11-15 20:44:22] Received from NM: ACK:SS_REGISTRATION_OK
+
+[2025-11-15 20:44:22] Registration complete. Private command line is active.
+[2025-11-15 20:44:22] [Main Thread] Starting public client server on port 9001...
+[2025-11-15 20:44:22] 
+--- Storage Server is now ONLINE. Listening on port 9001 ---
+
+[2025-11-15 20:44:22] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-15 20:44:31] [NM-Thread] Received trusted command: CREATE do.txt
+[2025-11-15 20:44:31] [NM-Thread] Successfully created file: do.txt
+[2025-11-15 20:44:34] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 20:44:34] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 20:44:34] [SS-Thread] Received command: WRITE do.txt 0
+[2025-11-15 20:44:34] [SS-Thread] WRITE request: do.txt sentence 0
+[2025-11-15 20:44:34] [AccessControl] Checking WRITE permission for file do.txt
+[2025-11-15 20:44:34] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 20:44:34] [AccessControl] Connected to NM
+[2025-11-15 20:44:34] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 do.txt WRITE
+[2025-11-15 20:44:34] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 20:44:34] [AccessControl] Access GRANTED
+[2025-11-15 20:44:34] [SS-Thread] Sentence lock acquired for do.txt sentence 0
+[2025-11-15 20:44:34] [SS-Thread] Loaded file do.txt, size=0, data=0x60892996bcb0
+[2025-11-15 20:44:34] [SS-Thread] Backup created: storage_root/do.txt.bak
+[2025-11-15 20:44:36] [SS-Thread] Parse OK: word_index=0, content='hello', working_data=''
+[2025-11-15 20:44:36] [SS-Thread] find_sentence returned 0, s_start=0, s_end=0
+[2025-11-15 20:44:36] [SS-Thread] Added word 0 to sentence 0
+[2025-11-15 20:44:38] [SS-Thread] Parse OK: word_index=1, content='world.', working_data='hello'
+[2025-11-15 20:44:38] [SS-Thread] find_sentence returned 1, s_start=0, s_end=4
+[2025-11-15 20:44:38] [SS-Thread] Appended word 1 to sentence 0
+[2025-11-15 20:44:41] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 20:44:41] [SS-Thread] File do.txt updated successfully
+[2025-11-15 20:44:41] [SS-Thread] Sentence lock released for do.txt sentence 0
+[2025-11-15 20:44:41] [SS-Thread] Client disconnected.
+[2025-11-15 20:44:49] [NM-Thread] Received trusted command: UNDO do.txt
+[2025-11-15 20:44:49] [AccessControl] Checking WRITE permission for file do.txt
+[2025-11-15 20:44:49] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 20:44:49] [AccessControl] Connected to NM
+[2025-11-15 20:44:49] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 do.txt WRITE
+[2025-11-15 20:44:49] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 20:44:49] [AccessControl] Access GRANTED
+[2025-11-15 20:44:49] [SS-Thread] UNDO: Attempting to lock file do.txt...
+[2025-11-15 20:44:49] [SS-Thread] Successfully restored backup for: do.txt
+[2025-11-15 20:44:49] [SS-Thread] UNDO: Unlocked file do.txt.
+[2025-11-15 20:47:11] [NM-Thread] Received trusted command: UNDO do.txt
+[2025-11-15 20:47:11] [AccessControl] Checking WRITE permission for file do.txt
+[2025-11-15 20:47:11] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 20:47:11] [AccessControl] Connected to NM
+[2025-11-15 20:47:11] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 do.txt WRITE
+[2025-11-15 20:47:11] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 20:47:11] [AccessControl] Access GRANTED
+[2025-11-15 20:47:11] [SS-Thread] UNDO: Attempting to lock file do.txt...
+[2025-11-15 20:47:11] [SS-Thread] Failed to find backup for do.txt: No such file or directory
+[2025-11-15 20:47:11] [SS-Thread] UNDO: Unlocked file do.txt.
+[2025-11-15 20:47:23] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 20:47:23] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 20:47:23] [SS-Thread] Received command: WRITE do.txt 0
+[2025-11-15 20:47:23] [SS-Thread] WRITE request: do.txt sentence 0
+[2025-11-15 20:47:23] [AccessControl] Checking WRITE permission for file do.txt
+[2025-11-15 20:47:23] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 20:47:23] [AccessControl] Connected to NM
+[2025-11-15 20:47:23] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 do.txt WRITE
+[2025-11-15 20:47:23] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 20:47:23] [AccessControl] Access GRANTED
+[2025-11-15 20:47:23] [SS-Thread] Sentence lock acquired for do.txt sentence 0
+[2025-11-15 20:47:23] [SS-Thread] Loaded file do.txt, size=0, data=0x60892996bcb0
+[2025-11-15 20:47:23] [SS-Thread] Backup created: storage_root/do.txt.bak
+[2025-11-15 20:47:30] [SS-Thread] Parse OK: word_index=0, content='LOL', working_data=''
+[2025-11-15 20:47:30] [SS-Thread] find_sentence returned 0, s_start=0, s_end=0
+[2025-11-15 20:47:30] [SS-Thread] Added word 0 to sentence 0
+[2025-11-15 20:47:41] [SS-Thread] Parse OK: word_index=1, content='vik cant pull', working_data='LOL'
+[2025-11-15 20:47:41] [SS-Thread] find_sentence returned 1, s_start=0, s_end=2
+[2025-11-15 20:47:41] [SS-Thread] Appended word 1 to sentence 0
+[2025-11-15 20:47:47] [SS-Thread] Parse OK: word_index=2, content='ananya', working_data='LOL vik cant pull'
+[2025-11-15 20:47:47] [SS-Thread] find_sentence returned 1, s_start=0, s_end=16
+[2025-11-15 20:47:47] [SS-Thread] Replaced word 2 in sentence 0
+[2025-11-15 20:47:53] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 20:47:53] [SS-Thread] File do.txt updated successfully
+[2025-11-15 20:47:53] [SS-Thread] Sentence lock released for do.txt sentence 0
+[2025-11-15 20:47:53] [SS-Thread] Client disconnected.
+[2025-11-15 20:48:02] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 20:48:02] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 20:48:02] [SS-Thread] Received command: STREAM do.txt
+[2025-11-15 20:48:02] [AccessControl] Checking READ permission for file do.txt
+[2025-11-15 20:48:02] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 20:48:02] [AccessControl] Connected to NM
+[2025-11-15 20:48:02] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 do.txt READ
+[2025-11-15 20:48:02] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 20:48:02] [AccessControl] Access GRANTED
+[2025-11-15 20:48:02] [SS-Thread] Stream request for: do.txt
+[2025-11-15 20:57:28] [SS-Thread] Client disconnected.
+[2025-11-15 20:58:28] [NM-Thread] Received trusted command: CREATE file.txt
+[2025-11-15 20:58:28] [NM-Thread] Successfully created file: file.txt
+[2025-11-15 20:58:57] 
+--- LOGGING STARTED: Sat Nov 15 20:58:57 2025 ---
+[2025-11-15 20:58:57] Lock systems initialized.
+[2025-11-15 20:58:57] Storage Server (SS) starting up...
+[2025-11-15 20:58:57] Successfully connected to NM!
+[2025-11-15 20:58:57] Sending registration: REGISTER_SS 9001 9001
+[2025-11-15 20:58:57] Received from NM: ACK:SS_REGISTRATION_OK
+
+[2025-11-15 20:58:57] Registration complete. Private command line is active.
+[2025-11-15 20:58:57] [Main Thread] Starting public client server on port 9001...
+[2025-11-15 20:58:57] 
+--- Storage Server is now ONLINE. Listening on port 9001 ---
+
+[2025-11-15 20:58:57] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-15 20:59:09] [NM-Thread] Received trusted command: CREATE file.txt
+[2025-11-15 20:59:09] [NM-Thread] CREATE failed: File 'file.txt' already exists.
+[2025-11-15 20:59:14] [NM-Thread] Received trusted command: CREATE file1.txt
+[2025-11-15 20:59:14] [NM-Thread] Successfully created file: file1.txt
+[2025-11-15 20:59:18] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 20:59:18] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 20:59:18] [SS-Thread] Received command: WRITE file1.txt 0
+[2025-11-15 20:59:18] [SS-Thread] WRITE request: file1.txt sentence 0
+[2025-11-15 20:59:18] [AccessControl] Checking WRITE permission for file file1.txt
+[2025-11-15 20:59:18] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 20:59:18] [AccessControl] Connected to NM
+[2025-11-15 20:59:18] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 file1.txt WRITE
+[2025-11-15 20:59:18] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 20:59:18] [AccessControl] Access GRANTED
+[2025-11-15 20:59:18] [SS-Thread] Sentence lock acquired for file1.txt sentence 0
+[2025-11-15 20:59:18] [SS-Thread] Loaded file file1.txt, size=0, data=0x639d2f15dcb0
+[2025-11-15 20:59:18] [SS-Thread] Backup created: storage_root/file1.txt.bak
+[2025-11-15 20:59:20] [SS-Thread] Parse OK: word_index=0, content='hello', working_data=''
+[2025-11-15 20:59:20] [SS-Thread] find_sentence returned 0, s_start=0, s_end=0
+[2025-11-15 20:59:20] [SS-Thread] Added word 0 to sentence 0
+[2025-11-15 20:59:22] [SS-Thread] Parse OK: word_index=1, content='world', working_data='hello'
+[2025-11-15 20:59:22] [SS-Thread] find_sentence returned 1, s_start=0, s_end=4
+[2025-11-15 20:59:22] [SS-Thread] Appended word 1 to sentence 0
+[2025-11-15 20:59:24] [SS-Thread] Parse OK: word_index=2, content='ok.', working_data='hello world'
+[2025-11-15 20:59:24] [SS-Thread] find_sentence returned 1, s_start=0, s_end=10
+[2025-11-15 20:59:24] [SS-Thread] Appended word 2 to sentence 0
+[2025-11-15 20:59:26] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 20:59:26] [SS-Thread] File file1.txt updated successfully
+[2025-11-15 20:59:26] [SS-Thread] Sentence lock released for file1.txt sentence 0
+[2025-11-15 20:59:26] [SS-Thread] Client disconnected.
+[2025-11-15 20:59:32] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 20:59:32] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 20:59:32] [SS-Thread] Received command: STREAM file1.txt
+[2025-11-15 20:59:32] [AccessControl] Checking READ permission for file file1.txt
+[2025-11-15 20:59:32] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 20:59:32] [AccessControl] Connected to NM
+[2025-11-15 20:59:32] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 file1.txt READ
+[2025-11-15 20:59:32] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 20:59:32] [AccessControl] Access GRANTED
+[2025-11-15 20:59:32] [SS-Thread] Stream request for: file1.txt
+[2025-11-15 20:59:32] [SS-Thread] Client disconnected.
+[2025-11-15 21:00:19] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 21:00:19] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 21:00:19] [SS-Thread] Received command: READ file1.txt
+[2025-11-15 21:00:19] [SS-Thread] Read request for: file1.txt
+[2025-11-15 21:00:19] [AccessControl] Checking READ permission for file file1.txt
+[2025-11-15 21:00:19] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 21:00:19] [AccessControl] Connected to NM
+[2025-11-15 21:00:19] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 file1.txt READ
+[2025-11-15 21:00:19] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 21:00:19] [AccessControl] Access GRANTED
+[2025-11-15 21:00:19] [SS-Thread] Client disconnected.
+[2025-11-15 21:04:16] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 21:04:16] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 21:04:16] [SS-Thread] Received command: WRITE file1.txt 100
+[2025-11-15 21:04:16] [SS-Thread] WRITE request: file1.txt sentence 100
+[2025-11-15 21:04:16] [AccessControl] Checking WRITE permission for file file1.txt
+[2025-11-15 21:04:16] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 21:04:16] [AccessControl] Connected to NM
+[2025-11-15 21:04:16] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 file1.txt WRITE
+[2025-11-15 21:04:16] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 21:04:16] [AccessControl] Access GRANTED
+[2025-11-15 21:04:16] [SS-Thread] Sentence lock acquired for file1.txt sentence 100
+[2025-11-15 21:04:16] [SS-Thread] Loaded file file1.txt, size=15, data=0x639d2f15dcb0
+[2025-11-15 21:04:16] [SS-Thread] Backup created: storage_root/file1.txt.bak
+[2025-11-15 21:05:53] [SS-Thread] Parse OK: word_index=0, content='Vik sigma', working_data='hello world ok.'
+[2025-11-15 21:05:53] [SS-Thread] find_sentence returned 0, s_start=0, s_end=14
+[2025-11-15 21:11:06] [SS-Thread] Client disconnected during WRITE
+[2025-11-15 21:11:06] [SS-Thread] Sentence lock released for file1.txt sentence 100
+[2025-11-15 21:11:06] [SS-Thread] Client disconnected.
+[2025-11-15 21:11:14] [NM-Thread] Name Server disconnected! Command thread shutting down.
+[2025-11-15 21:12:02] 
+--- LOGGING STARTED: Sat Nov 15 21:12:02 2025 ---
+[2025-11-15 21:12:02] Lock systems initialized.
+[2025-11-15 21:12:02] Storage Server (SS) starting up...
+[2025-11-15 21:12:11] 
+--- LOGGING STARTED: Sat Nov 15 21:12:11 2025 ---
+[2025-11-15 21:12:11] Lock systems initialized.
+[2025-11-15 21:12:11] Storage Server (SS) starting up...
+[2025-11-15 21:12:11] Successfully connected to NM!
+[2025-11-15 21:12:11] Sending registration: REGISTER_SS 9001 9001
+[2025-11-15 21:12:11] Received from NM: ACK:SS_REGISTRATION_OK
+
+[2025-11-15 21:12:11] Registration complete. Private command line is active.
+[2025-11-15 21:12:11] [Main Thread] Starting public client server on port 9001...
+[2025-11-15 21:12:11] 
+--- Storage Server is now ONLINE. Listening on port 9001 ---
+
+[2025-11-15 21:12:11] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-15 21:12:24] [NM-Thread] Received trusted command: CREATE lmao.txt
+[2025-11-15 21:12:24] [NM-Thread] Successfully created file: lmao.txt
+[2025-11-15 21:12:50] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 21:12:50] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 21:12:50] [SS-Thread] Received command: WRITE lmao.txt 0
+[2025-11-15 21:12:50] [SS-Thread] WRITE request: lmao.txt sentence 0
+[2025-11-15 21:12:50] [AccessControl] Checking WRITE permission for file lmao.txt
+[2025-11-15 21:12:50] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 21:12:50] [AccessControl] Connected to NM
+[2025-11-15 21:12:50] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 lmao.txt WRITE
+[2025-11-15 21:12:50] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 21:12:50] [AccessControl] Access GRANTED
+[2025-11-15 21:12:50] [SS-Thread] Sentence lock acquired for lmao.txt sentence 0
+[2025-11-15 21:12:50] [SS-Thread] Loaded file lmao.txt, size=0, data=0x64872c85fcb0
+[2025-11-15 21:12:50] [SS-Thread] Backup created: storage_root/lmao.txt.bak
+[2025-11-15 21:12:54] [SS-Thread] Parse OK: word_index=0, content='havish ', working_data=''
+[2025-11-15 21:12:54] [SS-Thread] find_sentence returned 0, s_start=0, s_end=0
+[2025-11-15 21:12:54] [SS-Thread] Added word 0 to sentence 0
+[2025-11-15 21:13:04] [SS-Thread] Parse OK: word_index=100, content='lol', working_data='havish '
+[2025-11-15 21:13:04] [SS-Thread] find_sentence returned 1, s_start=0, s_end=6
+[2025-11-15 21:13:04] [SS-Thread] Appended word 100 to sentence 0
+[2025-11-15 21:13:18] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 21:13:18] [SS-Thread] File lmao.txt updated successfully
+[2025-11-15 21:13:18] [SS-Thread] Sentence lock released for lmao.txt sentence 0
+[2025-11-15 21:13:18] [SS-Thread] Client disconnected.
+[2025-11-15 21:17:43] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 21:17:43] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 21:17:43] [SS-Thread] Received command: WRITE lmao.txt 1
+[2025-11-15 21:17:43] [SS-Thread] WRITE request: lmao.txt sentence 1
+[2025-11-15 21:17:43] [AccessControl] Checking WRITE permission for file lmao.txt
+[2025-11-15 21:17:43] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 21:17:43] [AccessControl] Connected to NM
+[2025-11-15 21:17:43] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 lmao.txt WRITE
+[2025-11-15 21:17:43] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 21:17:43] [AccessControl] Access GRANTED
+[2025-11-15 21:17:43] [SS-Thread] Sentence lock acquired for lmao.txt sentence 1
+[2025-11-15 21:17:43] [SS-Thread] Loaded file lmao.txt, size=11, data=0x64872c85fcb0
+[2025-11-15 21:17:43] [SS-Thread] Backup created: storage_root/lmao.txt.bak
+[2025-11-15 21:20:00] [SS-Thread] Parse OK: word_index=0, content='lol', working_data='havish  lol'
+[2025-11-15 21:20:00] [SS-Thread] find_sentence returned 0, s_start=0, s_end=0
+[2025-11-15 21:20:00] [SS-Thread] Sentence 1 not found, exiting write mode
+[2025-11-15 21:20:00] [SS-Thread] Sentence lock released for lmao.txt sentence 1
+[2025-11-15 21:24:04] [SS-Thread] Client disconnected.
+[2025-11-15 21:24:19] 
+--- LOGGING STARTED: Sat Nov 15 21:24:19 2025 ---
+[2025-11-15 21:24:19] Lock systems initialized.
+[2025-11-15 21:24:19] Storage Server (SS) starting up...
+[2025-11-15 21:24:19] Successfully connected to NM!
+[2025-11-15 21:24:19] Sending registration: REGISTER_SS 9001 9001
+[2025-11-15 21:24:19] Received from NM: ACK:SS_REGISTRATION_OK
+
+[2025-11-15 21:24:19] Registration complete. Private command line is active.
+[2025-11-15 21:24:19] [Main Thread] Starting public client server on port 9001...
+[2025-11-15 21:24:19] 
+--- Storage Server is now ONLINE. Listening on port 9001 ---
+
+[2025-11-15 21:24:19] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-15 21:24:22] [NM-Thread] Name Server disconnected! Command thread shutting down.
+[2025-11-15 21:24:32] 
+--- LOGGING STARTED: Sat Nov 15 21:24:32 2025 ---
+[2025-11-15 21:24:32] Lock systems initialized.
+[2025-11-15 21:24:32] Storage Server (SS) starting up...
+[2025-11-15 21:24:32] Successfully connected to NM!
+[2025-11-15 21:24:32] Sending registration: REGISTER_SS 9001 9001
+[2025-11-15 21:24:32] Received from NM: ACK:SS_REGISTRATION_OK
+
+[2025-11-15 21:24:32] Registration complete. Private command line is active.
+[2025-11-15 21:24:32] [Main Thread] Starting public client server on port 9001...
+[2025-11-15 21:24:32] 
+--- Storage Server is now ONLINE. Listening on port 9001 ---
+
+[2025-11-15 21:24:32] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-15 21:25:03] [NM-Thread] Received trusted command: CREATE lmao.txt
+[2025-11-15 21:25:03] [NM-Thread] CREATE failed: File 'lmao.txt' already exists.
+[2025-11-15 21:25:12] [NM-Thread] Received trusted command: CREATE lmao1.txt
+[2025-11-15 21:25:12] [NM-Thread] Successfully created file: lmao1.txt
+[2025-11-15 21:25:25] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 21:25:25] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 21:25:25] [SS-Thread] Received command: WRITE lmao1.txt 100
+[2025-11-15 21:25:25] [SS-Thread] WRITE request: lmao1.txt sentence 100
+[2025-11-15 21:25:25] [AccessControl] Checking WRITE permission for file lmao1.txt
+[2025-11-15 21:25:25] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 21:25:25] [AccessControl] Connected to NM
+[2025-11-15 21:25:25] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 lmao1.txt WRITE
+[2025-11-15 21:25:25] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 21:25:25] [AccessControl] Access GRANTED
+[2025-11-15 21:25:25] [SS-Thread] Sentence 100 not found in lmao1.txt
+[2025-11-15 21:25:25] [SS-Thread] Client disconnected.
+[2025-11-15 21:33:21] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 21:33:21] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 21:33:21] [SS-Thread] Received command: WRITE lmao1.txt 1
+[2025-11-15 21:33:21] [SS-Thread] WRITE request: lmao1.txt sentence 1
+[2025-11-15 21:33:21] [AccessControl] Checking WRITE permission for file lmao1.txt
+[2025-11-15 21:33:21] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 21:33:21] [AccessControl] Connected to NM
+[2025-11-15 21:33:21] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 lmao1.txt WRITE
+[2025-11-15 21:33:21] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 21:33:21] [AccessControl] Access GRANTED
+[2025-11-15 21:33:21] [SS-Thread] Sentence 1 not found in lmao1.txt
+[2025-11-15 21:33:21] [SS-Thread] Client disconnected.
+[2025-11-15 21:33:31] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 21:33:31] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 21:33:31] [SS-Thread] Received command: WRITE lmao1.txt 0
+[2025-11-15 21:33:31] [SS-Thread] WRITE request: lmao1.txt sentence 0
+[2025-11-15 21:33:31] [AccessControl] Checking WRITE permission for file lmao1.txt
+[2025-11-15 21:33:31] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 21:33:31] [AccessControl] Connected to NM
+[2025-11-15 21:33:31] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 lmao1.txt WRITE
+[2025-11-15 21:33:31] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 21:33:31] [AccessControl] Access GRANTED
+[2025-11-15 21:33:31] [SS-Thread] Sentence validation passed for sentence 0
+[2025-11-15 21:33:31] [SS-Thread] Sentence lock acquired for lmao1.txt sentence 0
+[2025-11-15 21:33:31] [SS-Thread] Loaded file lmao1.txt, size=0, data=0x62e1a27c7cb0
+[2025-11-15 21:33:31] [SS-Thread] Backup created: storage_root/lmao1.txt.bak
+[2025-11-15 21:33:39] [SS-Thread] Parse OK: word_index=0, content='HELLO WORLD', working_data=''
+[2025-11-15 21:33:39] [SS-Thread] find_sentence returned 0, s_start=0, s_end=0
+[2025-11-15 21:33:39] [SS-Thread] Added word 0 to sentence 0
+[2025-11-15 21:33:41] [SS-Thread] Parse OK: word_index=0, content='H', working_data='HELLO WORLD'
+[2025-11-15 21:33:41] [SS-Thread] find_sentence returned 1, s_start=0, s_end=10
+[2025-11-15 21:33:41] [SS-Thread] Replaced word 0 in sentence 0
+[2025-11-15 21:33:47] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 21:33:47] [SS-Thread] File lmao1.txt updated successfully
+[2025-11-15 21:33:47] [SS-Thread] Sentence lock released for lmao1.txt sentence 0
+[2025-11-15 21:33:47] [SS-Thread] Client disconnected.
+[2025-11-15 21:34:07] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 21:34:07] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 21:34:07] [SS-Thread] Received command: STREAM lmao1.txt
+[2025-11-15 21:34:07] [AccessControl] Checking READ permission for file lmao1.txt
+[2025-11-15 21:34:07] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 21:34:07] [AccessControl] Connected to NM
+[2025-11-15 21:34:07] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 lmao1.txt READ
+[2025-11-15 21:34:07] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 21:34:07] [AccessControl] Access GRANTED
+[2025-11-15 21:34:07] [SS-Thread] Stream request for: lmao1.txt
+[2025-11-15 21:34:07] [SS-Thread] Client disconnected.
+[2025-11-15 22:02:37] 
+--- LOGGING STARTED: Sat Nov 15 22:02:37 2025 ---
+[2025-11-15 22:02:37] Lock systems initialized.
+[2025-11-15 22:02:37] Storage Server (SS) starting up...
+[2025-11-15 22:02:37] Successfully connected to NM!
+[2025-11-15 22:02:37] Sending registration: REGISTER_SS 9001 9001
+[2025-11-15 22:02:37] Received from NM: ACK:SS_REGISTRATION_OK
+
+[2025-11-15 22:02:37] Registration complete. Private command line is active.
+[2025-11-15 22:02:37] [Main Thread] Starting public client server on port 9001...
+[2025-11-15 22:02:37] 
+--- Storage Server is now ONLINE. Listening on port 9001 ---
+
+[2025-11-15 22:02:37] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-15 22:03:26] [NM-Thread] Received trusted command: CREATE chanu_test
+[2025-11-15 22:03:26] [NM-Thread] Successfully created file: chanu_test
+[2025-11-15 22:03:35] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:03:35] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:03:35] [SS-Thread] Received command: WRITE chanu_test 0
+[2025-11-15 22:03:35] [SS-Thread] WRITE request: chanu_test sentence 0
+[2025-11-15 22:03:35] [AccessControl] Checking WRITE permission for file chanu_test
+[2025-11-15 22:03:35] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:03:35] [AccessControl] Connected to NM
+[2025-11-15 22:03:35] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 chanu_test WRITE
+[2025-11-15 22:03:35] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:03:35] [AccessControl] Access GRANTED
+[2025-11-15 22:03:35] [SS-Thread] Sentence validation passed for sentence 0
+[2025-11-15 22:03:35] [SS-Thread] Sentence lock acquired for chanu_test sentence 0
+[2025-11-15 22:03:35] [SS-Thread] Loaded file chanu_test, size=0, data=0x5d7cdf6abcb0
+[2025-11-15 22:03:35] [SS-Thread] Backup created: storage_root/chanu_test.bak
+[2025-11-15 22:04:39] [SS-Thread] Parse OK: word_index=1, content='I am just a mouse.', working_data=''
+[2025-11-15 22:04:39] [SS-Thread] find_sentence returned 0, s_start=0, s_end=0
+[2025-11-15 22:04:39] [SS-Thread] Added word 1 to sentence 0
+[2025-11-15 22:05:45] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 22:05:45] [SS-Thread] File chanu_test updated successfully
+[2025-11-15 22:05:45] [SS-Thread] Sentence lock released for chanu_test sentence 0
+[2025-11-15 22:05:45] [SS-Thread] Client disconnected.
+[2025-11-15 22:05:51] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:05:51] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:05:51] [SS-Thread] Received command: READ chanu_test
+[2025-11-15 22:05:51] [SS-Thread] Read request for: chanu_test
+[2025-11-15 22:05:51] [AccessControl] Checking READ permission for file chanu_test
+[2025-11-15 22:05:51] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:05:51] [AccessControl] Connected to NM
+[2025-11-15 22:05:51] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 chanu_test READ
+[2025-11-15 22:05:51] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:05:51] [AccessControl] Access GRANTED
+[2025-11-15 22:05:51] [SS-Thread] Client disconnected.
+[2025-11-15 22:06:04] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:06:04] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:06:04] [SS-Thread] Received command: WRITE chanu_test 1
+[2025-11-15 22:06:04] [SS-Thread] WRITE request: chanu_test sentence 1
+[2025-11-15 22:06:04] [AccessControl] Checking WRITE permission for file chanu_test
+[2025-11-15 22:06:04] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:06:04] [AccessControl] Connected to NM
+[2025-11-15 22:06:04] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 chanu_test WRITE
+[2025-11-15 22:06:04] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:06:04] [AccessControl] Access GRANTED
+[2025-11-15 22:06:04] [SS-Thread] Sentence 1 not found in chanu_test
+[2025-11-15 22:06:04] [SS-Thread] Client disconnected.
+[2025-11-15 22:10:02] 
+--- LOGGING STARTED: Sat Nov 15 22:10:02 2025 ---
+[2025-11-15 22:10:02] Lock systems initialized.
+[2025-11-15 22:10:02] Storage Server (SS) starting up...
+[2025-11-15 22:10:02] Successfully connected to NM!
+[2025-11-15 22:10:02] Sending registration: REGISTER_SS 9001 9001
+[2025-11-15 22:10:02] Received from NM: ACK:SS_REGISTRATION_OK
+
+[2025-11-15 22:10:02] Registration complete. Private command line is active.
+[2025-11-15 22:10:02] [Main Thread] Starting public client server on port 9001...
+[2025-11-15 22:10:02] 
+--- Storage Server is now ONLINE. Listening on port 9001 ---
+
+[2025-11-15 22:10:02] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-15 22:10:30] [NM-Thread] Received trusted command: CREATE chanu_bro
+[2025-11-15 22:10:30] [NM-Thread] Successfully created file: chanu_bro
+[2025-11-15 22:10:59] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:10:59] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:10:59] [SS-Thread] Received command: WRITE chanu_bro 0
+[2025-11-15 22:10:59] [SS-Thread] WRITE request: chanu_bro sentence 0
+[2025-11-15 22:10:59] [AccessControl] Checking WRITE permission for file chanu_bro
+[2025-11-15 22:10:59] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:10:59] [AccessControl] Connected to NM
+[2025-11-15 22:10:59] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 chanu_bro WRITE
+[2025-11-15 22:10:59] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:10:59] [AccessControl] Access GRANTED
+[2025-11-15 22:10:59] [SS-Thread] Will create new sentence 0
+[2025-11-15 22:10:59] [SS-Thread] Sentence validation passed for sentence 0
+[2025-11-15 22:10:59] [SS-Thread] Sentence lock acquired for chanu_bro sentence 0
+[2025-11-15 22:10:59] [SS-Thread] Loaded file chanu_bro, size=0, data=0x5e8b1487dcb0
+[2025-11-15 22:10:59] [SS-Thread] Backup created: storage_root/chanu_bro.bak
+[2025-11-15 22:11:18] [SS-Thread] Parse OK: word_index=1, content='I am a mouse.', working_data=''
+[2025-11-15 22:11:18] [SS-Thread] find_sentence returned 0, s_start=0, s_end=0
+[2025-11-15 22:11:18] [SS-Thread] Creating new sentence 0
+[2025-11-15 22:11:18] [SS-Thread] Added word 1 to new sentence 0
+[2025-11-15 22:11:26] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 22:11:26] [SS-Thread] File chanu_bro updated successfully
+[2025-11-15 22:11:26] [SS-Thread] Sentence lock released for chanu_bro sentence 0
+[2025-11-15 22:11:26] [SS-Thread] Client disconnected.
+[2025-11-15 22:11:44] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:11:44] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:11:44] [SS-Thread] Received command: READ chanu_bro
+[2025-11-15 22:11:44] [SS-Thread] Read request for: chanu_bro
+[2025-11-15 22:11:44] [AccessControl] Checking READ permission for file chanu_bro
+[2025-11-15 22:11:44] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:11:44] [AccessControl] Connected to NM
+[2025-11-15 22:11:44] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 chanu_bro READ
+[2025-11-15 22:11:44] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:11:44] [AccessControl] Access GRANTED
+[2025-11-15 22:11:44] [SS-Thread] Client disconnected.
+[2025-11-15 22:12:00] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:12:00] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:12:00] [SS-Thread] Received command: WRITE chanu_bro 1
+[2025-11-15 22:12:00] [SS-Thread] WRITE request: chanu_bro sentence 1
+[2025-11-15 22:12:00] [AccessControl] Checking WRITE permission for file chanu_bro
+[2025-11-15 22:12:00] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:12:00] [AccessControl] Connected to NM
+[2025-11-15 22:12:00] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 chanu_bro WRITE
+[2025-11-15 22:12:00] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:12:00] [AccessControl] Access GRANTED
+[2025-11-15 22:12:00] [SS-Thread] Will create new sentence 1
+[2025-11-15 22:12:00] [SS-Thread] Sentence validation passed for sentence 1
+[2025-11-15 22:12:00] [SS-Thread] Sentence lock acquired for chanu_bro sentence 1
+[2025-11-15 22:12:00] [SS-Thread] Loaded file chanu_bro, size=13, data=0x5e8b1487dcb0
+[2025-11-15 22:12:00] [SS-Thread] Backup created: storage_root/chanu_bro.bak
+[2025-11-15 22:12:16] [SS-Thread] Parse OK: word_index=1, content='I dont like PNS', working_data='I am a mouse.'
+[2025-11-15 22:12:16] [SS-Thread] find_sentence returned 0, s_start=0, s_end=12
+[2025-11-15 22:12:16] [SS-Thread] Creating new sentence 1
+[2025-11-15 22:12:16] [SS-Thread] Added word 1 to new sentence 1
+[2025-11-15 22:12:36] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 22:12:36] [SS-Thread] File chanu_bro updated successfully
+[2025-11-15 22:12:36] [SS-Thread] Sentence lock released for chanu_bro sentence 1
+[2025-11-15 22:12:36] [SS-Thread] Client disconnected.
+[2025-11-15 22:12:46] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:12:46] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:12:46] [SS-Thread] Received command: READ chanu_bro
+[2025-11-15 22:12:46] [SS-Thread] Read request for: chanu_bro
+[2025-11-15 22:12:46] [AccessControl] Checking READ permission for file chanu_bro
+[2025-11-15 22:12:46] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:12:46] [AccessControl] Connected to NM
+[2025-11-15 22:12:46] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 chanu_bro READ
+[2025-11-15 22:12:46] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:12:46] [AccessControl] Access GRANTED
+[2025-11-15 22:12:46] [SS-Thread] Client disconnected.
+[2025-11-15 22:13:04] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:13:04] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:13:04] [SS-Thread] Received command: WRITE chanu_bro 2
+[2025-11-15 22:13:04] [SS-Thread] WRITE request: chanu_bro sentence 2
+[2025-11-15 22:13:04] [AccessControl] Checking WRITE permission for file chanu_bro
+[2025-11-15 22:13:04] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:13:04] [AccessControl] Connected to NM
+[2025-11-15 22:13:04] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 chanu_bro WRITE
+[2025-11-15 22:13:04] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:13:04] [AccessControl] Access GRANTED
+[2025-11-15 22:13:04] [SS-Thread] Will create new sentence 2
+[2025-11-15 22:13:04] [SS-Thread] Sentence validation passed for sentence 2
+[2025-11-15 22:13:04] [SS-Thread] Sentence lock acquired for chanu_bro sentence 2
+[2025-11-15 22:13:04] [SS-Thread] Loaded file chanu_bro, size=29, data=0x71d8400030f0
+[2025-11-15 22:13:04] [SS-Thread] Backup created: storage_root/chanu_bro.bak
+[2025-11-15 22:13:17] [SS-Thread] Parse OK: word_index=1, content='lol', working_data='I am a mouse. I dont like PNS'
+[2025-11-15 22:13:17] [SS-Thread] find_sentence returned 0, s_start=14, s_end=12
+[2025-11-15 22:13:17] [SS-Thread] Creating new sentence 2
+[2025-11-15 22:13:17] [SS-Thread] Added word 1 to new sentence 2
+[2025-11-15 22:17:50] [SS-Thread] Client disconnected during WRITE
+[2025-11-15 22:17:50] [SS-Thread] Sentence lock released for chanu_bro sentence 2
+[2025-11-15 22:17:50] [SS-Thread] Client disconnected.
+[2025-11-15 22:18:12] 
+--- LOGGING STARTED: Sat Nov 15 22:18:12 2025 ---
+[2025-11-15 22:18:12] Lock systems initialized.
+[2025-11-15 22:18:12] Storage Server (SS) starting up...
+[2025-11-15 22:18:12] Successfully connected to NM!
+[2025-11-15 22:18:12] Sending registration: REGISTER_SS 9001 9001
+[2025-11-15 22:18:12] Received from NM: ACK:SS_REGISTRATION_OK
+
+[2025-11-15 22:18:12] Registration complete. Private command line is active.
+[2025-11-15 22:18:12] [Main Thread] Starting public client server on port 9001...
+[2025-11-15 22:18:12] 
+--- Storage Server is now ONLINE. Listening on port 9001 ---
+
+[2025-11-15 22:18:12] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-15 22:20:50] [NM-Thread] Name Server disconnected! Command thread shutting down.
+[2025-11-15 22:20:57] 
+--- LOGGING STARTED: Sat Nov 15 22:20:57 2025 ---
+[2025-11-15 22:20:57] Lock systems initialized.
+[2025-11-15 22:20:57] Storage Server (SS) starting up...
+[2025-11-15 22:20:57] Successfully connected to NM!
+[2025-11-15 22:20:57] Sending registration: REGISTER_SS 9001 9001
+[2025-11-15 22:20:57] Received from NM: ACK:SS_REGISTRATION_OK
+
+[2025-11-15 22:20:57] Registration complete. Private command line is active.
+[2025-11-15 22:20:57] [Main Thread] Starting public client server on port 9001...
+[2025-11-15 22:20:57] 
+--- Storage Server is now ONLINE. Listening on port 9001 ---
+
+[2025-11-15 22:20:57] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-15 22:21:21] [NM-Thread] Received trusted command: CREATE c
+[2025-11-15 22:21:21] [NM-Thread] Successfully created file: c
+[2025-11-15 22:21:30] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:21:30] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:21:30] [SS-Thread] Received command: WRITE c 0
+[2025-11-15 22:21:30] [SS-Thread] WRITE request: c sentence 0
+[2025-11-15 22:21:30] [AccessControl] Checking WRITE permission for file c
+[2025-11-15 22:21:30] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:21:30] [AccessControl] Connected to NM
+[2025-11-15 22:21:30] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 c WRITE
+[2025-11-15 22:21:30] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:21:30] [AccessControl] Access GRANTED
+[2025-11-15 22:21:30] [SS-Thread] Will create new sentence 0
+[2025-11-15 22:21:30] [SS-Thread] Sentence validation passed for sentence 0
+[2025-11-15 22:21:30] [SS-Thread] Sentence lock acquired for c sentence 0
+[2025-11-15 22:21:30] [SS-Thread] Loaded file c, size=0, data=0x5dce4b8c2cb0
+[2025-11-15 22:21:30] [SS-Thread] Backup created: storage_root/c.bak
+[2025-11-15 22:21:44] [SS-Thread] Parse OK: word_index=1, content='hide.', working_data=''
+[2025-11-15 22:21:44] [SS-Thread] Split into 1 words
+[2025-11-15 22:21:44] [SS-Thread] find_sentence returned 0, s_start=0, s_end=0
+[2025-11-15 22:21:44] [SS-Thread] Creating new sentence 0
+[2025-11-15 22:21:44] [SS-Thread] Added 1 words to new sentence 0
+[2025-11-15 22:21:53] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 22:21:53] [SS-Thread] File c updated successfully
+[2025-11-15 22:21:53] [SS-Thread] Sentence lock released for c sentence 0
+[2025-11-15 22:21:53] [SS-Thread] Client disconnected.
+[2025-11-15 22:21:57] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:21:57] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:21:57] [SS-Thread] Received command: READ c
+[2025-11-15 22:21:57] [SS-Thread] Read request for: c
+[2025-11-15 22:21:57] [AccessControl] Checking READ permission for file c
+[2025-11-15 22:21:57] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:21:57] [AccessControl] Connected to NM
+[2025-11-15 22:21:57] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 c READ
+[2025-11-15 22:21:57] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:21:57] [AccessControl] Access GRANTED
+[2025-11-15 22:21:57] [SS-Thread] Client disconnected.
+[2025-11-15 22:22:10] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:22:10] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:22:10] [SS-Thread] Received command: WRITE c 1
+[2025-11-15 22:22:10] [SS-Thread] WRITE request: c sentence 1
+[2025-11-15 22:22:10] [AccessControl] Checking WRITE permission for file c
+[2025-11-15 22:22:10] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:22:10] [AccessControl] Connected to NM
+[2025-11-15 22:22:10] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 c WRITE
+[2025-11-15 22:22:10] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:22:10] [AccessControl] Access GRANTED
+[2025-11-15 22:22:10] [SS-Thread] Will create new sentence 1
+[2025-11-15 22:22:10] [SS-Thread] Sentence validation passed for sentence 1
+[2025-11-15 22:22:10] [SS-Thread] Sentence lock acquired for c sentence 1
+[2025-11-15 22:22:10] [SS-Thread] Loaded file c, size=5, data=0x5dce4b8c2cb0
+[2025-11-15 22:22:10] [SS-Thread] Backup created: storage_root/c.bak
+[2025-11-15 22:22:20] [SS-Thread] Parse OK: word_index=0, content='lol', working_data='hide.'
+[2025-11-15 22:22:20] [SS-Thread] Split into 1 words
+[2025-11-15 22:22:20] [SS-Thread] find_sentence returned 0, s_start=0, s_end=4
+[2025-11-15 22:22:20] [SS-Thread] Creating new sentence 1
+[2025-11-15 22:22:20] [SS-Thread] Added 1 words to new sentence 1
+[2025-11-15 22:22:24] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 22:22:24] [SS-Thread] File c updated successfully
+[2025-11-15 22:22:24] [SS-Thread] Sentence lock released for c sentence 1
+[2025-11-15 22:22:24] [SS-Thread] Client disconnected.
+[2025-11-15 22:22:29] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:22:29] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:22:29] [SS-Thread] Received command: WRITE c 2
+[2025-11-15 22:22:29] [SS-Thread] WRITE request: c sentence 2
+[2025-11-15 22:22:29] [AccessControl] Checking WRITE permission for file c
+[2025-11-15 22:22:29] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:22:29] [AccessControl] Connected to NM
+[2025-11-15 22:22:29] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 c WRITE
+[2025-11-15 22:22:29] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:22:29] [AccessControl] Access GRANTED
+[2025-11-15 22:22:29] [SS-Thread] Will create new sentence 2
+[2025-11-15 22:22:29] [SS-Thread] Sentence validation passed for sentence 2
+[2025-11-15 22:22:29] [SS-Thread] Sentence lock acquired for c sentence 2
+[2025-11-15 22:22:29] [SS-Thread] Loaded file c, size=9, data=0x5dce4b8c2cb0
+[2025-11-15 22:22:29] [SS-Thread] Backup created: storage_root/c.bak
+[2025-11-15 22:29:00] [SS-Thread] Client disconnected during WRITE
+[2025-11-15 22:29:00] [SS-Thread] Sentence lock released for c sentence 2
+[2025-11-15 22:29:00] [SS-Thread] Client disconnected.
+[2025-11-15 22:29:19] 
+--- LOGGING STARTED: Sat Nov 15 22:29:19 2025 ---
+[2025-11-15 22:29:19] Lock systems initialized.
+[2025-11-15 22:29:19] Storage Server (SS) starting up...
+[2025-11-15 22:29:19] Successfully connected to NM!
+[2025-11-15 22:29:19] Sending registration: REGISTER_SS 9001 9001
+[2025-11-15 22:29:19] Received from NM: ACK:SS_REGISTRATION_OK
+
+[2025-11-15 22:29:19] Registration complete. Private command line is active.
+[2025-11-15 22:29:19] [Main Thread] Starting public client server on port 9001...
+[2025-11-15 22:29:19] 
+--- Storage Server is now ONLINE. Listening on port 9001 ---
+
+[2025-11-15 22:29:19] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-15 22:29:38] [NM-Thread] Received trusted command: CREATE h
+[2025-11-15 22:29:38] [NM-Thread] Successfully created file: h
+[2025-11-15 22:30:08] [NM-Thread] Name Server disconnected! Command thread shutting down.
+[2025-11-15 22:30:28] 
+--- LOGGING STARTED: Sat Nov 15 22:30:28 2025 ---
+[2025-11-15 22:30:28] Lock systems initialized.
+[2025-11-15 22:30:28] Storage Server (SS) starting up...
+[2025-11-15 22:30:28] Successfully connected to NM!
+[2025-11-15 22:30:28] Sending registration: REGISTER_SS 9001 9001
+[2025-11-15 22:30:28] Received from NM: ACK:SS_REGISTRATION_OK
+
+[2025-11-15 22:30:28] Registration complete. Private command line is active.
+[2025-11-15 22:30:28] [Main Thread] Starting public client server on port 9001...
+[2025-11-15 22:30:28] 
+--- Storage Server is now ONLINE. Listening on port 9001 ---
+
+[2025-11-15 22:30:28] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-15 22:30:40] [NM-Thread] Received trusted command: CREATE l
+[2025-11-15 22:30:40] [NM-Thread] Successfully created file: l
+[2025-11-15 22:30:56] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:30:56] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:30:56] [SS-Thread] Received command: WRITE l 0
+[2025-11-15 22:30:56] [SS-Thread] WRITE request: l sentence 0
+[2025-11-15 22:30:56] [AccessControl] Checking WRITE permission for file l
+[2025-11-15 22:30:56] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:30:56] [AccessControl] Connected to NM
+[2025-11-15 22:30:56] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 l WRITE
+[2025-11-15 22:30:56] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:30:56] [AccessControl] Access GRANTED
+[2025-11-15 22:30:56] [SS-Thread] Will create new sentence 0
+[2025-11-15 22:30:56] [SS-Thread] Sentence validation passed for sentence 0
+[2025-11-15 22:30:56] [SS-Thread] Sentence lock acquired for l sentence 0
+[2025-11-15 22:30:56] [SS-Thread] Loaded file l, size=0, data=0x59fe74d56cb0
+[2025-11-15 22:30:56] [SS-Thread] Backup created: storage_root/l.bak
+[2025-11-15 22:31:25] [SS-Thread] Parse OK: word_index=0, content='lol,', working_data=''
+[2025-11-15 22:31:25] [SS-Thread] Split into 1 words
+[2025-11-15 22:31:25] [SS-Thread] find_sentence returned 0, s_start=0, s_end=0
+[2025-11-15 22:31:25] [SS-Thread] Creating new sentence 0
+[2025-11-15 22:31:25] [SS-Thread] Added 1 words to new sentence 0
+[2025-11-15 22:31:35] [SS-Thread] Parse OK: word_index=1, content='lol.', working_data='lol,'
+[2025-11-15 22:31:35] [SS-Thread] Split into 1 words
+[2025-11-15 22:31:35] [SS-Thread] find_sentence returned 1, s_start=0, s_end=3
+[2025-11-15 22:31:35] [SS-Thread] Inserted 1 words at index 1 in sentence 0
+[2025-11-15 22:31:38] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 22:31:38] [SS-Thread] File l updated successfully
+[2025-11-15 22:31:38] [SS-Thread] Sentence lock released for l sentence 0
+[2025-11-15 22:31:38] [SS-Thread] Client disconnected.
+[2025-11-15 22:31:44] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:31:44] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:31:44] [SS-Thread] Received command: READ l
+[2025-11-15 22:31:44] [SS-Thread] Read request for: l
+[2025-11-15 22:31:44] [AccessControl] Checking READ permission for file l
+[2025-11-15 22:31:44] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:31:44] [AccessControl] Connected to NM
+[2025-11-15 22:31:44] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 l READ
+[2025-11-15 22:31:44] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:31:44] [AccessControl] Access GRANTED
+[2025-11-15 22:31:44] [SS-Thread] Client disconnected.
+[2025-11-15 22:31:55] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:31:55] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:31:55] [SS-Thread] Received command: WRITE l 1
+[2025-11-15 22:31:55] [SS-Thread] WRITE request: l sentence 1
+[2025-11-15 22:31:55] [AccessControl] Checking WRITE permission for file l
+[2025-11-15 22:31:55] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:31:55] [AccessControl] Connected to NM
+[2025-11-15 22:31:55] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 l WRITE
+[2025-11-15 22:31:55] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:31:55] [AccessControl] Access GRANTED
+[2025-11-15 22:31:55] [SS-Thread] Will create new sentence 1
+[2025-11-15 22:31:55] [SS-Thread] Sentence validation passed for sentence 1
+[2025-11-15 22:31:55] [SS-Thread] Sentence lock acquired for l sentence 1
+[2025-11-15 22:31:55] [SS-Thread] Loaded file l, size=9, data=0x59fe74d56cb0
+[2025-11-15 22:31:55] [SS-Thread] Backup created: storage_root/l.bak
+[2025-11-15 22:32:17] [SS-Thread] Parse OK: word_index=0, content='this', working_data='lol, lol.'
+[2025-11-15 22:32:17] [SS-Thread] Split into 1 words
+[2025-11-15 22:32:17] [SS-Thread] find_sentence returned 0, s_start=0, s_end=8
+[2025-11-15 22:32:17] [SS-Thread] Creating new sentence 1
+[2025-11-15 22:32:17] [SS-Thread] Added 1 words to new sentence 1
+[2025-11-15 22:32:21] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 22:32:21] [SS-Thread] File l updated successfully
+[2025-11-15 22:32:21] [SS-Thread] Sentence lock released for l sentence 1
+[2025-11-15 22:32:21] [SS-Thread] Client disconnected.
+[2025-11-15 22:32:30] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:32:30] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:32:30] [SS-Thread] Received command: READ l
+[2025-11-15 22:32:30] [SS-Thread] Read request for: l
+[2025-11-15 22:32:30] [AccessControl] Checking READ permission for file l
+[2025-11-15 22:32:30] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:32:30] [AccessControl] Connected to NM
+[2025-11-15 22:32:30] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 l READ
+[2025-11-15 22:32:30] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:32:30] [AccessControl] Access GRANTED
+[2025-11-15 22:32:30] [SS-Thread] Client disconnected.
+[2025-11-15 22:32:41] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:32:41] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:32:41] [SS-Thread] Received command: WRITE l 2
+[2025-11-15 22:32:41] [SS-Thread] WRITE request: l sentence 2
+[2025-11-15 22:32:41] [AccessControl] Checking WRITE permission for file l
+[2025-11-15 22:32:41] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:32:41] [AccessControl] Connected to NM
+[2025-11-15 22:32:41] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 l WRITE
+[2025-11-15 22:32:41] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:32:41] [AccessControl] Access GRANTED
+[2025-11-15 22:32:41] [SS-Thread] Cannot create sentence 2 - sentence 1 doesn't end with period
+[2025-11-15 22:32:41] [SS-Thread] Client disconnected.
+[2025-11-15 22:33:11] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:33:11] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:33:11] [SS-Thread] Received command: WRITE l 1
+[2025-11-15 22:33:11] [SS-Thread] WRITE request: l sentence 1
+[2025-11-15 22:33:11] [AccessControl] Checking WRITE permission for file l
+[2025-11-15 22:33:11] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:33:11] [AccessControl] Connected to NM
+[2025-11-15 22:33:11] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 l WRITE
+[2025-11-15 22:33:11] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:33:11] [AccessControl] Access GRANTED
+[2025-11-15 22:33:11] [SS-Thread] Sentence validation passed for sentence 1
+[2025-11-15 22:33:11] [SS-Thread] Sentence lock acquired for l sentence 1
+[2025-11-15 22:33:11] [SS-Thread] Loaded file l, size=14, data=0x59fe74d56cb0
+[2025-11-15 22:33:11] [SS-Thread] Backup created: storage_root/l.bak
+[2025-11-15 22:33:17] [SS-Thread] Parse OK: word_index=3, content='T-T', working_data='lol, lol. this'
+[2025-11-15 22:33:17] [SS-Thread] Split into 1 words
+[2025-11-15 22:33:17] [SS-Thread] find_sentence returned 1, s_start=10, s_end=13
+[2025-11-15 22:33:17] [SS-Thread] Invalid word_index 3 (sentence has 1 words)
+[2025-11-15 22:34:42] [SS-Thread] Parse OK: word_index=2, content='T-T', working_data='lol, lol. this'
+[2025-11-15 22:34:42] [SS-Thread] Split into 1 words
+[2025-11-15 22:34:42] [SS-Thread] find_sentence returned 1, s_start=10, s_end=13
+[2025-11-15 22:34:42] [SS-Thread] Invalid word_index 2 (sentence has 1 words)
+[2025-11-15 22:36:03] [SS-Thread] Client disconnected during WRITE
+[2025-11-15 22:36:03] [SS-Thread] Sentence lock released for l sentence 1
+[2025-11-15 22:36:03] [SS-Thread] Client disconnected.
+[2025-11-15 22:36:07] [NM-Thread] Name Server disconnected! Command thread shutting down.
+[2025-11-15 22:36:32] 
+--- LOGGING STARTED: Sat Nov 15 22:36:32 2025 ---
+[2025-11-15 22:36:32] Lock systems initialized.
+[2025-11-15 22:36:32] Storage Server (SS) starting up...
+[2025-11-15 22:36:32] Successfully connected to NM!
+[2025-11-15 22:36:32] Sending registration: REGISTER_SS 9001 9001
+[2025-11-15 22:36:32] Received from NM: ACK:SS_REGISTRATION_OK
+
+[2025-11-15 22:36:32] Registration complete. Private command line is active.
+[2025-11-15 22:36:32] [Main Thread] Starting public client server on port 9001...
+[2025-11-15 22:36:32] 
+--- Storage Server is now ONLINE. Listening on port 9001 ---
+
+[2025-11-15 22:36:32] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-15 22:36:45] [NM-Thread] Received trusted command: CREATE k
+[2025-11-15 22:36:45] [NM-Thread] Successfully created file: k
+[2025-11-15 22:37:13] [NM-Thread] Name Server disconnected! Command thread shutting down.
+[2025-11-15 22:37:19] 
+--- LOGGING STARTED: Sat Nov 15 22:37:19 2025 ---
+[2025-11-15 22:37:19] Lock systems initialized.
+[2025-11-15 22:37:19] Storage Server (SS) starting up...
+[2025-11-15 22:37:19] Successfully connected to NM!
+[2025-11-15 22:37:19] Sending registration: REGISTER_SS 9001 9001
+[2025-11-15 22:37:19] Received from NM: ACK:SS_REGISTRATION_OK
+
+[2025-11-15 22:37:19] Registration complete. Private command line is active.
+[2025-11-15 22:37:19] [Main Thread] Starting public client server on port 9001...
+[2025-11-15 22:37:19] 
+--- Storage Server is now ONLINE. Listening on port 9001 ---
+
+[2025-11-15 22:37:19] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-15 22:37:45] [NM-Thread] Received trusted command: CREATE c
+[2025-11-15 22:37:45] [NM-Thread] Successfully created file: c
+[2025-11-15 22:37:55] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:37:55] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:37:55] [SS-Thread] Received command: WRITE c 0
+[2025-11-15 22:37:55] [SS-Thread] WRITE request: c sentence 0
+[2025-11-15 22:37:55] [AccessControl] Checking WRITE permission for file c
+[2025-11-15 22:37:55] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:37:55] [AccessControl] Connected to NM
+[2025-11-15 22:37:55] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 c WRITE
+[2025-11-15 22:37:55] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:37:55] [AccessControl] Access GRANTED
+[2025-11-15 22:37:55] [SS-Thread] Will create new sentence 0
+[2025-11-15 22:37:55] [SS-Thread] Sentence validation passed for sentence 0
+[2025-11-15 22:37:55] [SS-Thread] Sentence lock acquired for c sentence 0
+[2025-11-15 22:37:55] [SS-Thread] Loaded file c, size=0, data=0x617e2df55cb0
+[2025-11-15 22:37:55] [SS-Thread] Backup created: storage_root/c.bak
+[2025-11-15 22:38:00] [SS-Thread] Parse OK: word_index=0, content='lol.', working_data=''
+[2025-11-15 22:38:00] [SS-Thread] Split into 1 words
+[2025-11-15 22:38:00] [SS-Thread] find_sentence returned 0, s_start=0, s_end=0
+[2025-11-15 22:38:00] [SS-Thread] Creating new sentence 0
+[2025-11-15 22:38:00] [SS-Thread] Added 1 words to new sentence 0
+[2025-11-15 22:38:38] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 22:38:38] [SS-Thread] File c updated successfully
+[2025-11-15 22:38:38] [SS-Thread] Sentence lock released for c sentence 0
+[2025-11-15 22:38:38] [SS-Thread] Client disconnected.
+[2025-11-15 22:38:51] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:38:51] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:38:51] [SS-Thread] Received command: WRITE c 1
+[2025-11-15 22:38:51] [SS-Thread] WRITE request: c sentence 1
+[2025-11-15 22:38:51] [AccessControl] Checking WRITE permission for file c
+[2025-11-15 22:38:51] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:38:51] [AccessControl] Connected to NM
+[2025-11-15 22:38:51] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 c WRITE
+[2025-11-15 22:38:51] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:38:51] [AccessControl] Access GRANTED
+[2025-11-15 22:38:51] [SS-Thread] Will create new sentence 1
+[2025-11-15 22:38:51] [SS-Thread] Sentence validation passed for sentence 1
+[2025-11-15 22:38:51] [SS-Thread] Sentence lock acquired for c sentence 1
+[2025-11-15 22:38:51] [SS-Thread] Loaded file c, size=4, data=0x617e2df55cb0
+[2025-11-15 22:38:51] [SS-Thread] Backup created: storage_root/c.bak
+[2025-11-15 22:38:58] [SS-Thread] Parse OK: word_index=0, content='lol', working_data='lol.'
+[2025-11-15 22:38:58] [SS-Thread] Split into 1 words
+[2025-11-15 22:38:58] [SS-Thread] find_sentence returned 0, s_start=0, s_end=3
+[2025-11-15 22:38:58] [SS-Thread] Creating new sentence 1
+[2025-11-15 22:38:58] [SS-Thread] Added 1 words to new sentence 1
+[2025-11-15 22:39:01] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 22:39:01] [SS-Thread] File c updated successfully
+[2025-11-15 22:39:01] [SS-Thread] Sentence lock released for c sentence 1
+[2025-11-15 22:39:01] [SS-Thread] Client disconnected.
+[2025-11-15 22:39:18] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:39:18] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:39:18] [SS-Thread] Received command: WRITE c 1
+[2025-11-15 22:39:18] [SS-Thread] WRITE request: c sentence 1
+[2025-11-15 22:39:18] [AccessControl] Checking WRITE permission for file c
+[2025-11-15 22:39:18] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:39:18] [AccessControl] Connected to NM
+[2025-11-15 22:39:18] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 c WRITE
+[2025-11-15 22:39:18] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:39:18] [AccessControl] Access GRANTED
+[2025-11-15 22:39:18] [SS-Thread] Sentence validation passed for sentence 1
+[2025-11-15 22:39:18] [SS-Thread] Sentence lock acquired for c sentence 1
+[2025-11-15 22:39:18] [SS-Thread] Loaded file c, size=8, data=0x617e2df55cb0
+[2025-11-15 22:39:18] [SS-Thread] Backup created: storage_root/c.bak
+[2025-11-15 22:39:26] [SS-Thread] Parse OK: word_index=1, content='lol', working_data='lol. lol'
+[2025-11-15 22:39:26] [SS-Thread] Split into 1 words
+[2025-11-15 22:39:26] [SS-Thread] find_sentence returned 1, s_start=5, s_end=7
+[2025-11-15 22:39:26] [SS-Thread] Inserted 1 words at index 1 in sentence 1
+[2025-11-15 22:39:36] [SS-Thread] Parse OK: word_index=3, content='LOL', working_data='lol. lol lol'
+[2025-11-15 22:39:36] [SS-Thread] Split into 1 words
+[2025-11-15 22:39:36] [SS-Thread] find_sentence returned 1, s_start=5, s_end=11
+[2025-11-15 22:39:36] [SS-Thread] Invalid word_index 3 (sentence has 2 words)
+[2025-11-15 22:39:40] [SS-Thread] Parse OK: word_index=2, content='lol', working_data='lol. lol lol'
+[2025-11-15 22:39:40] [SS-Thread] Split into 1 words
+[2025-11-15 22:39:40] [SS-Thread] find_sentence returned 1, s_start=5, s_end=11
+[2025-11-15 22:39:40] [SS-Thread] Inserted 1 words at index 2 in sentence 1
+[2025-11-15 22:40:21] [SS-Thread] Parse OK: word_index=3, content='.', working_data='lol. lol lol lol'
+[2025-11-15 22:40:21] [SS-Thread] Split into 1 words
+[2025-11-15 22:40:21] [SS-Thread] find_sentence returned 1, s_start=5, s_end=15
+[2025-11-15 22:40:21] [SS-Thread] Inserted 1 words at index 3 in sentence 1
+[2025-11-15 22:40:26] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 22:40:26] [SS-Thread] File c updated successfully
+[2025-11-15 22:40:26] [SS-Thread] Sentence lock released for c sentence 1
+[2025-11-15 22:40:26] [SS-Thread] Client disconnected.
+[2025-11-15 22:40:47] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:40:47] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:40:47] [SS-Thread] Received command: WRITE c 3
+[2025-11-15 22:40:47] [SS-Thread] WRITE request: c sentence 3
+[2025-11-15 22:40:47] [AccessControl] Checking WRITE permission for file c
+[2025-11-15 22:40:47] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:40:47] [AccessControl] Connected to NM
+[2025-11-15 22:40:47] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 c WRITE
+[2025-11-15 22:40:47] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:40:47] [AccessControl] Access GRANTED
+[2025-11-15 22:40:47] [SS-Thread] Sentence 3 not found in c (file has 2 sentences, can only create sentence 2)
+[2025-11-15 22:40:47] [SS-Thread] Client disconnected.
+[2025-11-15 22:40:54] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:40:54] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:40:54] [SS-Thread] Received command: WRITE c 1
+[2025-11-15 22:40:54] [SS-Thread] WRITE request: c sentence 1
+[2025-11-15 22:40:54] [AccessControl] Checking WRITE permission for file c
+[2025-11-15 22:40:54] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:40:54] [AccessControl] Connected to NM
+[2025-11-15 22:40:54] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 c WRITE
+[2025-11-15 22:40:54] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:40:54] [AccessControl] Access GRANTED
+[2025-11-15 22:40:54] [SS-Thread] Sentence validation passed for sentence 1
+[2025-11-15 22:40:54] [SS-Thread] Sentence lock acquired for c sentence 1
+[2025-11-15 22:40:54] [SS-Thread] Loaded file c, size=18, data=0x617e2df55cb0
+[2025-11-15 22:40:54] [SS-Thread] Backup created: storage_root/c.bak
+[2025-11-15 22:40:58] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 22:40:58] [SS-Thread] File c updated successfully
+[2025-11-15 22:40:58] [SS-Thread] Sentence lock released for c sentence 1
+[2025-11-15 22:40:58] [SS-Thread] Client disconnected.
+[2025-11-15 22:41:01] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:41:01] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:41:01] [SS-Thread] Received command: WRITE c 2
+[2025-11-15 22:41:01] [SS-Thread] WRITE request: c sentence 2
+[2025-11-15 22:41:01] [AccessControl] Checking WRITE permission for file c
+[2025-11-15 22:41:01] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:41:01] [AccessControl] Connected to NM
+[2025-11-15 22:41:01] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 c WRITE
+[2025-11-15 22:41:01] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:41:01] [AccessControl] Access GRANTED
+[2025-11-15 22:41:01] [SS-Thread] Will create new sentence 2
+[2025-11-15 22:41:01] [SS-Thread] Sentence validation passed for sentence 2
+[2025-11-15 22:41:01] [SS-Thread] Sentence lock acquired for c sentence 2
+[2025-11-15 22:41:01] [SS-Thread] Loaded file c, size=18, data=0x617e2df55cb0
+[2025-11-15 22:41:01] [SS-Thread] Backup created: storage_root/c.bak
+[2025-11-15 22:41:09] [SS-Thread] Parse OK: word_index=0, content='this', working_data='lol. lol lol lol .'
+[2025-11-15 22:41:09] [SS-Thread] Split into 1 words
+[2025-11-15 22:41:09] [SS-Thread] find_sentence returned 0, s_start=5, s_end=17
+[2025-11-15 22:41:09] [SS-Thread] Creating new sentence 2
+[2025-11-15 22:41:09] [SS-Thread] Added 1 words to new sentence 2
+[2025-11-15 22:41:20] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 22:41:20] [SS-Thread] File c updated successfully
+[2025-11-15 22:41:20] [SS-Thread] Sentence lock released for c sentence 2
+[2025-11-15 22:41:20] [SS-Thread] Client disconnected.
+[2025-11-15 22:41:40] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:41:40] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:41:40] [SS-Thread] Received command: WRITE c 2
+[2025-11-15 22:41:40] [SS-Thread] WRITE request: c sentence 2
+[2025-11-15 22:41:40] [AccessControl] Checking WRITE permission for file c
+[2025-11-15 22:41:40] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:41:40] [AccessControl] Connected to NM
+[2025-11-15 22:41:40] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 c WRITE
+[2025-11-15 22:41:40] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:41:40] [AccessControl] Access GRANTED
+[2025-11-15 22:41:40] [SS-Thread] Sentence validation passed for sentence 2
+[2025-11-15 22:41:40] [SS-Thread] Sentence lock acquired for c sentence 2
+[2025-11-15 22:41:40] [SS-Thread] Loaded file c, size=23, data=0x617e2df55cb0
+[2025-11-15 22:41:40] [SS-Thread] Backup created: storage_root/c.bak
+[2025-11-15 22:41:47] [SS-Thread] Parse OK: word_index=1, content='lol', working_data='lol. lol lol lol . this'
+[2025-11-15 22:41:47] [SS-Thread] Split into 1 words
+[2025-11-15 22:41:47] [SS-Thread] find_sentence returned 1, s_start=19, s_end=22
+[2025-11-15 22:41:47] [SS-Thread] Inserted 1 words at index 1 in sentence 2
+[2025-11-15 22:41:55] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 22:41:55] [SS-Thread] File c updated successfully
+[2025-11-15 22:41:55] [SS-Thread] Sentence lock released for c sentence 2
+[2025-11-15 22:41:55] [SS-Thread] Client disconnected.
+[2025-11-15 22:42:06] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:42:06] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:42:06] [SS-Thread] Received command: WRITE c 3
+[2025-11-15 22:42:06] [SS-Thread] WRITE request: c sentence 3
+[2025-11-15 22:42:06] [AccessControl] Checking WRITE permission for file c
+[2025-11-15 22:42:06] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:42:06] [AccessControl] Connected to NM
+[2025-11-15 22:42:06] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 c WRITE
+[2025-11-15 22:42:06] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:42:06] [AccessControl] Access GRANTED
+[2025-11-15 22:42:06] [SS-Thread] Cannot create sentence 3 - sentence 2 doesn't end with period
+[2025-11-15 22:42:06] [SS-Thread] Client disconnected.
+[2025-11-15 22:42:29] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:42:29] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:42:29] [SS-Thread] Received command: WRITE c 2
+[2025-11-15 22:42:29] [SS-Thread] WRITE request: c sentence 2
+[2025-11-15 22:42:29] [AccessControl] Checking WRITE permission for file c
+[2025-11-15 22:42:29] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:42:29] [AccessControl] Connected to NM
+[2025-11-15 22:42:29] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 c WRITE
+[2025-11-15 22:42:29] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:42:29] [AccessControl] Access GRANTED
+[2025-11-15 22:42:29] [SS-Thread] Sentence validation passed for sentence 2
+[2025-11-15 22:42:29] [SS-Thread] Sentence lock acquired for c sentence 2
+[2025-11-15 22:42:29] [SS-Thread] Loaded file c, size=27, data=0x7d015c000fb0
+[2025-11-15 22:42:29] [SS-Thread] Backup created: storage_root/c.bak
+[2025-11-15 22:42:49] [SS-Thread] Parse OK: word_index=2, content='T-T', working_data='lol. lol lol lol . this lol'
+[2025-11-15 22:42:49] [SS-Thread] Split into 1 words
+[2025-11-15 22:42:49] [SS-Thread] find_sentence returned 1, s_start=19, s_end=26
+[2025-11-15 22:42:49] [SS-Thread] Inserted 1 words at index 2 in sentence 2
+[2025-11-15 22:43:00] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 22:43:00] [SS-Thread] File c updated successfully
+[2025-11-15 22:43:00] [SS-Thread] Sentence lock released for c sentence 2
+[2025-11-15 22:43:00] [SS-Thread] Client disconnected.
+[2025-11-15 22:43:04] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:43:04] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:43:04] [SS-Thread] Received command: READ c
+[2025-11-15 22:43:04] [SS-Thread] Read request for: c
+[2025-11-15 22:43:04] [AccessControl] Checking READ permission for file c
+[2025-11-15 22:43:04] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:43:04] [AccessControl] Connected to NM
+[2025-11-15 22:43:04] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 c READ
+[2025-11-15 22:43:04] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:43:04] [AccessControl] Access GRANTED
+[2025-11-15 22:43:04] [SS-Thread] Client disconnected.
+[2025-11-15 22:43:28] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:43:28] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:43:28] [SS-Thread] Received command: WRITE c 0
+[2025-11-15 22:43:28] [SS-Thread] WRITE request: c sentence 0
+[2025-11-15 22:43:28] [AccessControl] Checking WRITE permission for file c
+[2025-11-15 22:43:28] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:43:28] [AccessControl] Connected to NM
+[2025-11-15 22:43:28] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 c WRITE
+[2025-11-15 22:43:28] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:43:28] [AccessControl] Access GRANTED
+[2025-11-15 22:43:28] [SS-Thread] Sentence validation passed for sentence 0
+[2025-11-15 22:43:28] [SS-Thread] Sentence lock acquired for c sentence 0
+[2025-11-15 22:43:28] [SS-Thread] Loaded file c, size=31, data=0x7d015c000fb0
+[2025-11-15 22:43:28] [SS-Thread] Backup created: storage_root/c.bak
+[2025-11-15 22:43:36] [SS-Thread] Parse OK: word_index=0, content='this lol mod', working_data='lol. lol lol lol . this lol T-T'
+[2025-11-15 22:43:36] [SS-Thread] Split into 3 words
+[2025-11-15 22:43:36] [SS-Thread] find_sentence returned 1, s_start=0, s_end=3
+[2025-11-15 22:43:36] [SS-Thread] Inserted 3 words at index 0 in sentence 0
+[2025-11-15 22:43:42] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 22:43:42] [SS-Thread] File c updated successfully
+[2025-11-15 22:43:42] [SS-Thread] Sentence lock released for c sentence 0
+[2025-11-15 22:43:42] [SS-Thread] Client disconnected.
+[2025-11-15 22:44:15] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:44:15] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:44:15] [SS-Thread] Received command: READ c
+[2025-11-15 22:44:15] [SS-Thread] Read request for: c
+[2025-11-15 22:44:15] [AccessControl] Checking READ permission for file c
+[2025-11-15 22:44:15] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:44:15] [AccessControl] Connected to NM
+[2025-11-15 22:44:15] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 c READ
+[2025-11-15 22:44:15] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:44:15] [AccessControl] Access GRANTED
+[2025-11-15 22:44:15] [SS-Thread] Client disconnected.
+[2025-11-15 22:44:38] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:44:38] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:44:38] [SS-Thread] Received command: WRITE c 1
+[2025-11-15 22:44:38] [SS-Thread] WRITE request: c sentence 1
+[2025-11-15 22:44:38] [AccessControl] Checking WRITE permission for file c
+[2025-11-15 22:44:38] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:44:38] [AccessControl] Connected to NM
+[2025-11-15 22:44:38] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 c WRITE
+[2025-11-15 22:44:38] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:44:38] [AccessControl] Access GRANTED
+[2025-11-15 22:44:38] [SS-Thread] Sentence validation passed for sentence 1
+[2025-11-15 22:44:38] [SS-Thread] Sentence lock acquired for c sentence 1
+[2025-11-15 22:44:38] [SS-Thread] Loaded file c, size=44, data=0x7d015c000fb0
+[2025-11-15 22:44:38] [SS-Thread] Backup created: storage_root/c.bak
+[2025-11-15 22:44:49] [SS-Thread] Parse OK: word_index=0, content='AAD.', working_data='this lol mod lol. lol lol lol . this lol T-T'
+[2025-11-15 22:44:49] [SS-Thread] Split into 1 words
+[2025-11-15 22:44:49] [SS-Thread] find_sentence returned 1, s_start=18, s_end=30
+[2025-11-15 22:44:49] [SS-Thread] Inserted 1 words at index 0 in sentence 1
+[2025-11-15 22:45:03] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 22:45:03] [SS-Thread] File c updated successfully
+[2025-11-15 22:45:03] [SS-Thread] Sentence lock released for c sentence 1
+[2025-11-15 22:45:03] [SS-Thread] Client disconnected.
+[2025-11-15 22:45:10] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:45:10] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:45:10] [SS-Thread] Received command: READ c
+[2025-11-15 22:45:10] [SS-Thread] Read request for: c
+[2025-11-15 22:45:10] [AccessControl] Checking READ permission for file c
+[2025-11-15 22:45:10] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:45:10] [AccessControl] Connected to NM
+[2025-11-15 22:45:10] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 c READ
+[2025-11-15 22:45:10] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:45:10] [AccessControl] Access GRANTED
+[2025-11-15 22:45:10] [SS-Thread] Client disconnected.
+[2025-11-15 22:45:25] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:45:25] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:45:25] [SS-Thread] Received command: WRITE c 1
+[2025-11-15 22:45:25] [SS-Thread] WRITE request: c sentence 1
+[2025-11-15 22:45:25] [AccessControl] Checking WRITE permission for file c
+[2025-11-15 22:45:25] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:45:25] [AccessControl] Connected to NM
+[2025-11-15 22:45:25] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 c WRITE
+[2025-11-15 22:45:25] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:45:25] [AccessControl] Access GRANTED
+[2025-11-15 22:45:25] [SS-Thread] Sentence validation passed for sentence 1
+[2025-11-15 22:45:25] [SS-Thread] Sentence lock acquired for c sentence 1
+[2025-11-15 22:45:25] [SS-Thread] Loaded file c, size=49, data=0x7d015c000fb0
+[2025-11-15 22:45:25] [SS-Thread] Backup created: storage_root/c.bak
+[2025-11-15 22:45:36] [SS-Thread] Parse OK: word_index=1, content='lmao', working_data='this lol mod lol. AAD. lol lol lol . this lol T-T'
+[2025-11-15 22:45:36] [SS-Thread] Split into 1 words
+[2025-11-15 22:45:36] [SS-Thread] find_sentence returned 1, s_start=18, s_end=21
+[2025-11-15 22:45:36] [SS-Thread] Inserted 1 words at index 1 in sentence 1
+[2025-11-15 22:45:40] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 22:45:40] [SS-Thread] File c updated successfully
+[2025-11-15 22:45:40] [SS-Thread] Sentence lock released for c sentence 1
+[2025-11-15 22:45:40] [SS-Thread] Client disconnected.
+[2025-11-15 22:45:42] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:45:42] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:45:42] [SS-Thread] Received command: READ c
+[2025-11-15 22:45:42] [SS-Thread] Read request for: c
+[2025-11-15 22:45:42] [AccessControl] Checking READ permission for file c
+[2025-11-15 22:45:42] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:45:42] [AccessControl] Connected to NM
+[2025-11-15 22:45:42] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 c READ
+[2025-11-15 22:45:42] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:45:42] [AccessControl] Access GRANTED
+[2025-11-15 22:45:42] [SS-Thread] Client disconnected.
+[2025-11-15 22:47:16] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:47:16] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:47:16] [SS-Thread] Received command: WRITE c 3
+[2025-11-15 22:47:16] [SS-Thread] WRITE request: c sentence 3
+[2025-11-15 22:47:16] [AccessControl] Checking WRITE permission for file c
+[2025-11-15 22:47:16] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:47:16] [AccessControl] Connected to NM
+[2025-11-15 22:47:16] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 c WRITE
+[2025-11-15 22:47:16] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:47:16] [AccessControl] Access GRANTED
+[2025-11-15 22:47:16] [SS-Thread] Sentence validation passed for sentence 3
+[2025-11-15 22:47:16] [SS-Thread] Sentence lock acquired for c sentence 3
+[2025-11-15 22:47:16] [SS-Thread] Loaded file c, size=54, data=0x7d015c000fb0
+[2025-11-15 22:47:16] [SS-Thread] Backup created: storage_root/c.bak
+[2025-11-15 22:47:24] [SS-Thread] Parse OK: word_index=2, content='hav', working_data='this lol mod lol. AAD. lmao lol lol lol . this lol T-T'
+[2025-11-15 22:47:24] [SS-Thread] Split into 1 words
+[2025-11-15 22:47:24] [SS-Thread] find_sentence returned 1, s_start=42, s_end=53
+[2025-11-15 22:47:24] [SS-Thread] Inserted 1 words at index 2 in sentence 3
+[2025-11-15 22:51:01] [SS-Thread] Client disconnected during WRITE
+[2025-11-15 22:51:01] [SS-Thread] Sentence lock released for c sentence 3
+[2025-11-15 22:51:01] [SS-Thread] Client disconnected.
+[2025-11-15 22:51:04] [NM-Thread] Name Server disconnected! Command thread shutting down.
+[2025-11-15 22:51:37] 
+--- LOGGING STARTED: Sat Nov 15 22:51:37 2025 ---
+[2025-11-15 22:51:37] Lock systems initialized.
+[2025-11-15 22:51:37] Storage Server (SS) starting up...
+[2025-11-15 22:51:37] Successfully connected to NM!
+[2025-11-15 22:51:37] Sending registration: REGISTER_SS 9001 9001
+[2025-11-15 22:51:37] Received from NM: ACK:SS_REGISTRATION_OK
+
+[2025-11-15 22:51:37] Registration complete. Private command line is active.
+[2025-11-15 22:51:37] [Main Thread] Starting public client server on port 9001...
+[2025-11-15 22:51:37] 
+--- Storage Server is now ONLINE. Listening on port 9001 ---
+
+[2025-11-15 22:51:37] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-15 22:51:47] [NM-Thread] Received trusted command: CREATE c
+[2025-11-15 22:51:47] [NM-Thread] Successfully created file: c
+[2025-11-15 22:51:59] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:51:59] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:51:59] [SS-Thread] Received command: WRITE c 0
+[2025-11-15 22:51:59] [SS-Thread] WRITE request: c sentence 0
+[2025-11-15 22:51:59] [AccessControl] Checking WRITE permission for file c
+[2025-11-15 22:51:59] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:51:59] [AccessControl] Connected to NM
+[2025-11-15 22:51:59] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 c WRITE
+[2025-11-15 22:51:59] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:51:59] [AccessControl] Access GRANTED
+[2025-11-15 22:51:59] [SS-Thread] Will create new sentence 0
+[2025-11-15 22:51:59] [SS-Thread] Sentence validation passed for sentence 0
+[2025-11-15 22:51:59] [SS-Thread] Sentence lock acquired for c sentence 0
+[2025-11-15 22:51:59] [SS-Thread] Loaded file c, size=0, data=0x60f83d138cb0
+[2025-11-15 22:51:59] [SS-Thread] Backup created: storage_root/c.bak
+[2025-11-15 22:52:04] [SS-Thread] Parse OK: word_index=0, content='lol.', working_data=''
+[2025-11-15 22:52:04] [SS-Thread] Split into 1 words
+[2025-11-15 22:52:04] [SS-Thread] Period analysis: period_found=0, before='lol.', after='NULL'
+[2025-11-15 22:52:04] [SS-Thread] find_sentence returned 0, s_start=0, s_end=0
+[2025-11-15 22:52:04] [SS-Thread] Creating new sentence 0
+[2025-11-15 22:52:04] [SS-Thread] Added 1 words to new sentence 0
+[2025-11-15 22:52:11] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 22:52:11] [SS-Thread] File c updated successfully
+[2025-11-15 22:52:11] [SS-Thread] Sentence lock released for c sentence 0
+[2025-11-15 22:52:11] [SS-Thread] Client disconnected.
+[2025-11-15 22:52:17] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:52:17] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:52:17] [SS-Thread] Received command: READ c
+[2025-11-15 22:52:17] [SS-Thread] Read request for: c
+[2025-11-15 22:52:17] [AccessControl] Checking READ permission for file c
+[2025-11-15 22:52:17] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:52:17] [AccessControl] Connected to NM
+[2025-11-15 22:52:17] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 c READ
+[2025-11-15 22:52:17] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:52:17] [AccessControl] Access GRANTED
+[2025-11-15 22:52:17] [SS-Thread] Client disconnected.
+[2025-11-15 22:52:33] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:52:33] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:52:33] [SS-Thread] Received command: WRITE c 1
+[2025-11-15 22:52:33] [SS-Thread] WRITE request: c sentence 1
+[2025-11-15 22:52:33] [AccessControl] Checking WRITE permission for file c
+[2025-11-15 22:52:33] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:52:33] [AccessControl] Connected to NM
+[2025-11-15 22:52:33] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 c WRITE
+[2025-11-15 22:52:33] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:52:33] [AccessControl] Access GRANTED
+[2025-11-15 22:52:33] [SS-Thread] Will create new sentence 1
+[2025-11-15 22:52:33] [SS-Thread] Sentence validation passed for sentence 1
+[2025-11-15 22:52:33] [SS-Thread] Sentence lock acquired for c sentence 1
+[2025-11-15 22:52:33] [SS-Thread] Loaded file c, size=4, data=0x60f83d138cb0
+[2025-11-15 22:52:33] [SS-Thread] Backup created: storage_root/c.bak
+[2025-11-15 22:52:39] [SS-Thread] Parse OK: word_index=0, content='sen', working_data='lol.'
+[2025-11-15 22:52:39] [SS-Thread] Split into 1 words
+[2025-11-15 22:52:39] [SS-Thread] Period analysis: period_found=-1, before='NULL', after='NULL'
+[2025-11-15 22:52:39] [SS-Thread] find_sentence returned 0, s_start=0, s_end=3
+[2025-11-15 22:52:39] [SS-Thread] Creating new sentence 1
+[2025-11-15 22:52:39] [SS-Thread] Added 1 words to new sentence 1
+[2025-11-15 22:52:43] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 22:52:43] [SS-Thread] File c updated successfully
+[2025-11-15 22:52:43] [SS-Thread] Sentence lock released for c sentence 1
+[2025-11-15 22:52:43] [SS-Thread] Client disconnected.
+[2025-11-15 22:52:48] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:52:48] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:52:48] [SS-Thread] Received command: READ c
+[2025-11-15 22:52:48] [SS-Thread] Read request for: c
+[2025-11-15 22:52:48] [AccessControl] Checking READ permission for file c
+[2025-11-15 22:52:48] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:52:48] [AccessControl] Connected to NM
+[2025-11-15 22:52:48] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 c READ
+[2025-11-15 22:52:48] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:52:48] [AccessControl] Access GRANTED
+[2025-11-15 22:52:48] [SS-Thread] Client disconnected.
+[2025-11-15 22:53:06] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:53:06] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:53:06] [SS-Thread] Received command: WRITE c 2
+[2025-11-15 22:53:06] [SS-Thread] WRITE request: c sentence 2
+[2025-11-15 22:53:06] [AccessControl] Checking WRITE permission for file c
+[2025-11-15 22:53:06] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:53:06] [AccessControl] Connected to NM
+[2025-11-15 22:53:06] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 c WRITE
+[2025-11-15 22:53:06] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:53:06] [AccessControl] Access GRANTED
+[2025-11-15 22:53:06] [SS-Thread] Cannot create sentence 2 - sentence 1 doesn't end with period
+[2025-11-15 22:53:06] [SS-Thread] Client disconnected.
+[2025-11-15 22:53:19] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:53:19] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:53:19] [SS-Thread] Received command: WRITE c 1
+[2025-11-15 22:53:19] [SS-Thread] WRITE request: c sentence 1
+[2025-11-15 22:53:19] [AccessControl] Checking WRITE permission for file c
+[2025-11-15 22:53:19] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:53:19] [AccessControl] Connected to NM
+[2025-11-15 22:53:19] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 c WRITE
+[2025-11-15 22:53:19] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:53:19] [AccessControl] Access GRANTED
+[2025-11-15 22:53:19] [SS-Thread] Sentence validation passed for sentence 1
+[2025-11-15 22:53:19] [SS-Thread] Sentence lock acquired for c sentence 1
+[2025-11-15 22:53:19] [SS-Thread] Loaded file c, size=8, data=0x60f83d138cb0
+[2025-11-15 22:53:19] [SS-Thread] Backup created: storage_root/c.bak
+[2025-11-15 22:53:26] [SS-Thread] Parse OK: word_index=1, content='T-T', working_data='lol. sen'
+[2025-11-15 22:53:26] [SS-Thread] Split into 1 words
+[2025-11-15 22:53:26] [SS-Thread] Period analysis: period_found=-1, before='NULL', after='NULL'
+[2025-11-15 22:53:26] [SS-Thread] find_sentence returned 1, s_start=5, s_end=7
+[2025-11-15 22:53:26] [SS-Thread] Inserted 1 words at index 1 in sentence 1
+[2025-11-15 22:53:35] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 22:53:35] [SS-Thread] File c updated successfully
+[2025-11-15 22:53:35] [SS-Thread] Sentence lock released for c sentence 1
+[2025-11-15 22:53:35] [SS-Thread] Client disconnected.
+[2025-11-15 22:53:56] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:53:56] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:53:56] [SS-Thread] Received command: WRITE c 0
+[2025-11-15 22:53:56] [SS-Thread] WRITE request: c sentence 0
+[2025-11-15 22:53:56] [AccessControl] Checking WRITE permission for file c
+[2025-11-15 22:53:56] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:53:56] [AccessControl] Connected to NM
+[2025-11-15 22:53:56] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 c WRITE
+[2025-11-15 22:53:56] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:53:56] [AccessControl] Access GRANTED
+[2025-11-15 22:53:56] [SS-Thread] Sentence validation passed for sentence 0
+[2025-11-15 22:53:56] [SS-Thread] Sentence lock acquired for c sentence 0
+[2025-11-15 22:53:56] [SS-Thread] Loaded file c, size=12, data=0x60f83d138cb0
+[2025-11-15 22:53:56] [SS-Thread] Backup created: storage_root/c.bak
+[2025-11-15 22:53:59] [SS-Thread] Parse OK: word_index=0, content='lol', working_data='lol. sen T-T'
+[2025-11-15 22:53:59] [SS-Thread] Split into 1 words
+[2025-11-15 22:53:59] [SS-Thread] Period analysis: period_found=-1, before='NULL', after='NULL'
+[2025-11-15 22:53:59] [SS-Thread] find_sentence returned 1, s_start=0, s_end=3
+[2025-11-15 22:53:59] [SS-Thread] Inserted 1 words at index 0 in sentence 0
+[2025-11-15 22:54:02] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 22:54:02] [SS-Thread] File c updated successfully
+[2025-11-15 22:54:02] [SS-Thread] Sentence lock released for c sentence 0
+[2025-11-15 22:54:02] [SS-Thread] Client disconnected.
+[2025-11-15 22:54:05] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:54:05] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:54:05] [SS-Thread] Received command: READ c
+[2025-11-15 22:54:05] [SS-Thread] Read request for: c
+[2025-11-15 22:54:05] [AccessControl] Checking READ permission for file c
+[2025-11-15 22:54:05] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:54:05] [AccessControl] Connected to NM
+[2025-11-15 22:54:05] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 c READ
+[2025-11-15 22:54:05] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:54:05] [AccessControl] Access GRANTED
+[2025-11-15 22:54:05] [SS-Thread] Client disconnected.
+[2025-11-15 22:54:46] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:54:46] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:54:46] [SS-Thread] Received command: WRITE c 0
+[2025-11-15 22:54:46] [SS-Thread] WRITE request: c sentence 0
+[2025-11-15 22:54:46] [AccessControl] Checking WRITE permission for file c
+[2025-11-15 22:54:46] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:54:46] [AccessControl] Connected to NM
+[2025-11-15 22:54:46] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 c WRITE
+[2025-11-15 22:54:46] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:54:46] [AccessControl] Access GRANTED
+[2025-11-15 22:54:46] [SS-Thread] Sentence validation passed for sentence 0
+[2025-11-15 22:54:46] [SS-Thread] Sentence lock acquired for c sentence 0
+[2025-11-15 22:54:46] [SS-Thread] Loaded file c, size=16, data=0x60f83d138cb0
+[2025-11-15 22:54:46] [SS-Thread] Backup created: storage_root/c.bak
+[2025-11-15 22:54:57] [SS-Thread] Parse OK: word_index=0, content='lol.', working_data='lol lol. sen T-T'
+[2025-11-15 22:54:57] [SS-Thread] Split into 1 words
+[2025-11-15 22:54:57] [SS-Thread] Period analysis: period_found=0, before='lol.', after='NULL'
+[2025-11-15 22:54:57] [SS-Thread] find_sentence returned 1, s_start=0, s_end=7
+[2025-11-15 22:54:57] [SS-Thread] Split sentence 0 at period, created new sentence
+[2025-11-15 22:54:57] [SS-Thread] Inserted 1 words at index 0 in sentence 0
+[2025-11-15 22:55:12] [SS-Thread] Parse OK: word_index=2, content='loll', working_data='lol. lol lol. sen T-T'
+[2025-11-15 22:55:12] [SS-Thread] Split into 1 words
+[2025-11-15 22:55:12] [SS-Thread] Period analysis: period_found=-1, before='NULL', after='NULL'
+[2025-11-15 22:55:12] [SS-Thread] find_sentence returned 1, s_start=0, s_end=3
+[2025-11-15 22:55:12] [SS-Thread] Invalid word_index 2 (sentence has 1 words)
+[2025-11-15 22:55:46] [SS-Thread] Parse OK: word_index=1, content='loll', working_data='lol. lol lol. sen T-T'
+[2025-11-15 22:55:46] [SS-Thread] Split into 1 words
+[2025-11-15 22:55:46] [SS-Thread] Period analysis: period_found=-1, before='NULL', after='NULL'
+[2025-11-15 22:55:46] [SS-Thread] find_sentence returned 1, s_start=0, s_end=3
+[2025-11-15 22:55:46] [SS-Thread] Inserted 1 words at index 1 in sentence 0
+[2025-11-15 22:55:54] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 22:55:54] [SS-Thread] File c updated successfully
+[2025-11-15 22:55:54] [SS-Thread] Sentence lock released for c sentence 0
+[2025-11-15 22:55:54] [SS-Thread] Client disconnected.
+[2025-11-15 22:55:58] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:55:58] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:55:58] [SS-Thread] Received command: READ c
+[2025-11-15 22:55:58] [SS-Thread] Read request for: c
+[2025-11-15 22:55:58] [AccessControl] Checking READ permission for file c
+[2025-11-15 22:55:58] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:55:58] [AccessControl] Connected to NM
+[2025-11-15 22:55:58] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 c READ
+[2025-11-15 22:55:58] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:55:58] [AccessControl] Access GRANTED
+[2025-11-15 22:55:58] [SS-Thread] Client disconnected.
+[2025-11-15 22:56:22] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:56:22] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:56:22] [SS-Thread] Received command: WRITE c 0
+[2025-11-15 22:56:22] [SS-Thread] WRITE request: c sentence 0
+[2025-11-15 22:56:22] [AccessControl] Checking WRITE permission for file c
+[2025-11-15 22:56:22] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:56:22] [AccessControl] Connected to NM
+[2025-11-15 22:56:22] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 c WRITE
+[2025-11-15 22:56:22] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:56:22] [AccessControl] Access GRANTED
+[2025-11-15 22:56:22] [SS-Thread] Sentence validation passed for sentence 0
+[2025-11-15 22:56:22] [SS-Thread] Sentence lock acquired for c sentence 0
+[2025-11-15 22:56:22] [SS-Thread] Loaded file c, size=26, data=0x7ba840000fb0
+[2025-11-15 22:56:22] [SS-Thread] Backup created: storage_root/c.bak
+[2025-11-15 22:56:28] [SS-Thread] Parse OK: word_index=1, content='lol', working_data='lol. loll lol lol. sen T-T'
+[2025-11-15 22:56:28] [SS-Thread] Split into 1 words
+[2025-11-15 22:56:28] [SS-Thread] Period analysis: period_found=-1, before='NULL', after='NULL'
+[2025-11-15 22:56:28] [SS-Thread] find_sentence returned 1, s_start=0, s_end=3
+[2025-11-15 22:56:28] [SS-Thread] Inserted 1 words at index 1 in sentence 0
+[2025-11-15 22:56:33] [SS-Thread] Parse OK: word_index=1, content='HAV', working_data='lol. lol loll lol lol. sen T-T'
+[2025-11-15 22:56:33] [SS-Thread] Split into 1 words
+[2025-11-15 22:56:33] [SS-Thread] Period analysis: period_found=-1, before='NULL', after='NULL'
+[2025-11-15 22:56:33] [SS-Thread] find_sentence returned 1, s_start=0, s_end=3
+[2025-11-15 22:56:33] [SS-Thread] Inserted 1 words at index 1 in sentence 0
+[2025-11-15 22:56:42] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 22:56:42] [SS-Thread] File c updated successfully
+[2025-11-15 22:56:42] [SS-Thread] Sentence lock released for c sentence 0
+[2025-11-15 22:56:42] [SS-Thread] Client disconnected.
+[2025-11-15 22:56:50] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 22:56:50] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 22:56:50] [SS-Thread] Received command: READ c
+[2025-11-15 22:56:50] [SS-Thread] Read request for: c
+[2025-11-15 22:56:50] [AccessControl] Checking READ permission for file c
+[2025-11-15 22:56:50] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 22:56:50] [AccessControl] Connected to NM
+[2025-11-15 22:56:50] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 c READ
+[2025-11-15 22:56:50] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 22:56:50] [AccessControl] Access GRANTED
+[2025-11-15 22:56:50] [SS-Thread] Client disconnected.
+[2025-11-15 23:01:41] [NM-Thread] Name Server disconnected! Command thread shutting down.
+[2025-11-15 23:02:12] 
+--- LOGGING STARTED: Sat Nov 15 23:02:12 2025 ---
+[2025-11-15 23:02:12] Lock systems initialized.
+[2025-11-15 23:02:12] Storage Server (SS) starting up...
+[2025-11-15 23:02:12] Successfully connected to NM!
+[2025-11-15 23:02:12] Sending registration: REGISTER_SS 9001 9001
+[2025-11-15 23:02:12] Received from NM: ACK:SS_REGISTRATION_OK
+
+[2025-11-15 23:02:12] Registration complete. Private command line is active.
+[2025-11-15 23:02:12] [Main Thread] Starting public client server on port 9001...
+[2025-11-15 23:02:12] 
+--- Storage Server is now ONLINE. Listening on port 9001 ---
+
+[2025-11-15 23:02:12] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-15 23:02:19] [NM-Thread] Received trusted command: CREATE c
+[2025-11-15 23:02:19] [NM-Thread] CREATE failed: File 'c' already exists.
+[2025-11-15 23:02:36] [NM-Thread] Name Server disconnected! Command thread shutting down.
+[2025-11-15 23:02:41] 
+--- LOGGING STARTED: Sat Nov 15 23:02:41 2025 ---
+[2025-11-15 23:02:41] Lock systems initialized.
+[2025-11-15 23:02:41] Storage Server (SS) starting up...
+[2025-11-15 23:02:41] Successfully connected to NM!
+[2025-11-15 23:02:41] Sending registration: REGISTER_SS 9001 9001
+[2025-11-15 23:02:41] Received from NM: ACK:SS_REGISTRATION_OK
+
+[2025-11-15 23:02:41] Registration complete. Private command line is active.
+[2025-11-15 23:02:41] [Main Thread] Starting public client server on port 9001...
+[2025-11-15 23:02:41] 
+--- Storage Server is now ONLINE. Listening on port 9001 ---
+
+[2025-11-15 23:02:41] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-15 23:02:52] [NM-Thread] Received trusted command: CREATE f
+[2025-11-15 23:02:52] [NM-Thread] Successfully created file: f
+[2025-11-15 23:03:10] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 23:03:10] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 23:03:10] [SS-Thread] Received command: WRITE f 0
+[2025-11-15 23:03:10] [SS-Thread] WRITE request: f sentence 0
+[2025-11-15 23:03:10] [AccessControl] Checking WRITE permission for file f
+[2025-11-15 23:03:10] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 23:03:10] [AccessControl] Connected to NM
+[2025-11-15 23:03:10] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 f WRITE
+[2025-11-15 23:03:10] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 23:03:10] [AccessControl] Access GRANTED
+[2025-11-15 23:03:10] [SS-Thread] Will create new sentence 0
+[2025-11-15 23:03:10] [SS-Thread] Sentence validation passed for sentence 0
+[2025-11-15 23:03:10] [SS-Thread] Sentence lock acquired for f sentence 0
+[2025-11-15 23:03:10] [SS-Thread] Loaded file f, size=0, data=0x632dac948cb0
+[2025-11-15 23:03:10] [SS-Thread] Backup created: storage_root/f.bak
+[2025-11-15 23:03:13] [SS-Thread] Parse OK: word_index=0, content='lol.', working_data=''
+[2025-11-15 23:03:13] [SS-Thread] Split into 1 words
+[2025-11-15 23:03:13] [SS-Thread] Period analysis: period_found=0, before='lol.', after='NULL'
+[2025-11-15 23:03:13] [SS-Thread] find_sentence returned 0, s_start=0, s_end=0
+[2025-11-15 23:03:13] [SS-Thread] Creating new sentence 0
+[2025-11-15 23:03:13] [SS-Thread] Added 1 words to new sentence 0
+[2025-11-15 23:03:26] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 23:03:26] [SS-Thread] File f updated successfully
+[2025-11-15 23:03:26] [SS-Thread] Sentence lock released for f sentence 0
+[2025-11-15 23:03:26] [SS-Thread] Client disconnected.
+[2025-11-15 23:03:41] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 23:03:41] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 23:03:41] [SS-Thread] Received command: WRITE f 1
+[2025-11-15 23:03:41] [SS-Thread] WRITE request: f sentence 1
+[2025-11-15 23:03:41] [AccessControl] Checking WRITE permission for file f
+[2025-11-15 23:03:41] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 23:03:41] [AccessControl] Connected to NM
+[2025-11-15 23:03:41] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 f WRITE
+[2025-11-15 23:03:41] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 23:03:41] [AccessControl] Access GRANTED
+[2025-11-15 23:03:41] [SS-Thread] Will create new sentence 1
+[2025-11-15 23:03:41] [SS-Thread] Sentence validation passed for sentence 1
+[2025-11-15 23:03:41] [SS-Thread] Sentence lock acquired for f sentence 1
+[2025-11-15 23:03:41] [SS-Thread] Loaded file f, size=4, data=0x632dac948cb0
+[2025-11-15 23:03:41] [SS-Thread] Backup created: storage_root/f.bak
+[2025-11-15 23:03:48] [SS-Thread] Parse OK: word_index=0, content='lol', working_data='lol.'
+[2025-11-15 23:03:48] [SS-Thread] Split into 1 words
+[2025-11-15 23:03:48] [SS-Thread] Period analysis: period_found=-1, before='NULL', after='NULL'
+[2025-11-15 23:03:48] [SS-Thread] find_sentence returned 0, s_start=0, s_end=3
+[2025-11-15 23:03:48] [SS-Thread] Creating new sentence 1
+[2025-11-15 23:03:48] [SS-Thread] Added 1 words to new sentence 1
+[2025-11-15 23:03:52] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 23:03:52] [SS-Thread] File f updated successfully
+[2025-11-15 23:03:52] [SS-Thread] Sentence lock released for f sentence 1
+[2025-11-15 23:03:52] [SS-Thread] Client disconnected.
+[2025-11-15 23:03:56] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 23:03:56] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 23:03:56] [SS-Thread] Received command: READ f
+[2025-11-15 23:03:56] [SS-Thread] Read request for: f
+[2025-11-15 23:03:56] [AccessControl] Checking READ permission for file f
+[2025-11-15 23:03:56] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 23:03:56] [AccessControl] Connected to NM
+[2025-11-15 23:03:56] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 f READ
+[2025-11-15 23:03:56] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 23:03:56] [AccessControl] Access GRANTED
+[2025-11-15 23:03:56] [SS-Thread] Client disconnected.
+[2025-11-15 23:04:05] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 23:04:05] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 23:04:05] [SS-Thread] Received command: WRITE f 2
+[2025-11-15 23:04:05] [SS-Thread] WRITE request: f sentence 2
+[2025-11-15 23:04:05] [AccessControl] Checking WRITE permission for file f
+[2025-11-15 23:04:05] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 23:04:05] [AccessControl] Connected to NM
+[2025-11-15 23:04:05] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 f WRITE
+[2025-11-15 23:04:05] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 23:04:05] [AccessControl] Access GRANTED
+[2025-11-15 23:04:05] [SS-Thread] Cannot create sentence 2 - sentence 1 doesn't end with period
+[2025-11-15 23:04:05] [SS-Thread] Client disconnected.
+[2025-11-15 23:04:12] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 23:04:12] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 23:04:12] [SS-Thread] Received command: WRITE f 1
+[2025-11-15 23:04:12] [SS-Thread] WRITE request: f sentence 1
+[2025-11-15 23:04:12] [AccessControl] Checking WRITE permission for file f
+[2025-11-15 23:04:12] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 23:04:12] [AccessControl] Connected to NM
+[2025-11-15 23:04:12] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 f WRITE
+[2025-11-15 23:04:12] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 23:04:12] [AccessControl] Access GRANTED
+[2025-11-15 23:04:12] [SS-Thread] Sentence validation passed for sentence 1
+[2025-11-15 23:04:12] [SS-Thread] Sentence lock acquired for f sentence 1
+[2025-11-15 23:04:12] [SS-Thread] Loaded file f, size=8, data=0x632dac948cb0
+[2025-11-15 23:04:12] [SS-Thread] Backup created: storage_root/f.bak
+[2025-11-15 23:04:19] [SS-Thread] Parse OK: word_index=1, content='T-T', working_data='lol. lol'
+[2025-11-15 23:04:19] [SS-Thread] Split into 1 words
+[2025-11-15 23:04:19] [SS-Thread] Period analysis: period_found=-1, before='NULL', after='NULL'
+[2025-11-15 23:04:19] [SS-Thread] find_sentence returned 1, s_start=5, s_end=7
+[2025-11-15 23:04:19] [SS-Thread] Inserted 1 words at index 1 in sentence 1
+[2025-11-15 23:04:33] [SS-Thread] Parse OK: word_index=0, content='LOL.', working_data='lol. lol T-T'
+[2025-11-15 23:04:33] [SS-Thread] Split into 1 words
+[2025-11-15 23:04:33] [SS-Thread] Period analysis: period_found=0, before='LOL.', after='NULL'
+[2025-11-15 23:04:33] [SS-Thread] find_sentence returned 1, s_start=5, s_end=11
+[2025-11-15 23:04:33] [SS-Thread] Replaced word 0 with period-delimited content, split sentence 1
+[2025-11-15 23:04:33] [SS-Thread] Inserted 1 words at index 0 in sentence 1
+[2025-11-15 23:04:36] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 23:04:36] [SS-Thread] File f updated successfully
+[2025-11-15 23:04:36] [SS-Thread] Sentence lock released for f sentence 1
+[2025-11-15 23:04:36] [SS-Thread] Client disconnected.
+[2025-11-15 23:04:40] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 23:04:40] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 23:04:40] [SS-Thread] Received command: READ f
+[2025-11-15 23:04:40] [SS-Thread] Read request for: f
+[2025-11-15 23:04:40] [AccessControl] Checking READ permission for file f
+[2025-11-15 23:04:40] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 23:04:40] [AccessControl] Connected to NM
+[2025-11-15 23:04:40] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 f READ
+[2025-11-15 23:04:40] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 23:04:40] [AccessControl] Access GRANTED
+[2025-11-15 23:04:40] [SS-Thread] Client disconnected.
+[2025-11-15 23:05:20] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 23:05:20] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 23:05:20] [SS-Thread] Received command: WRITE f 0
+[2025-11-15 23:05:20] [SS-Thread] WRITE request: f sentence 0
+[2025-11-15 23:05:20] [AccessControl] Checking WRITE permission for file f
+[2025-11-15 23:05:20] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 23:05:20] [AccessControl] Connected to NM
+[2025-11-15 23:05:20] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 f WRITE
+[2025-11-15 23:05:20] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 23:05:20] [AccessControl] Access GRANTED
+[2025-11-15 23:05:20] [SS-Thread] Sentence validation passed for sentence 0
+[2025-11-15 23:05:20] [SS-Thread] Sentence lock acquired for f sentence 0
+[2025-11-15 23:05:20] [SS-Thread] Loaded file f, size=8, data=0x632dac948cb0
+[2025-11-15 23:05:20] [SS-Thread] Backup created: storage_root/f.bak
+[2025-11-15 23:05:23] [SS-Thread] Parse OK: word_index=0, content='lol.', working_data='LOL. T-T'
+[2025-11-15 23:05:23] [SS-Thread] Split into 1 words
+[2025-11-15 23:05:23] [SS-Thread] Period analysis: period_found=0, before='lol.', after='NULL'
+[2025-11-15 23:05:23] [SS-Thread] find_sentence returned 1, s_start=0, s_end=3
+[2025-11-15 23:05:23] [SS-Thread] Replaced word 0 with period-delimited content, split sentence 0
+[2025-11-15 23:05:23] [SS-Thread] Inserted 1 words at index 0 in sentence 0
+[2025-11-15 23:05:28] [SS-Thread] Parse OK: word_index=0, content='and', working_data='lol.  T-T'
+[2025-11-15 23:05:28] [SS-Thread] Split into 1 words
+[2025-11-15 23:05:28] [SS-Thread] Period analysis: period_found=-1, before='NULL', after='NULL'
+[2025-11-15 23:05:28] [SS-Thread] find_sentence returned 1, s_start=0, s_end=3
+[2025-11-15 23:05:28] [SS-Thread] Inserted 1 words at index 0 in sentence 0
+[2025-11-15 23:05:36] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 23:05:36] [SS-Thread] File f updated successfully
+[2025-11-15 23:05:36] [SS-Thread] Sentence lock released for f sentence 0
+[2025-11-15 23:05:36] [SS-Thread] Client disconnected.
+[2025-11-15 23:05:50] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 23:05:50] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 23:05:50] [SS-Thread] Received command: READ f
+[2025-11-15 23:05:50] [SS-Thread] Read request for: f
+[2025-11-15 23:05:50] [AccessControl] Checking READ permission for file f
+[2025-11-15 23:05:50] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 23:05:50] [AccessControl] Connected to NM
+[2025-11-15 23:05:50] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 f READ
+[2025-11-15 23:05:50] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 23:05:50] [AccessControl] Access GRANTED
+[2025-11-15 23:05:50] [SS-Thread] Client disconnected.
+[2025-11-15 23:08:11] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 23:08:11] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 23:08:11] [SS-Thread] Received command: WRITE f 0
+[2025-11-15 23:08:11] [SS-Thread] WRITE request: f sentence 0
+[2025-11-15 23:08:11] [AccessControl] Checking WRITE permission for file f
+[2025-11-15 23:08:11] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 23:08:11] [AccessControl] Connected to NM
+[2025-11-15 23:08:11] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 f WRITE
+[2025-11-15 23:08:11] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 23:08:11] [AccessControl] Access GRANTED
+[2025-11-15 23:08:11] [SS-Thread] Sentence validation passed for sentence 0
+[2025-11-15 23:08:11] [SS-Thread] Sentence lock acquired for f sentence 0
+[2025-11-15 23:08:11] [SS-Thread] Loaded file f, size=13, data=0x632dac948cb0
+[2025-11-15 23:08:11] [SS-Thread] Backup created: storage_root/f.bak
+[2025-11-15 23:08:17] [SS-Thread] Parse OK: word_index=0, content='hav.', working_data='and lol.  T-T'
+[2025-11-15 23:08:17] [SS-Thread] Split into 1 words
+[2025-11-15 23:08:17] [SS-Thread] Period analysis: period_found=0, before='hav.', after='NULL'
+[2025-11-15 23:08:17] [SS-Thread] find_sentence returned 1, s_start=0, s_end=7
+[2025-11-15 23:08:17] [SS-Thread] Replaced word 0 with period-delimited content, split sentence 0
+[2025-11-15 23:08:17] [SS-Thread] Inserted 1 words at index 0 in sentence 0
+[2025-11-15 23:08:22] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 23:08:22] [SS-Thread] File f updated successfully
+[2025-11-15 23:08:22] [SS-Thread] Sentence lock released for f sentence 0
+[2025-11-15 23:08:22] [SS-Thread] Client disconnected.
+[2025-11-15 23:09:20] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 23:09:20] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 23:09:20] [SS-Thread] Received command: READ f
+[2025-11-15 23:09:20] [SS-Thread] Read request for: f
+[2025-11-15 23:09:20] [AccessControl] Checking READ permission for file f
+[2025-11-15 23:09:20] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 23:09:20] [AccessControl] Connected to NM
+[2025-11-15 23:09:20] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 f READ
+[2025-11-15 23:09:20] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 23:09:20] [AccessControl] Access GRANTED
+[2025-11-15 23:09:20] [SS-Thread] Client disconnected.
+[2025-11-15 23:12:50] [NM-Thread] Name Server disconnected! Command thread shutting down.
+[2025-11-15 23:13:11] 
+--- LOGGING STARTED: Sat Nov 15 23:13:11 2025 ---
+[2025-11-15 23:13:11] Lock systems initialized.
+[2025-11-15 23:13:11] Storage Server (SS) starting up...
+[2025-11-15 23:13:11] Successfully connected to NM!
+[2025-11-15 23:13:11] Sending registration: REGISTER_SS 9001 9001
+[2025-11-15 23:13:11] Received from NM: ACK:SS_REGISTRATION_OK
+
+[2025-11-15 23:13:11] Registration complete. Private command line is active.
+[2025-11-15 23:13:11] [Main Thread] Starting public client server on port 9001...
+[2025-11-15 23:13:11] 
+--- Storage Server is now ONLINE. Listening on port 9001 ---
+
+[2025-11-15 23:13:11] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-15 23:13:20] [NM-Thread] Received trusted command: CREATE l
+[2025-11-15 23:13:20] [NM-Thread] CREATE failed: File 'l' already exists.
+[2025-11-15 23:13:24] [NM-Thread] Name Server disconnected! Command thread shutting down.
+[2025-11-15 23:13:32] 
+--- LOGGING STARTED: Sat Nov 15 23:13:32 2025 ---
+[2025-11-15 23:13:32] Lock systems initialized.
+[2025-11-15 23:13:32] Storage Server (SS) starting up...
+[2025-11-15 23:13:32] Successfully connected to NM!
+[2025-11-15 23:13:32] Sending registration: REGISTER_SS 9001 9001
+[2025-11-15 23:13:32] Received from NM: ACK:SS_REGISTRATION_OK
+
+[2025-11-15 23:13:32] Registration complete. Private command line is active.
+[2025-11-15 23:13:32] [Main Thread] Starting public client server on port 9001...
+[2025-11-15 23:13:32] 
+--- Storage Server is now ONLINE. Listening on port 9001 ---
+
+[2025-11-15 23:13:32] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-15 23:13:43] [NM-Thread] Received trusted command: CREATE t
+[2025-11-15 23:13:43] [NM-Thread] Successfully created file: t
+[2025-11-15 23:13:49] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 23:13:49] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 23:13:49] [SS-Thread] Received command: WRITE t 0
+[2025-11-15 23:13:49] [SS-Thread] WRITE request: t sentence 0
+[2025-11-15 23:13:49] [AccessControl] Checking WRITE permission for file t
+[2025-11-15 23:13:49] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 23:13:49] [AccessControl] Connected to NM
+[2025-11-15 23:13:49] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 t WRITE
+[2025-11-15 23:13:49] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 23:13:49] [AccessControl] Access GRANTED
+[2025-11-15 23:13:49] [SS-Thread] Will create new sentence 0
+[2025-11-15 23:13:49] [SS-Thread] Sentence validation passed for sentence 0
+[2025-11-15 23:13:49] [SS-Thread] Sentence lock acquired for t sentence 0
+[2025-11-15 23:13:49] [SS-Thread] Loaded file t, size=0, data=0x63ac36a43cb0
+[2025-11-15 23:13:49] [SS-Thread] Backup created: storage_root/t.bak
+[2025-11-15 23:13:54] [SS-Thread] Parse OK: word_index=0, content='lol.', working_data=''
+[2025-11-15 23:13:54] [SS-Thread] Split into 1 words
+[2025-11-15 23:13:54] [SS-Thread] Period analysis: period_found=0, before='lol.', after='NULL'
+[2025-11-15 23:13:54] [SS-Thread] find_sentence returned 0, s_start=0, s_end=0
+[2025-11-15 23:13:54] [SS-Thread] Creating new sentence 0
+[2025-11-15 23:13:54] [SS-Thread] Added 1 words to new sentence 0
+[2025-11-15 23:14:01] [SS-Thread] Parse OK: word_index=0, content='hav.', working_data='lol.'
+[2025-11-15 23:14:01] [SS-Thread] Split into 1 words
+[2025-11-15 23:14:01] [SS-Thread] Period analysis: period_found=0, before='hav.', after='NULL'
+[2025-11-15 23:14:01] [SS-Thread] find_sentence returned 1, s_start=0, s_end=3
+[2025-11-15 23:14:01] [SS-Thread] Inserted word 0 with period delimiter, split sentence 0
+[2025-11-15 23:14:01] [SS-Thread] Inserted 1 words at index 0 in sentence 0
+[2025-11-15 23:14:03] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 23:14:03] [SS-Thread] File t updated successfully
+[2025-11-15 23:14:03] [SS-Thread] Sentence lock released for t sentence 0
+[2025-11-15 23:14:03] [SS-Thread] Client disconnected.
+[2025-11-15 23:14:19] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 23:14:19] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 23:14:19] [SS-Thread] Received command: READ t
+[2025-11-15 23:14:19] [SS-Thread] Read request for: t
+[2025-11-15 23:14:19] [AccessControl] Checking READ permission for file t
+[2025-11-15 23:14:19] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 23:14:19] [AccessControl] Connected to NM
+[2025-11-15 23:14:19] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 t READ
+[2025-11-15 23:14:19] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 23:14:19] [AccessControl] Access GRANTED
+[2025-11-15 23:14:19] [SS-Thread] Client disconnected.
+[2025-11-15 23:14:32] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 23:14:32] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 23:14:32] [SS-Thread] Received command: WRITE t 2
+[2025-11-15 23:14:32] [SS-Thread] WRITE request: t sentence 2
+[2025-11-15 23:14:32] [AccessControl] Checking WRITE permission for file t
+[2025-11-15 23:14:32] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 23:14:32] [AccessControl] Connected to NM
+[2025-11-15 23:14:32] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 t WRITE
+[2025-11-15 23:14:32] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 23:14:32] [AccessControl] Access GRANTED
+[2025-11-15 23:14:32] [SS-Thread] Will create new sentence 2
+[2025-11-15 23:14:32] [SS-Thread] Sentence validation passed for sentence 2
+[2025-11-15 23:14:32] [SS-Thread] Sentence lock acquired for t sentence 2
+[2025-11-15 23:14:32] [SS-Thread] Loaded file t, size=9, data=0x63ac36a43cb0
+[2025-11-15 23:14:32] [SS-Thread] Backup created: storage_root/t.bak
+[2025-11-15 23:14:37] [SS-Thread] Parse OK: word_index=0, content='LOL', working_data='hav. lol.'
+[2025-11-15 23:14:37] [SS-Thread] Split into 1 words
+[2025-11-15 23:14:37] [SS-Thread] Period analysis: period_found=-1, before='NULL', after='NULL'
+[2025-11-15 23:14:37] [SS-Thread] find_sentence returned 0, s_start=5, s_end=8
+[2025-11-15 23:14:37] [SS-Thread] Creating new sentence 2
+[2025-11-15 23:14:37] [SS-Thread] Added 1 words to new sentence 2
+[2025-11-15 23:14:41] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 23:14:41] [SS-Thread] File t updated successfully
+[2025-11-15 23:14:41] [SS-Thread] Sentence lock released for t sentence 2
+[2025-11-15 23:14:41] [SS-Thread] Client disconnected.
+[2025-11-15 23:15:10] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 23:15:10] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 23:15:10] [SS-Thread] Received command: WRITE t 3
+[2025-11-15 23:15:10] [SS-Thread] WRITE request: t sentence 3
+[2025-11-15 23:15:10] [AccessControl] Checking WRITE permission for file t
+[2025-11-15 23:15:10] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 23:15:10] [AccessControl] Connected to NM
+[2025-11-15 23:15:10] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 t WRITE
+[2025-11-15 23:15:10] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 23:15:10] [AccessControl] Access GRANTED
+[2025-11-15 23:15:10] [SS-Thread] Cannot create sentence 3 - sentence 2 doesn't end with period
+[2025-11-15 23:15:10] [SS-Thread] Client disconnected.
+[2025-11-15 23:15:28] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 23:15:28] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 23:15:28] [SS-Thread] Received command: WRITE t 0
+[2025-11-15 23:15:28] [SS-Thread] WRITE request: t sentence 0
+[2025-11-15 23:15:28] [AccessControl] Checking WRITE permission for file t
+[2025-11-15 23:15:28] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 23:15:28] [AccessControl] Connected to NM
+[2025-11-15 23:15:28] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 t WRITE
+[2025-11-15 23:15:28] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 23:15:28] [AccessControl] Access GRANTED
+[2025-11-15 23:15:28] [SS-Thread] Sentence validation passed for sentence 0
+[2025-11-15 23:15:28] [SS-Thread] Sentence lock acquired for t sentence 0
+[2025-11-15 23:15:28] [SS-Thread] Loaded file t, size=13, data=0x63ac36a43cb0
+[2025-11-15 23:15:28] [SS-Thread] Backup created: storage_root/t.bak
+[2025-11-15 23:15:35] [SS-Thread] Parse OK: word_index=0, content='lol and am done with write', working_data='hav. lol. LOL'
+[2025-11-15 23:15:35] [SS-Thread] Split into 6 words
+[2025-11-15 23:15:35] [SS-Thread] Period analysis: period_found=-1, before='NULL', after='NULL'
+[2025-11-15 23:15:35] [SS-Thread] find_sentence returned 1, s_start=0, s_end=3
+[2025-11-15 23:15:35] [SS-Thread] Inserted 6 words at index 0 in sentence 0
+[2025-11-15 23:15:45] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 23:15:45] [SS-Thread] File t updated successfully
+[2025-11-15 23:15:45] [SS-Thread] Sentence lock released for t sentence 0
+[2025-11-15 23:15:45] [SS-Thread] Client disconnected.
+[2025-11-15 23:16:16] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 23:16:16] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 23:16:16] [SS-Thread] Received command: READ t
+[2025-11-15 23:16:16] [SS-Thread] Read request for: t
+[2025-11-15 23:16:16] [AccessControl] Checking READ permission for file t
+[2025-11-15 23:16:16] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 23:16:16] [AccessControl] Connected to NM
+[2025-11-15 23:16:16] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 t READ
+[2025-11-15 23:16:16] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 23:16:16] [AccessControl] Access GRANTED
+[2025-11-15 23:16:16] [SS-Thread] Client disconnected.
+[2025-11-15 23:16:39] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 23:16:39] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 23:16:39] [SS-Thread] Received command: WRITE t 0
+[2025-11-15 23:16:39] [SS-Thread] WRITE request: t sentence 0
+[2025-11-15 23:16:39] [AccessControl] Checking WRITE permission for file t
+[2025-11-15 23:16:39] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 23:16:39] [AccessControl] Connected to NM
+[2025-11-15 23:16:39] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 t WRITE
+[2025-11-15 23:16:39] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 23:16:39] [AccessControl] Access GRANTED
+[2025-11-15 23:16:39] [SS-Thread] Sentence validation passed for sentence 0
+[2025-11-15 23:16:39] [SS-Thread] Sentence lock acquired for t sentence 0
+[2025-11-15 23:16:39] [SS-Thread] Loaded file t, size=40, data=0x74ba40000fb0
+[2025-11-15 23:16:39] [SS-Thread] Backup created: storage_root/t.bak
+[2025-11-15 23:16:42] [SS-Thread] Parse OK: word_index=7, content='lol', working_data='lol and am done with write hav. lol. LOL'
+[2025-11-15 23:16:42] [SS-Thread] Split into 1 words
+[2025-11-15 23:16:42] [SS-Thread] Period analysis: period_found=-1, before='NULL', after='NULL'
+[2025-11-15 23:16:42] [SS-Thread] find_sentence returned 1, s_start=0, s_end=30
+[2025-11-15 23:16:42] [SS-Thread] Inserted 1 words at index 7 in sentence 0
+[2025-11-15 23:16:49] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 23:16:49] [SS-Thread] File t updated successfully
+[2025-11-15 23:16:49] [SS-Thread] Sentence lock released for t sentence 0
+[2025-11-15 23:16:49] [SS-Thread] Client disconnected.
+[2025-11-15 23:16:54] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 23:16:54] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 23:16:54] [SS-Thread] Received command: READ t
+[2025-11-15 23:16:54] [SS-Thread] Read request for: t
+[2025-11-15 23:16:54] [AccessControl] Checking READ permission for file t
+[2025-11-15 23:16:54] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 23:16:54] [AccessControl] Connected to NM
+[2025-11-15 23:16:54] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 t READ
+[2025-11-15 23:16:54] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 23:16:54] [AccessControl] Access GRANTED
+[2025-11-15 23:16:54] [SS-Thread] Client disconnected.
+[2025-11-15 23:19:28] [NM-Thread] Name Server disconnected! Command thread shutting down.
+[2025-11-15 23:19:39] 
+--- LOGGING STARTED: Sat Nov 15 23:19:39 2025 ---
+[2025-11-15 23:19:39] Lock systems initialized.
+[2025-11-15 23:19:39] Storage Server (SS) starting up...
+[2025-11-15 23:19:39] Successfully connected to NM!
+[2025-11-15 23:19:39] Sending registration: REGISTER_SS 9001 9001
+[2025-11-15 23:19:39] Received from NM: ACK:SS_REGISTRATION_OK
+
+[2025-11-15 23:19:39] Registration complete. Private command line is active.
+[2025-11-15 23:19:39] [Main Thread] Starting public client server on port 9001...
+[2025-11-15 23:19:39] 
+--- Storage Server is now ONLINE. Listening on port 9001 ---
+
+[2025-11-15 23:19:39] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-15 23:19:50] [NM-Thread] Name Server disconnected! Command thread shutting down.
+[2025-11-15 23:20:01] 
+--- LOGGING STARTED: Sat Nov 15 23:20:01 2025 ---
+[2025-11-15 23:20:01] Lock systems initialized.
+[2025-11-15 23:20:01] Storage Server (SS) starting up...
+[2025-11-15 23:20:01] Successfully connected to NM!
+[2025-11-15 23:20:01] Sending registration: REGISTER_SS 9001 9001
+[2025-11-15 23:20:01] Received from NM: ACK:SS_REGISTRATION_OK
+
+[2025-11-15 23:20:01] Registration complete. Private command line is active.
+[2025-11-15 23:20:01] [Main Thread] Starting public client server on port 9001...
+[2025-11-15 23:20:01] 
+--- Storage Server is now ONLINE. Listening on port 9001 ---
+
+[2025-11-15 23:20:01] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-15 23:20:15] [NM-Thread] Received trusted command: CREATE n
+[2025-11-15 23:20:15] [NM-Thread] Successfully created file: n
+[2025-11-15 23:20:19] [NM-Thread] Name Server disconnected! Command thread shutting down.
+[2025-11-15 23:20:29] 
+--- LOGGING STARTED: Sat Nov 15 23:20:29 2025 ---
+[2025-11-15 23:20:29] Lock systems initialized.
+[2025-11-15 23:20:29] Storage Server (SS) starting up...
+[2025-11-15 23:20:29] Successfully connected to NM!
+[2025-11-15 23:20:29] Sending registration: REGISTER_SS 9001 9001
+[2025-11-15 23:20:29] Received from NM: ACK:SS_REGISTRATION_OK
+
+[2025-11-15 23:20:29] Registration complete. Private command line is active.
+[2025-11-15 23:20:29] [Main Thread] Starting public client server on port 9001...
+[2025-11-15 23:20:29] 
+--- Storage Server is now ONLINE. Listening on port 9001 ---
+
+[2025-11-15 23:20:29] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-15 23:20:36] [NM-Thread] Received trusted command: CREATE x
+[2025-11-15 23:20:36] [NM-Thread] Successfully created file: x
+[2025-11-15 23:20:53] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 23:20:53] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 23:20:53] [SS-Thread] Received command: WRITE x 0
+[2025-11-15 23:20:53] [SS-Thread] WRITE request: x sentence 0
+[2025-11-15 23:20:53] [AccessControl] Checking WRITE permission for file x
+[2025-11-15 23:20:53] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 23:20:53] [AccessControl] Connected to NM
+[2025-11-15 23:20:53] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 x WRITE
+[2025-11-15 23:20:53] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 23:20:53] [AccessControl] Access GRANTED
+[2025-11-15 23:20:53] [SS-Thread] Will create new sentence 0
+[2025-11-15 23:20:53] [SS-Thread] Sentence validation passed for sentence 0
+[2025-11-15 23:20:53] [SS-Thread] Sentence lock acquired for x sentence 0
+[2025-11-15 23:20:53] [SS-Thread] Loaded file x, size=0, data=0x607724643cb0
+[2025-11-15 23:20:53] [SS-Thread] Backup created: storage_root/x.bak
+[2025-11-15 23:21:01] [SS-Thread] Parse OK: word_index=0, content='lol.', working_data=''
+[2025-11-15 23:21:01] [SS-Thread] Split into 1 words
+[2025-11-15 23:21:01] [SS-Thread] Period analysis: period_found=0, before='lol.', after='NULL'
+[2025-11-15 23:21:01] [SS-Thread] find_sentence returned 0, s_start=0, s_end=0
+[2025-11-15 23:21:01] [SS-Thread] Creating new sentence 0
+[2025-11-15 23:21:01] [SS-Thread] Added 1 words to new sentence 0
+[2025-11-15 23:21:19] [SS-Thread] Parse OK: word_index=1, content='hav', working_data='lol.'
+[2025-11-15 23:21:19] [SS-Thread] Split into 1 words
+[2025-11-15 23:21:19] [SS-Thread] Period analysis: period_found=-1, before='NULL', after='NULL'
+[2025-11-15 23:21:19] [SS-Thread] find_sentence returned 1, s_start=0, s_end=3
+[2025-11-15 23:21:19] [SS-Thread] Inserted 1 words at index 1 in sentence 0
+[2025-11-15 23:21:23] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 23:21:23] [SS-Thread] File x updated successfully
+[2025-11-15 23:21:23] [SS-Thread] Sentence lock released for x sentence 0
+[2025-11-15 23:21:23] [SS-Thread] Client disconnected.
+[2025-11-15 23:21:27] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 23:21:27] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 23:21:27] [SS-Thread] Received command: READ x
+[2025-11-15 23:21:27] [SS-Thread] Read request for: x
+[2025-11-15 23:21:27] [AccessControl] Checking READ permission for file x
+[2025-11-15 23:21:27] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 23:21:27] [AccessControl] Connected to NM
+[2025-11-15 23:21:27] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 x READ
+[2025-11-15 23:21:27] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 23:21:27] [AccessControl] Access GRANTED
+[2025-11-15 23:21:27] [SS-Thread] Client disconnected.
+[2025-11-15 23:21:41] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 23:21:41] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 23:21:41] [SS-Thread] Received command: WRITE x 0
+[2025-11-15 23:21:41] [SS-Thread] WRITE request: x sentence 0
+[2025-11-15 23:21:41] [AccessControl] Checking WRITE permission for file x
+[2025-11-15 23:21:41] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 23:21:41] [AccessControl] Connected to NM
+[2025-11-15 23:21:41] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 x WRITE
+[2025-11-15 23:21:41] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 23:21:41] [AccessControl] Access GRANTED
+[2025-11-15 23:21:41] [SS-Thread] Sentence validation passed for sentence 0
+[2025-11-15 23:21:41] [SS-Thread] Sentence lock acquired for x sentence 0
+[2025-11-15 23:21:41] [SS-Thread] Loaded file x, size=9, data=0x607724643cb0
+[2025-11-15 23:21:41] [SS-Thread] Backup created: storage_root/x.bak
+[2025-11-15 23:21:48] [SS-Thread] Parse OK: word_index=2, content='k', working_data='lol hav .'
+[2025-11-15 23:21:48] [SS-Thread] Split into 1 words
+[2025-11-15 23:21:48] [SS-Thread] Period analysis: period_found=-1, before='NULL', after='NULL'
+[2025-11-15 23:21:48] [SS-Thread] find_sentence returned 1, s_start=0, s_end=8
+[2025-11-15 23:21:48] [SS-Thread] Inserted 1 words at index 2 in sentence 0
+[2025-11-15 23:22:01] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 23:22:01] [SS-Thread] File x updated successfully
+[2025-11-15 23:22:01] [SS-Thread] Sentence lock released for x sentence 0
+[2025-11-15 23:22:01] [SS-Thread] Client disconnected.
+[2025-11-15 23:22:12] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 23:22:12] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 23:22:12] [SS-Thread] Received command: WRITE x 2
+[2025-11-15 23:22:12] [SS-Thread] WRITE request: x sentence 2
+[2025-11-15 23:22:12] [AccessControl] Checking WRITE permission for file x
+[2025-11-15 23:22:12] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 23:22:12] [AccessControl] Connected to NM
+[2025-11-15 23:22:12] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 x WRITE
+[2025-11-15 23:22:12] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 23:22:12] [AccessControl] Access GRANTED
+[2025-11-15 23:22:12] [SS-Thread] Sentence 2 not found in x (file has 1 sentences, can only create sentence 1)
+[2025-11-15 23:22:12] [SS-Thread] Client disconnected.
+[2025-11-15 23:22:16] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 23:22:16] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 23:22:16] [SS-Thread] Received command: WRITE x 1
+[2025-11-15 23:22:16] [SS-Thread] WRITE request: x sentence 1
+[2025-11-15 23:22:16] [AccessControl] Checking WRITE permission for file x
+[2025-11-15 23:22:16] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 23:22:16] [AccessControl] Connected to NM
+[2025-11-15 23:22:16] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 x WRITE
+[2025-11-15 23:22:16] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 23:22:16] [AccessControl] Access GRANTED
+[2025-11-15 23:22:16] [SS-Thread] Will create new sentence 1
+[2025-11-15 23:22:16] [SS-Thread] Sentence validation passed for sentence 1
+[2025-11-15 23:22:16] [SS-Thread] Sentence lock acquired for x sentence 1
+[2025-11-15 23:22:16] [SS-Thread] Loaded file x, size=11, data=0x607724643cb0
+[2025-11-15 23:22:16] [SS-Thread] Backup created: storage_root/x.bak
+[2025-11-15 23:22:21] [SS-Thread] Parse OK: word_index=0, content='pns', working_data='lol hav k .'
+[2025-11-15 23:22:21] [SS-Thread] Split into 1 words
+[2025-11-15 23:22:21] [SS-Thread] Period analysis: period_found=-1, before='NULL', after='NULL'
+[2025-11-15 23:22:21] [SS-Thread] find_sentence returned 0, s_start=0, s_end=10
+[2025-11-15 23:22:21] [SS-Thread] Creating new sentence 1
+[2025-11-15 23:22:21] [SS-Thread] Added 1 words to new sentence 1
+[2025-11-15 23:22:30] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 23:22:30] [SS-Thread] File x updated successfully
+[2025-11-15 23:22:30] [SS-Thread] Sentence lock released for x sentence 1
+[2025-11-15 23:22:30] [SS-Thread] Client disconnected.
+[2025-11-15 23:22:51] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 23:22:51] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 23:22:51] [SS-Thread] Received command: WRITE x 2
+[2025-11-15 23:22:51] [SS-Thread] WRITE request: x sentence 2
+[2025-11-15 23:22:51] [AccessControl] Checking WRITE permission for file x
+[2025-11-15 23:22:51] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 23:22:51] [AccessControl] Connected to NM
+[2025-11-15 23:22:51] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 x WRITE
+[2025-11-15 23:22:51] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 23:22:51] [AccessControl] Access GRANTED
+[2025-11-15 23:22:51] [SS-Thread] Cannot create sentence 2 - sentence 1 doesn't end with period
+[2025-11-15 23:22:51] [SS-Thread] Client disconnected.
+[2025-11-15 23:22:56] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 23:22:56] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 23:22:56] [SS-Thread] Received command: WRITE x 0
+[2025-11-15 23:22:56] [SS-Thread] WRITE request: x sentence 0
+[2025-11-15 23:22:56] [AccessControl] Checking WRITE permission for file x
+[2025-11-15 23:22:56] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 23:22:56] [AccessControl] Connected to NM
+[2025-11-15 23:22:56] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 x WRITE
+[2025-11-15 23:22:56] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 23:22:56] [AccessControl] Access GRANTED
+[2025-11-15 23:22:56] [SS-Thread] Sentence validation passed for sentence 0
+[2025-11-15 23:22:56] [SS-Thread] Sentence lock acquired for x sentence 0
+[2025-11-15 23:22:56] [SS-Thread] Loaded file x, size=15, data=0x607724643cb0
+[2025-11-15 23:22:56] [SS-Thread] Backup created: storage_root/x.bak
+[2025-11-15 23:22:59] [SS-Thread] Parse OK: word_index=0, content='lol', working_data='lol hav k . pns'
+[2025-11-15 23:22:59] [SS-Thread] Split into 1 words
+[2025-11-15 23:22:59] [SS-Thread] Period analysis: period_found=-1, before='NULL', after='NULL'
+[2025-11-15 23:22:59] [SS-Thread] find_sentence returned 1, s_start=0, s_end=10
+[2025-11-15 23:22:59] [SS-Thread] Inserted 1 words at index 0 in sentence 0
+[2025-11-15 23:23:04] [SS-Thread] Parse OK: word_index=0, content='lol.', working_data='lol lol hav k . pns'
+[2025-11-15 23:23:04] [SS-Thread] Split into 1 words
+[2025-11-15 23:23:04] [SS-Thread] Period analysis: period_found=0, before='lol.', after='NULL'
+[2025-11-15 23:23:04] [SS-Thread] find_sentence returned 1, s_start=0, s_end=14
+[2025-11-15 23:23:04] [SS-Thread] Inserted word 0 with period delimiter, split sentence 0
+[2025-11-15 23:23:04] [SS-Thread] Inserted 1 words at index 0 in sentence 0
+[2025-11-15 23:23:15] [SS-Thread] Parse OK: word_index=1, content='hav', working_data='lol. lol lol hav k . pns'
+[2025-11-15 23:23:15] [SS-Thread] Split into 1 words
+[2025-11-15 23:23:15] [SS-Thread] Period analysis: period_found=-1, before='NULL', after='NULL'
+[2025-11-15 23:23:15] [SS-Thread] find_sentence returned 1, s_start=0, s_end=3
+[2025-11-15 23:23:15] [SS-Thread] Inserted 1 words at index 1 in sentence 0
+[2025-11-15 23:23:18] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 23:23:18] [SS-Thread] File x updated successfully
+[2025-11-15 23:23:18] [SS-Thread] Sentence lock released for x sentence 0
+[2025-11-15 23:23:18] [SS-Thread] Client disconnected.
+[2025-11-15 23:23:42] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 23:23:42] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 23:23:42] [SS-Thread] Received command: READ x
+[2025-11-15 23:23:42] [SS-Thread] Read request for: x
+[2025-11-15 23:23:42] [AccessControl] Checking READ permission for file x
+[2025-11-15 23:23:42] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 23:23:42] [AccessControl] Connected to NM
+[2025-11-15 23:23:42] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 x READ
+[2025-11-15 23:23:42] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 23:23:42] [AccessControl] Access GRANTED
+[2025-11-15 23:23:42] [SS-Thread] Client disconnected.
+[2025-11-15 23:28:13] [NM-Thread] Name Server disconnected! Command thread shutting down.
+[2025-11-15 23:33:32] 
+--- LOGGING STARTED: Sat Nov 15 23:33:32 2025 ---
+[2025-11-15 23:33:32] Lock systems initialized.
+[2025-11-15 23:33:32] Storage Server (SS) starting up...
+[2025-11-15 23:33:32] Successfully connected to NM!
+[2025-11-15 23:33:32] Sending registration: REGISTER_SS 9001 9001
+[2025-11-15 23:33:32] Received from NM: ACK:SS_REGISTRATION_OK
+
+[2025-11-15 23:33:32] Registration complete. Private command line is active.
+[2025-11-15 23:33:32] [Main Thread] Starting public client server on port 9001...
+[2025-11-15 23:33:32] 
+--- Storage Server is now ONLINE. Listening on port 9001 ---
+
+[2025-11-15 23:33:32] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-15 23:33:42] [NM-Thread] Received trusted command: CREATE lol
+[2025-11-15 23:33:42] [NM-Thread] Successfully created file: lol
+[2025-11-15 23:33:52] [NM-Thread] Name Server disconnected! Command thread shutting down.
+[2025-11-15 23:34:19] 
+--- LOGGING STARTED: Sat Nov 15 23:34:19 2025 ---
+[2025-11-15 23:34:19] Lock systems initialized.
+[2025-11-15 23:34:19] Storage Server (SS) starting up...
+[2025-11-15 23:34:19] Successfully connected to NM!
+[2025-11-15 23:34:19] Sending registration: REGISTER_SS 9001 9001
+[2025-11-15 23:34:19] Received from NM: ACK:SS_REGISTRATION_OK
+
+[2025-11-15 23:34:19] Registration complete. Private command line is active.
+[2025-11-15 23:34:19] [Main Thread] Starting public client server on port 9001...
+[2025-11-15 23:34:19] 
+--- Storage Server is now ONLINE. Listening on port 9001 ---
+
+[2025-11-15 23:34:19] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-15 23:34:31] [NM-Thread] Received trusted command: CREATE dY
+[2025-11-15 23:34:31] [NM-Thread] Successfully created file: dY
+[2025-11-15 23:34:58] [NM-Thread] Received trusted command: CREATE l
+[2025-11-15 23:34:58] [NM-Thread] Successfully created file: l
+[2025-11-15 23:35:20] [NM-Thread] Received trusted command: GET_INFO dY
+[2025-11-15 23:35:20] [NM-Thread] Sending info for dY: 0 bytes, 1763229871 mtime, 0 words
+[2025-11-15 23:35:20] [NM-Thread] Received trusted command: GET_INFO l
+[2025-11-15 23:35:20] [NM-Thread] Sending info for l: 0 bytes, 1763229898 mtime, 0 words
+[2025-11-15 23:41:24] [NM-Thread] Name Server disconnected! Command thread shutting down.
+[2025-11-15 23:41:56] 
+--- LOGGING STARTED: Sat Nov 15 23:41:56 2025 ---
+[2025-11-15 23:41:56] Lock systems initialized.
+[2025-11-15 23:41:56] Storage Server (SS) starting up...
+[2025-11-15 23:41:56] Successfully connected to NM!
+[2025-11-15 23:41:56] Sending registration: REGISTER_SS 9001 9001
+[2025-11-15 23:41:56] Received from NM: ACK:SS_REGISTRATION_OK
+
+[2025-11-15 23:41:56] Registration complete. Private command line is active.
+[2025-11-15 23:41:56] [Main Thread] Starting public client server on port 9001...
+[2025-11-15 23:41:56] 
+--- Storage Server is now ONLINE. Listening on port 9001 ---
+
+[2025-11-15 23:41:56] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-15 23:42:26] [NM-Thread] Received trusted command: CREATE vik_f
+[2025-11-15 23:42:26] [NM-Thread] Successfully created file: vik_f
+[2025-11-15 23:43:26] [NM-Thread] Received trusted command: CREATE vik_f1
+[2025-11-15 23:43:26] [NM-Thread] Successfully created file: vik_f1
+[2025-11-15 23:44:01] [NM-Thread] Received trusted command: GET_INFO vik_f
+[2025-11-15 23:44:01] [NM-Thread] Sending info for vik_f: 0 bytes, 1763230346 mtime, 0 words
+[2025-11-15 23:44:01] [NM-Thread] Received trusted command: GET_INFO vik_f1
+[2025-11-15 23:44:01] [NM-Thread] Sending info for vik_f1: 0 bytes, 1763230406 mtime, 0 words
+[2025-11-15 23:49:54] [NM-Thread] Name Server disconnected! Command thread shutting down.
+[2025-11-15 23:50:04] 
+--- LOGGING STARTED: Sat Nov 15 23:50:04 2025 ---
+[2025-11-15 23:50:04] Lock systems initialized.
+[2025-11-15 23:50:04] Storage Server (SS) starting up...
+[2025-11-15 23:50:04] Successfully connected to NM!
+[2025-11-15 23:50:04] Sending registration: REGISTER_SS 9001 9001
+[2025-11-15 23:50:04] Received from NM: ACK:SS_REGISTRATION_OK
+
+[2025-11-15 23:50:04] Registration complete. Private command line is active.
+[2025-11-15 23:50:04] [Main Thread] Starting public client server on port 9001...
+[2025-11-15 23:50:04] 
+--- Storage Server is now ONLINE. Listening on port 9001 ---
+
+[2025-11-15 23:50:04] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-15 23:50:48] [NM-Thread] Name Server disconnected! Command thread shutting down.
+[2025-11-15 23:59:21] 
+--- LOGGING STARTED: Sat Nov 15 23:59:21 2025 ---
+[2025-11-15 23:59:21] Lock systems initialized.
+[2025-11-15 23:59:21] Storage Server (SS) starting up...
+[2025-11-15 23:59:21] Successfully connected to NM!
+[2025-11-15 23:59:21] Sending registration: REGISTER_SS 9001 9001
+[2025-11-15 23:59:21] Received from NM: ACK:SS_REGISTRATION_OK
+
+[2025-11-15 23:59:21] Registration complete. Private command line is active.
+[2025-11-15 23:59:21] [Main Thread] Starting public client server on port 9001...
+[2025-11-15 23:59:21] 
+--- Storage Server is now ONLINE. Listening on port 9001 ---
+
+[2025-11-15 23:59:21] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-15 23:59:44] [NM-Thread] Received trusted command: CREATE write_test.txt
+[2025-11-15 23:59:44] [NM-Thread] Successfully created file: write_test.txt
+[2025-11-15 23:59:44] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 23:59:44] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 23:59:44] [SS-Thread] Received command: WRITE write_test.txt 0
+[2025-11-15 23:59:44] [SS-Thread] WRITE request: write_test.txt sentence 0
+[2025-11-15 23:59:44] [AccessControl] Checking WRITE permission for file write_test.txt
+[2025-11-15 23:59:44] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 23:59:44] [AccessControl] Connected to NM
+[2025-11-15 23:59:44] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 write_test.txt WRITE
+[2025-11-15 23:59:44] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 23:59:44] [AccessControl] Access GRANTED
+[2025-11-15 23:59:44] [SS-Thread] Will create new sentence 0
+[2025-11-15 23:59:44] [SS-Thread] Sentence validation passed for sentence 0
+[2025-11-15 23:59:44] [SS-Thread] Sentence lock acquired for write_test.txt sentence 0
+[2025-11-15 23:59:44] [SS-Thread] Loaded file write_test.txt, size=0, data=0x5f3eda208cb0
+[2025-11-15 23:59:44] [SS-Thread] Backup created: storage_root/write_test.txt.bak
+[2025-11-15 23:59:45] [SS-Thread] Parse OK: word_index=0, content='This is sentence one.', working_data=''
+[2025-11-15 23:59:45] [SS-Thread] Split into 4 words
+[2025-11-15 23:59:45] [SS-Thread] Period analysis: period_found=3, before='one.', after='NULL'
+[2025-11-15 23:59:45] [SS-Thread] find_sentence returned 0, s_start=0, s_end=0
+[2025-11-15 23:59:45] [SS-Thread] Creating new sentence 0
+[2025-11-15 23:59:45] [SS-Thread] Added 4 words to new sentence 0
+[2025-11-15 23:59:45] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 23:59:45] [SS-Thread] File write_test.txt updated successfully
+[2025-11-15 23:59:45] [SS-Thread] Sentence lock released for write_test.txt sentence 0
+[2025-11-15 23:59:45] [SS-Thread] Client disconnected.
+[2025-11-15 23:59:46] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 23:59:46] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 23:59:46] [SS-Thread] Received command: WRITE write_test.txt 1
+[2025-11-15 23:59:46] [SS-Thread] WRITE request: write_test.txt sentence 1
+[2025-11-15 23:59:46] [AccessControl] Checking WRITE permission for file write_test.txt
+[2025-11-15 23:59:46] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 23:59:46] [AccessControl] Connected to NM
+[2025-11-15 23:59:46] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 write_test.txt WRITE
+[2025-11-15 23:59:46] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 23:59:46] [AccessControl] Access GRANTED
+[2025-11-15 23:59:46] [SS-Thread] Will create new sentence 1
+[2025-11-15 23:59:46] [SS-Thread] Sentence validation passed for sentence 1
+[2025-11-15 23:59:46] [SS-Thread] Sentence lock acquired for write_test.txt sentence 1
+[2025-11-15 23:59:46] [SS-Thread] Loaded file write_test.txt, size=21, data=0x5f3eda208480
+[2025-11-15 23:59:46] [SS-Thread] Backup created: storage_root/write_test.txt.bak
+[2025-11-15 23:59:46] [SS-Thread] Parse OK: word_index=0, content='This is sentence two.', working_data='This is sentence one.'
+[2025-11-15 23:59:46] [SS-Thread] Split into 4 words
+[2025-11-15 23:59:46] [SS-Thread] Period analysis: period_found=3, before='two.', after='NULL'
+[2025-11-15 23:59:46] [SS-Thread] find_sentence returned 0, s_start=0, s_end=20
+[2025-11-15 23:59:46] [SS-Thread] Creating new sentence 1
+[2025-11-15 23:59:46] [SS-Thread] Added 4 words to new sentence 1
+[2025-11-15 23:59:47] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 23:59:47] [SS-Thread] File write_test.txt updated successfully
+[2025-11-15 23:59:47] [SS-Thread] Sentence lock released for write_test.txt sentence 1
+[2025-11-15 23:59:47] [SS-Thread] Client disconnected.
+[2025-11-15 23:59:47] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 23:59:47] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 23:59:47] [SS-Thread] Received command: READ write_test.txt
+[2025-11-15 23:59:47] [SS-Thread] Read request for: write_test.txt
+[2025-11-15 23:59:47] [AccessControl] Checking READ permission for file write_test.txt
+[2025-11-15 23:59:47] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 23:59:47] [AccessControl] Connected to NM
+[2025-11-15 23:59:47] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 write_test.txt READ
+[2025-11-15 23:59:47] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 23:59:47] [AccessControl] Access GRANTED
+[2025-11-15 23:59:47] [SS-Thread] Client disconnected.
+[2025-11-15 23:59:51] [NM-Thread] Received trusted command: CREATE period_test.txt
+[2025-11-15 23:59:51] [NM-Thread] Successfully created file: period_test.txt
+[2025-11-15 23:59:51] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 23:59:51] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 23:59:51] [SS-Thread] Received command: WRITE period_test.txt 0
+[2025-11-15 23:59:51] [SS-Thread] WRITE request: period_test.txt sentence 0
+[2025-11-15 23:59:51] [AccessControl] Checking WRITE permission for file period_test.txt
+[2025-11-15 23:59:51] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 23:59:51] [AccessControl] Connected to NM
+[2025-11-15 23:59:51] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 period_test.txt WRITE
+[2025-11-15 23:59:51] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 23:59:51] [AccessControl] Access GRANTED
+[2025-11-15 23:59:51] [SS-Thread] Will create new sentence 0
+[2025-11-15 23:59:51] [SS-Thread] Sentence validation passed for sentence 0
+[2025-11-15 23:59:51] [SS-Thread] Sentence lock acquired for period_test.txt sentence 0
+[2025-11-15 23:59:51] [SS-Thread] Loaded file period_test.txt, size=0, data=0x5f3eda208cb0
+[2025-11-15 23:59:51] [SS-Thread] Backup created: storage_root/period_test.txt.bak
+[2025-11-15 23:59:52] [SS-Thread] Parse OK: word_index=0, content='Hello world', working_data=''
+[2025-11-15 23:59:52] [SS-Thread] Split into 2 words
+[2025-11-15 23:59:52] [SS-Thread] Period analysis: period_found=-1, before='NULL', after='NULL'
+[2025-11-15 23:59:52] [SS-Thread] find_sentence returned 0, s_start=0, s_end=0
+[2025-11-15 23:59:52] [SS-Thread] Creating new sentence 0
+[2025-11-15 23:59:52] [SS-Thread] Added 2 words to new sentence 0
+[2025-11-15 23:59:52] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 23:59:52] [SS-Thread] File period_test.txt updated successfully
+[2025-11-15 23:59:52] [SS-Thread] Sentence lock released for period_test.txt sentence 0
+[2025-11-15 23:59:52] [SS-Thread] Client disconnected.
+[2025-11-15 23:59:53] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 23:59:53] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 23:59:53] [SS-Thread] Received command: WRITE period_test.txt 0
+[2025-11-15 23:59:53] [SS-Thread] WRITE request: period_test.txt sentence 0
+[2025-11-15 23:59:53] [AccessControl] Checking WRITE permission for file period_test.txt
+[2025-11-15 23:59:53] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 23:59:53] [AccessControl] Connected to NM
+[2025-11-15 23:59:53] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 period_test.txt WRITE
+[2025-11-15 23:59:53] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 23:59:53] [AccessControl] Access GRANTED
+[2025-11-15 23:59:53] [SS-Thread] Sentence validation passed for sentence 0
+[2025-11-15 23:59:53] [SS-Thread] Sentence lock acquired for period_test.txt sentence 0
+[2025-11-15 23:59:53] [SS-Thread] Loaded file period_test.txt, size=11, data=0x5f3eda208cb0
+[2025-11-15 23:59:53] [SS-Thread] Backup created: storage_root/period_test.txt.bak
+[2025-11-15 23:59:53] [SS-Thread] Parse OK: word_index=1, content='there.', working_data='Hello world'
+[2025-11-15 23:59:53] [SS-Thread] Split into 1 words
+[2025-11-15 23:59:53] [SS-Thread] Period analysis: period_found=0, before='there.', after='NULL'
+[2025-11-15 23:59:53] [SS-Thread] find_sentence returned 1, s_start=0, s_end=10
+[2025-11-15 23:59:53] [SS-Thread] Inserted word 1 with period delimiter, split sentence 0
+[2025-11-15 23:59:53] [SS-Thread] Inserted 1 words at index 1 in sentence 0
+[2025-11-15 23:59:54] [SS-Thread] ETIRW received, finalizing write
+[2025-11-15 23:59:54] [SS-Thread] File period_test.txt updated successfully
+[2025-11-15 23:59:54] [SS-Thread] Sentence lock released for period_test.txt sentence 0
+[2025-11-15 23:59:54] [SS-Thread] Client disconnected.
+[2025-11-15 23:59:54] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 23:59:54] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 23:59:54] [SS-Thread] Received command: READ period_test.txt
+[2025-11-15 23:59:54] [SS-Thread] Read request for: period_test.txt
+[2025-11-15 23:59:54] [AccessControl] Checking READ permission for file period_test.txt
+[2025-11-15 23:59:54] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 23:59:54] [AccessControl] Connected to NM
+[2025-11-15 23:59:54] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 period_test.txt READ
+[2025-11-15 23:59:54] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 23:59:54] [AccessControl] Access GRANTED
+[2025-11-15 23:59:54] [SS-Thread] Client disconnected.
+[2025-11-15 23:59:58] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-15 23:59:58] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-15 23:59:58] [SS-Thread] Received command: WRITE write_test.txt 10
+[2025-11-15 23:59:58] [SS-Thread] WRITE request: write_test.txt sentence 10
+[2025-11-15 23:59:58] [AccessControl] Checking WRITE permission for file write_test.txt
+[2025-11-15 23:59:58] [AccessControl] Client IP: 127.0.0.1
+[2025-11-15 23:59:58] [AccessControl] Connected to NM
+[2025-11-15 23:59:58] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 write_test.txt WRITE
+[2025-11-15 23:59:58] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-15 23:59:58] [AccessControl] Access GRANTED
+[2025-11-15 23:59:58] [SS-Thread] Sentence 10 not found in write_test.txt (file has 2 sentences, can only create sentence 2)
+[2025-11-15 23:59:58] [SS-Thread] Client disconnected.
+[2025-11-16 00:00:01] [NM-Thread] Received trusted command: CREATE acl_test.txt
+[2025-11-16 00:00:01] [NM-Thread] Successfully created file: acl_test.txt
+[2025-11-16 00:00:02] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-16 00:00:02] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-16 00:00:02] [SS-Thread] Received command: WRITE acl_test.txt 0
+[2025-11-16 00:00:02] [SS-Thread] WRITE request: acl_test.txt sentence 0
+[2025-11-16 00:00:02] [AccessControl] Checking WRITE permission for file acl_test.txt
+[2025-11-16 00:00:02] [AccessControl] Client IP: 127.0.0.1
+[2025-11-16 00:00:02] [AccessControl] Connected to NM
+[2025-11-16 00:00:02] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 acl_test.txt WRITE
+[2025-11-16 00:00:02] [AccessControl] Received response (21 bytes): ACK:NO No permission
+
+[2025-11-16 00:00:02] [AccessControl] Denied access to 127.0.0.1 for WRITE on file acl_test.txt
+[2025-11-16 00:00:02] [SS-Thread] WRITE denied - no permission
+[2025-11-16 00:00:02] [SS-Thread] Client disconnected.
+[2025-11-16 00:00:04] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-16 00:00:04] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-16 00:00:04] [SS-Thread] Received command: READ acl_test.txt
+[2025-11-16 00:00:04] [SS-Thread] Read request for: acl_test.txt
+[2025-11-16 00:00:04] [AccessControl] Checking READ permission for file acl_test.txt
+[2025-11-16 00:00:04] [AccessControl] Client IP: 127.0.0.1
+[2025-11-16 00:00:04] [AccessControl] Connected to NM
+[2025-11-16 00:00:04] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 acl_test.txt READ
+[2025-11-16 00:00:04] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-16 00:00:04] [AccessControl] Access GRANTED
+[2025-11-16 00:00:04] [SS-Thread] Client disconnected.
+[2025-11-16 00:00:05] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-16 00:00:05] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-16 00:00:05] [SS-Thread] Received command: WRITE acl_test.txt 0
+[2025-11-16 00:00:05] [SS-Thread] WRITE request: acl_test.txt sentence 0
+[2025-11-16 00:00:05] [AccessControl] Checking WRITE permission for file acl_test.txt
+[2025-11-16 00:00:05] [AccessControl] Client IP: 127.0.0.1
+[2025-11-16 00:00:05] [AccessControl] Connected to NM
+[2025-11-16 00:00:05] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 acl_test.txt WRITE
+[2025-11-16 00:00:05] [AccessControl] Received response (21 bytes): ACK:NO No permission
+
+[2025-11-16 00:00:05] [AccessControl] Denied access to 127.0.0.1 for WRITE on file acl_test.txt
+[2025-11-16 00:00:05] [SS-Thread] WRITE denied - no permission
+[2025-11-16 00:00:05] [SS-Thread] Client disconnected.
+[2025-11-16 00:00:08] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-16 00:00:08] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-16 00:00:08] [SS-Thread] Received command: WRITE acl_test.txt 0
+[2025-11-16 00:00:08] [SS-Thread] WRITE request: acl_test.txt sentence 0
+[2025-11-16 00:00:08] [AccessControl] Checking WRITE permission for file acl_test.txt
+[2025-11-16 00:00:08] [AccessControl] Client IP: 127.0.0.1
+[2025-11-16 00:00:08] [AccessControl] Connected to NM
+[2025-11-16 00:00:08] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 acl_test.txt WRITE
+[2025-11-16 00:00:08] [AccessControl] Received response (21 bytes): ACK:NO No permission
+
+[2025-11-16 00:00:08] [AccessControl] Denied access to 127.0.0.1 for WRITE on file acl_test.txt
+[2025-11-16 00:00:08] [SS-Thread] WRITE denied - no permission
+[2025-11-16 00:00:08] [SS-Thread] Client disconnected.
+[2025-11-16 00:00:09] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-16 00:00:09] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-16 00:00:09] [SS-Thread] Received command: READ acl_test.txt
+[2025-11-16 00:00:09] [SS-Thread] Read request for: acl_test.txt
+[2025-11-16 00:00:09] [AccessControl] Checking READ permission for file acl_test.txt
+[2025-11-16 00:00:09] [AccessControl] Client IP: 127.0.0.1
+[2025-11-16 00:00:09] [AccessControl] Connected to NM
+[2025-11-16 00:00:09] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 acl_test.txt READ
+[2025-11-16 00:00:09] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-16 00:00:09] [AccessControl] Access GRANTED
+[2025-11-16 00:00:09] [SS-Thread] Client disconnected.
+[2025-11-16 00:00:11] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-16 00:00:11] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-16 00:00:11] [SS-Thread] Received command: READ acl_test.txt
+[2025-11-16 00:00:11] [SS-Thread] Read request for: acl_test.txt
+[2025-11-16 00:00:11] [AccessControl] Checking READ permission for file acl_test.txt
+[2025-11-16 00:00:11] [AccessControl] Client IP: 127.0.0.1
+[2025-11-16 00:00:11] [AccessControl] Connected to NM
+[2025-11-16 00:00:11] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 acl_test.txt READ
+[2025-11-16 00:00:11] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-16 00:00:11] [AccessControl] Access GRANTED
+[2025-11-16 00:00:11] [SS-Thread] Client disconnected.
+[2025-11-16 00:00:12] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-16 00:00:12] [SS-Thread] New client connected. Waiting for commands...
+[2025-11-16 00:00:12] [SS-Thread] Received command: READ acl_test.txt
+[2025-11-16 00:00:12] [SS-Thread] Read request for: acl_test.txt
+[2025-11-16 00:00:12] [AccessControl] Checking READ permission for file acl_test.txt
+[2025-11-16 00:00:12] [AccessControl] Client IP: 127.0.0.1
+[2025-11-16 00:00:12] [AccessControl] Connected to NM
+[2025-11-16 00:00:12] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 acl_test.txt READ
+[2025-11-16 00:00:12] [AccessControl] Received response (8 bytes): ACK:YES
+
+[2025-11-16 00:00:12] [AccessControl] Access GRANTED
+[2025-11-16 00:00:12] [SS-Thread] Client disconnected.
+[2025-11-16 00:00:15] [NM-Thread] Received trusted command: CREATE user1_file1.txt
+[2025-11-16 00:00:15] [NM-Thread] Successfully created file: user1_file1.txt
+[2025-11-16 00:00:16] [NM-Thread] Received trusted command: CREATE user1_file2.txt
+[2025-11-16 00:00:16] [NM-Thread] Successfully created file: user1_file2.txt
+[2025-11-16 00:00:46] [NM-Thread] Name Server disconnected! Command thread shutting down.

@@ -970,6 +970,15 @@ static void trie_collect_files(TrieNode* node, FileMetadata** files, int* count,
 }
 
 static void handle_view_command(Client* client, char* args) {
+    // Trim any trailing whitespace from args
+    if (args) {
+        char* end = args + strlen(args) - 1;
+        while (end >= args && (*end == ' ' || *end == '\t' || *end == '\n' || *end == '\r')) {
+            *end = '\0';
+            end--;
+        }
+    }
+    
     int show_all = (args && strstr(args, "-a"));
     int show_details = (args && strstr(args, "-l"));
     
@@ -984,21 +993,34 @@ static void handle_view_command(Client* client, char* args) {
     trie_collect_files(g_nm.file_trie_root, files, &file_count, 1000);
     pthread_rwlock_unlock(&g_nm.trie_lock);
     
+    // Determine header based on flags
     if (show_details) {
-        offset = snprintf(response, sizeof(response), 
-                         "%-30s %-15s %-10s %-10s %-20s\n",
-                         "FILENAME", "OWNER", "SIZE", "WORDS", "LAST MODIFIED");
-        offset += snprintf(response + offset, sizeof(response) - offset,
-                          "================================================================================\n");
+        if (show_all) {
+            // VIEW -al: Show all files with owner
+            offset = snprintf(response, sizeof(response), 
+                             "| %-12s | %-6s | %-6s | %-18s | %-6s |\n",
+                             "Filename", "Words", "Chars", "Last Access Time", "Owner");
+            offset += snprintf(response + offset, sizeof(response) - offset,
+                              "|--------------|--------|--------|-----------------------|--------|\n");
+        } else {
+            // VIEW -l: Show accessible files with details (no owner)
+            offset = snprintf(response, sizeof(response), 
+                             "| %-12s | %-6s | %-6s | %-18s |\n",
+                             "Filename", "Words", "Chars", "Last Access Time");
+            offset += snprintf(response + offset, sizeof(response) - offset,
+                              "|--------------|--------|--------|---------------------|\n");
+        }
     } else {
-        offset = snprintf(response, sizeof(response), "FILES:\n");
+        // VIEW or VIEW -a: Just list filenames
+        offset = snprintf(response, sizeof(response), "");
     }
     
     int displayed = 0;
     for (int i = 0; i < file_count && offset < sizeof(response) - 200; i++) {
         FileMetadata* file = files[i];
         
-        // Filter: show all or only user's files
+        // Filter: VIEW and VIEW -l show only accessible files
+        // VIEW -a and VIEW -al show all files
         if (!show_all && !acl_check_read(file, client->username)) {
             continue; // Skip files user can't access
         }
@@ -1028,19 +1050,31 @@ static void handle_view_command(Client* client, char* args) {
             struct tm* tm_info = localtime(&file->last_modified);
             strftime(time_str, 20, "%Y-%m-%d %H:%M", tm_info);
             
-            offset += snprintf(response + offset, sizeof(response) - offset,
-                              "%-30s %-15s %-10ld %-10d %-20s\n",
-                              file->filename, file->owner, file->file_size,
-                              file->word_count, time_str);
+            if (show_all) {
+                // VIEW -al: Include owner
+                offset += snprintf(response + offset, sizeof(response) - offset,
+                                  "| %-12s | %-6d | %-6ld | %-18s | %-6s |\n",
+                                  file->filename, file->word_count, file->file_size,
+                                  time_str, file->owner);
+            } else {
+                // VIEW -l: No owner
+                offset += snprintf(response + offset, sizeof(response) - offset,
+                                  "| %-12s | %-6d | %-6ld | %-18s |\n",
+                                  file->filename, file->word_count, file->file_size,
+                                  time_str);
+            }
         } else {
+            // VIEW or VIEW -a: Just filename
             offset += snprintf(response + offset, sizeof(response) - offset,
-                              "  %s\n", file->filename);
+                              "--> %s\n", file->filename);
         }
         displayed++;
     }
     
-    offset += snprintf(response + offset, sizeof(response) - offset,
-                      "\nTotal: %d files\n", displayed);
+    if (show_details) {
+        offset += snprintf(response + offset, sizeof(response) - offset,
+                          "-------------------------------------------------------------\n");
+    }
     
     write(client->socket_fd, response, strlen(response));
     nm_log_operation(client->ip, client->nm_port, client->username, "VIEW", 

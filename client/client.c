@@ -138,7 +138,7 @@ void handle_read(const char* filename) {
                 if (n <= 0) break;
                 response[n] = '\0';
                 printf("%s", response);
-                if (strstr(response, "EOF") || strstr(response, "STOP")) break;
+                if (strstr(response, "\nEOF\n") || strstr(response, "STOP")) break;
             }
             printf("\n");
             close(ss_socket);
@@ -183,7 +183,7 @@ void handle_stream(const char* filename) {
                 }
                 response[n] = '\0';
                 
-                if (strstr(response, "EOF") || strstr(response, "STOP")) {
+                if (strstr(response, "STREAM_END") || strstr(response, "EOF") || strstr(response, "STOP")) {
                     printf("\n");
                     break;
                 }
