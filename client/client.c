@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <sys/time.h>
 
 #define BUFFER_SIZE 8192
 #define NM_IP "127.0.0.1"

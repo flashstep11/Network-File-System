@@ -197,7 +197,8 @@ void handle_write_command(int client_socket, char* buffer) {
     logger("[SS-Thread] Sentence lock acquired for %s sentence %d\n", filename, sentence_num);
     
     // Send ACK to client to start interactive editing
-    write(client_socket, "ACK:SENTENCE_LOCKED Enter word updates (word_index content) or ETIRW to finish\n", 81);
+    const char* ack_msg = "ACK:SENTENCE_LOCKED Enter word updates (word_index content) or ETIRW to finish\n";
+    write(client_socket, ack_msg, strlen(ack_msg));
 
     // 5. Load file and create backup
     pthread_mutex_t* f_mutex = get_file_mutex(filename);
@@ -399,13 +400,19 @@ void handle_write_command(int client_socket, char* buffer) {
             // Sentence exists, now INSERT words at the specified position
             // Insert all words from the command at consecutive positions
             {
-                // Count existing words in the sentence
+                // Count existing words in the sentence (excluding standalone delimiters)
                 int existing_word_count = 0;
                 int pos = s_start;
                 while (pos <= s_end) {
                     // Skip spaces
                     while (pos <= s_end && working_data[pos] == ' ') pos++;
                     if (pos <= s_end) {
+                        // Check if this is a standalone delimiter (period, !, ?)
+                        if ((working_data[pos] == '.' || working_data[pos] == '!' || working_data[pos] == '?') &&
+                            (pos + 1 > s_end || working_data[pos + 1] == ' ')) {
+                            // This is a standalone delimiter at the end, don't count it as a word
+                            break;
+                        }
                         existing_word_count++;
                         // Skip to next space
                         while (pos <= s_end && working_data[pos] != ' ') pos++;
