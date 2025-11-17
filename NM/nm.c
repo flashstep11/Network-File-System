@@ -476,16 +476,34 @@ int ss_register(NameServer* nm, const char* ip, int nm_port, int client_port,
         char* file_list_copy = strdup(file_list);
         char* token = strtok(file_list_copy, " \t\n");
         int file_count = 0;
+        int new_files = 0;
+        int existing_files = 0;
         while (token != NULL) {
-            FileMetadata* file_info = file_create_metadata(token, "system", ss_id);
-            if (file_info) {
-                file_add_to_registry(nm, file_info);
-                file_count++;
+            // Check if file already exists in metadata (from persistence)
+            FileMetadata* existing = file_lookup(nm, token);
+            if (existing) {
+                // File exists in metadata - just update the ss_id mapping
+                pthread_rwlock_wrlock(&existing->lock);
+                existing->ss_id = ss_id;
+                pthread_rwlock_unlock(&existing->lock);
+                existing_files++;
+                nm_log("[SS%d] Updated ss_id for existing file: %s (owner=%s)\n", 
+                       ss_id, token, existing->owner);
+            } else {
+                // New file not in metadata - create with owner="system"
+                FileMetadata* file_info = file_create_metadata(token, "system", ss_id);
+                if (file_info) {
+                    file_add_to_registry(nm, file_info);
+                    new_files++;
+                    nm_log("[SS%d] Registered new file: %s (owner=system)\n", ss_id, token);
+                }
             }
+            file_count++;
             token = strtok(NULL, " \t\n");
         }
         free(file_list_copy);
-        nm_log("[SS%d] Registered %d files\n", ss_id, file_count);
+        nm_log("[SS%d] Registered %d files (%d new, %d existing with preserved metadata)\n", 
+               ss_id, file_count, new_files, existing_files);
     }
     return ss_id;
 }

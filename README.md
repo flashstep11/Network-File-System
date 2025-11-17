@@ -39,23 +39,27 @@ Full documentation: https://karthikv1392.github.io/cs3301_osn/course_project/
 
 **What:** File metadata (owner, ACL, timestamps) saved to disk in `NM/nm_metadata.dat`
 
-**Why:** Ensures data integrity across restarts - if user "vik" creates "vikhyath", he owns it forever.
+**Why:** Ensures data integrity across restarts - if user "vik" creates "vikhyath", he owns it forever, even after NM or SS restarts.
 
 **How It Works:**
-- Saves automatically on CREATE/DELETE/ADDACCESS/REMACCESS
-- Loads on Name Server startup
-- Binary format for efficiency
-- Full ACL preserved (all users and permissions)
+- **NM Persistence:** Saves metadata automatically on CREATE/DELETE/ADDACCESS/REMACCESS, loads on startup
+- **SS Persistence:** When SS restarts and re-registers files, NM recognizes existing files and preserves metadata (doesn't overwrite with owner="system")
+- **Binary format** for efficiency
+- **Full ACL preserved** (all users and permissions)
+- **Both paths work:** NM restart ✅ and SS restart ✅
+
+**Key Innovation:** SS restart doesn't lose file ownership! NM checks if file exists in metadata before creating new entry.
 
 **Quick Test:**
 ```bash
-# Create file as 'vik', restart Name Server, verify file and ownership persist
-# See QUICK_START_PERSISTENCE.md for detailed steps
+# Create file as 'vik', restart SS, verify 'vik' still owns the file
+# See SS_RESTART_PERSISTENCE.md for detailed steps
 ```
 
 **Documentation:**
-- `PERSISTENCE_IMPLEMENTATION.md` - Technical details
-- `PERSISTENCE_TESTING.md` - Manual test procedures
+- `PERSISTENCE_COMPLETE.md` - Complete implementation summary
+- `SS_RESTART_PERSISTENCE.md` - SS restart testing guide
+- `PERSISTENCE_TESTING.md` - Manual test procedures  
 - `QUICK_START_PERSISTENCE.md` - 5-minute quick test
 
 ## Build & Run
