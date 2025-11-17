@@ -5,10 +5,9 @@
 #include "nm_handler.h"
 void handle_undo_command(int client_socket, char* buffer) {
     char filename[256];
-    char bak_filename[512];
 
     // 1. --- Parse the command ---
-    // Command from Client: "UNDO <filename>\n"
+    // Command from NM: "UNDO <filename>\n"
     if (sscanf(buffer, "UNDO %255s", filename) != 1) {
         char *err = "ERR:400:BAD_UNDO_COMMAND\n";
         logger("[SS-Thread] Failed to parse UNDO command.\n");
@@ -16,15 +15,9 @@ void handle_undo_command(int client_socket, char* buffer) {
         return;
     }
 
-    // 2. --- ACCESS CONTROL CHECK ---
-    // A user must have WRITE permission to perform an UNDO
-    if (!check_permissions(client_socket, filename, "WRITE")) {
-        char *err = "ERR:403:ACCESS_DENIED\n";
-        write(client_socket, err, strlen(err));
-        return;
-    }
+    // NOTE: NM already checked permissions, no need to check again here
     
-    // 3. --- Form the backup file name and real file paths ---
+    // 2. --- Form the backup file name and real file paths ---
     char full_path[512], bak_full_path[512];
     get_full_path(full_path, sizeof(full_path), filename);
     snprintf(bak_full_path, sizeof(bak_full_path), "%s%s.bak", STORAGE_ROOT, filename);
@@ -189,6 +182,51 @@ void handle_get_info_command(int nm_socket, char* buffer) {
         }
     }
 }
+
+void handle_get_content_command(int nm_socket, char* buffer) {
+    char filename[256];
+    
+    if (sscanf(buffer, "GET_CONTENT %255s", filename) != 1) {
+        char *err = "ERR:400:BAD_GET_CONTENT_COMMAND\n";
+        logger("[NM-Thread] Failed to parse GET_CONTENT command.\n");
+        write(nm_socket, err, strlen(err));
+        return;
+    }
+    
+    // Build full path
+    char full_path[512];
+    snprintf(full_path, sizeof(full_path), "%s%s", STORAGE_ROOT, filename);
+    
+    // Read file content
+    FILE* fp = fopen(full_path, "r");
+    if (!fp) {
+        char *err = "ERR:404:FILE_NOT_FOUND\n";
+        logger("[NM-Thread] Failed to open file %s for reading: %s\n", full_path, strerror(errno));
+        write(nm_socket, err, strlen(err));
+        return;
+    }
+    
+    // Build full response in buffer
+    char response[BUFFER_SIZE * 2];
+    int offset = snprintf(response, sizeof(response), "ACK:CONTENT\n");
+    
+    // Read file content line by line
+    char line[1024];
+    while (fgets(line, sizeof(line), fp) && offset < sizeof(response) - 100) {
+        offset += snprintf(response + offset, sizeof(response) - offset, "%s", line);
+    }
+    
+    fclose(fp);
+    
+    // Add EOF marker
+    offset += snprintf(response + offset, sizeof(response) - offset, "\nEOF\n");
+    
+    // Send entire response at once
+    write(nm_socket, response, offset);
+    
+    logger("[NM-Thread] Sent content of %s to NM (%d bytes)\n", filename, offset);
+}
+
 void *handle_nm_commands(void *arg) {
     int nm_socket = *(int *)arg;
     free(arg);
@@ -214,6 +252,9 @@ void *handle_nm_commands(void *arg) {
         // ... (you can add more else if blocks for other NS commands) ...
         else if (strncmp(buffer, "GET_INFO", 8) == 0) {
             handle_get_info_command(nm_socket, buffer);
+        }
+        else if (strncmp(buffer, "GET_CONTENT", 11) == 0) {
+            handle_get_content_command(nm_socket, buffer);
         }
         else if (strncmp(buffer, "UNDO", 4) == 0) {
             handle_undo_command(nm_socket, buffer);

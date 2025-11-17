@@ -887,11 +887,9 @@ static void handle_exec_command(Client* client, char* filename) {
     
     // Request file content from SS
     char command[BUFFER_SIZE];
-    snprintf(command, sizeof(command), "GET_INFO %s\n", filename);
+    snprintf(command, sizeof(command), "GET_CONTENT %s\n", filename);
     char ss_response[BUFFER_SIZE * 4];
     
-    // Get file contents via custom command
-    snprintf(command, sizeof(command), "READ %s\n", filename);
     if (ss_send_command(ss, command, ss_response, sizeof(ss_response)) < 0) {
         send_error(client->socket_fd, ERR_SS_OFFLINE, "Failed to fetch file");
         return;
@@ -903,31 +901,57 @@ static void handle_exec_command(Client* client, char* filename) {
         return;
     }
     
+    // Skip "ACK:CONTENT\n" header
+    char* content = ss_response;
+    if (strncmp(content, "ACK:CONTENT\n", 12) == 0) {
+        content += 12; // Skip header
+    }
+    
+    // Remove EOF marker if present
+    char* eof_marker = strstr(content, "\nEOF\n");
+    if (eof_marker) {
+        *eof_marker = '\0';
+    }
+    
     nm_log("[EXEC] Executing commands from %s for user %s\n", filename, client->username);
     
     // Execute each line as a shell command
     char response[BUFFER_SIZE * 4];
     int offset = snprintf(response, sizeof(response), "EXEC OUTPUT:\n");
     
-    char* line = strtok(ss_response, "\n");
+    char* line = strtok(content, "\n");
     while (line != NULL && offset < sizeof(response) - 1000) {
+        // Trim leading/trailing whitespace
+        while (*line == ' ' || *line == '\t' || *line == '\r') line++;
+        char* end = line + strlen(line) - 1;
+        while (end > line && (*end == ' ' || *end == '\t' || *end == '\r' || *end == '\n')) {
+            *end = '\0';
+            end--;
+        }
+        
         // Skip empty lines
         if (strlen(line) == 0) {
             line = strtok(NULL, "\n");
             continue;
         }
         
-        // Execute command
+        // Execute command with explicit shell
         offset += snprintf(response + offset, sizeof(response) - offset, "\n$ %s\n", line);
         
-        FILE* pipe = popen(line, "r");
+        // Use sh -c to ensure proper shell execution
+        char shell_cmd[BUFFER_SIZE];
+        snprintf(shell_cmd, sizeof(shell_cmd), "/bin/sh -c '%s'", line);
+        
+        FILE* pipe = popen(shell_cmd, "r");
         if (pipe) {
             char cmd_output[512];
+            int got_output = 0;
             while (fgets(cmd_output, sizeof(cmd_output), pipe) != NULL && offset < sizeof(response) - 100) {
                 offset += snprintf(response + offset, sizeof(response) - offset, "%s", cmd_output);
+                got_output = 1;
             }
             int status = pclose(pipe);
-            if (status != 0) {
+            if (status != 0 && !got_output) {
                 offset += snprintf(response + offset, sizeof(response) - offset, "(exit code: %d)\n", WEXITSTATUS(status));
             }
         } else {
