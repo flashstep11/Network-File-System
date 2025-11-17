@@ -1,6 +1,7 @@
 // nm.c - Complete Name Server implementation (all modules consolidated)
 
 #include "nm.h"
+#include "persistence.h"
 
 // ======================== GLOBALS ========================
 NameServer g_nm;
@@ -642,6 +643,8 @@ static void handle_create_command(Client* client, char* filename) {
             file_add_to_registry(&g_nm, file_info);
             send_success(client->socket_fd, "CREATE_OK");
             nm_log_operation(client->ip, client->nm_port, client->username, "CREATE", filename, ERR_NONE);
+            // Save metadata after creating file
+            persist_save_metadata(&g_nm);
         } else {
             send_error(client->socket_fd, ERR_UNKNOWN, "Failed to register file");
         }
@@ -721,6 +724,8 @@ static void handle_delete_command(Client* client, char* filename) {
         file_delete_from_registry(&g_nm, filename);
         send_success(client->socket_fd, "DELETE_OK");
         nm_log_operation(client->ip, client->nm_port, client->username, "DELETE", filename, ERR_NONE);
+        // Save metadata after deleting file
+        persist_save_metadata(&g_nm);
     } else {
         write(client->socket_fd, ss_response, strlen(ss_response));
     }
@@ -841,6 +846,8 @@ static void handle_addaccess_command(Client* client, char* args) {
     if (acl_add_access(file_info, username, read_access, write_access) == 0) {
         send_success(client->socket_fd, "ACCESS_ADDED");
         nm_log_operation(client->ip, client->nm_port, client->username, "ADDACCESS", args, ERR_NONE);
+        // Save metadata after modifying ACL
+        persist_save_metadata(&g_nm);
     } else {
         send_error(client->socket_fd, ERR_UNKNOWN, "Failed to add access");
     }
@@ -864,6 +871,8 @@ static void handle_remaccess_command(Client* client, char* args) {
     if (acl_remove_access(file_info, username) == 0) {
         send_success(client->socket_fd, "ACCESS_REMOVED");
         nm_log_operation(client->ip, client->nm_port, client->username, "REMACCESS", args, ERR_NONE);
+        // Save metadata after modifying ACL
+        persist_save_metadata(&g_nm);
     } else {
         send_error(client->socket_fd, ERR_UNKNOWN, "Failed to remove access");
     }
@@ -1258,11 +1267,21 @@ void nm_init(NameServer* nm) {
     nm->client_count = 0;
     nm->running = 1;
     nm_log("Name Server initialized successfully\n");
+    
+    // Load persistent metadata from disk
+    if (persist_load_metadata(nm) < 0) {
+        nm_log("[WARNING] Failed to load metadata, starting fresh\n");
+    }
 }
 
 void nm_cleanup(NameServer* nm) {
     nm_log("Shutting down Name Server...\n");
     nm->running = 0;
+    
+    // Save metadata before shutdown
+    nm_log("Saving metadata to disk...\n");
+    persist_save_metadata(nm);
+    
     pthread_rwlock_wrlock(&nm->client_lock);
     for (int i = 0; i < nm->client_count; i++) {
         if (nm->clients[i].is_active) close(nm->clients[i].socket_fd);

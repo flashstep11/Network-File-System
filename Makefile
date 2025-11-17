@@ -11,9 +11,9 @@ all: nm ss client
 # Name Server
 nm: NM/name_server
 
-NM/name_server: NM/nm.c NM/nm.h
+NM/name_server: NM/nm.c NM/persistence.c NM/nm.h NM/persistence.h
 	@echo "Building Name Server..."
-	$(CC) $(CFLAGS) NM/nm.c -o NM/name_server $(LDFLAGS)
+	$(CC) $(CFLAGS) NM/nm.c NM/persistence.c -o NM/name_server $(LDFLAGS)
 	@echo "Name Server built successfully!"
 
 # Storage Server
@@ -34,7 +34,7 @@ client/client: client/client.c
 
 clean:
 	@echo "Cleaning all binaries..."
-	rm -f NM/name_server NM/*.o NM/*.log
+	rm -f NM/name_server NM/*.o NM/*.log NM/nm_metadata.dat
 	rm -f SS/storage_server SS/*.o SS/*.log
 	rm -f client/client client/*.o
 	@echo "Clean complete!"
