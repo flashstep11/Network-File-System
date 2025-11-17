@@ -514,27 +514,42 @@ void ss_mark_inactive(NameServer* nm, int ss_id) {
 
 int ss_send_command(StorageServer* ss, const char* command, char* response, int response_size) {
     if (!ss || !command) return -1;
+    
     pthread_mutex_lock(&ss->lock);
     if (!ss->is_active) {
         pthread_mutex_unlock(&ss->lock);
         return -1;
     }
-    ssize_t sent = write(ss->socket_fd, command, strlen(command));
+    int sock_fd = ss->socket_fd;
+    pthread_mutex_unlock(&ss->lock);
+    
+    // Set socket timeout (2 seconds) to prevent indefinite blocking
+    struct timeval timeout;
+    timeout.tv_sec = 2;
+    timeout.tv_usec = 0;
+    setsockopt(sock_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+    
+    ssize_t sent = write(sock_fd, command, strlen(command));
     if (sent <= 0) {
+        pthread_mutex_lock(&ss->lock);
         ss->is_active = 0;
         pthread_mutex_unlock(&ss->lock);
         return -1;
     }
+    
     if (response && response_size > 0) {
         memset(response, 0, response_size);
-        ssize_t received = read(ss->socket_fd, response, response_size - 1);
+        ssize_t received = read(sock_fd, response, response_size - 1);
         if (received <= 0) {
+            pthread_mutex_lock(&ss->lock);
             ss->is_active = 0;
             pthread_mutex_unlock(&ss->lock);
             return -1;
         }
         response[received] = '\0';
     }
+    
+    pthread_mutex_lock(&ss->lock);
     ss->last_heartbeat = time(NULL);
     pthread_mutex_unlock(&ss->lock);
     return 0;
@@ -979,8 +994,8 @@ static void handle_view_command(Client* client, char* args) {
         }
     }
     
-    int show_all = (args && strstr(args, "-a"));
-    int show_details = (args && strstr(args, "-l"));
+    int show_all = (args && strchr(args, 'a') != NULL);      // Check if 'a' flag present
+    int show_details = (args && strchr(args, 'l') != NULL);  // Check if 'l' flag present
     
     char response[BUFFER_SIZE * 8];
     int offset = 0;
@@ -995,24 +1010,15 @@ static void handle_view_command(Client* client, char* args) {
     
     // Determine header based on flags
     if (show_details) {
-        if (show_all) {
-            // VIEW -al: Show all files with owner
-            offset = snprintf(response, sizeof(response), 
-                             "| %-12s | %-6s | %-6s | %-18s | %-6s |\n",
-                             "Filename", "Words", "Chars", "Last Access Time", "Owner");
-            offset += snprintf(response + offset, sizeof(response) - offset,
-                              "|--------------|--------|--------|-----------------------|--------|\n");
-        } else {
-            // VIEW -l: Show accessible files with details (no owner)
-            offset = snprintf(response, sizeof(response), 
-                             "| %-12s | %-6s | %-6s | %-18s |\n",
-                             "Filename", "Words", "Chars", "Last Access Time");
-            offset += snprintf(response + offset, sizeof(response) - offset,
-                              "|--------------|--------|--------|---------------------|\n");
-        }
+        // VIEW -l or VIEW -al: Always show details with owner
+        offset = snprintf(response, sizeof(response), 
+                         "| %-12s | %-6s | %-6s | %-21s | %-8s |\n",
+                         "Filename", "Words", "Chars", "Last Access Time", "Owner");
+        offset += snprintf(response + offset, sizeof(response) - offset,
+                          "|--------------|--------|--------|----------------------|----------|\n");
     } else {
         // VIEW or VIEW -a: Just list filenames
-        offset = snprintf(response, sizeof(response), "");
+        offset = snprintf(response, sizeof(response), "Files:\n");
     }
     
     int displayed = 0;
@@ -1026,43 +1032,58 @@ static void handle_view_command(Client* client, char* args) {
         }
         
         if (show_details) {
-            // Update file stats from SS
+            // Get fresh file stats from SS (read-only, don't update metadata)
+            long size = 0;
+            int words = 0;
+            time_t mtime = file->last_modified;
+            
             StorageServer* ss = ss_get_by_id(&g_nm, file->ss_id);
             if (ss && ss->is_active) {
                 char command[BUFFER_SIZE];
                 snprintf(command, sizeof(command), "GET_INFO %s\n", file->filename);
                 char ss_response[BUFFER_SIZE];
                 if (ss_send_command(ss, command, ss_response, sizeof(ss_response)) == 0) {
-                    long size = 0, mtime = 0;
-                    int words = 0;
-                    // Try parsing with word count first (new format)
-                    if (sscanf(ss_response, "ACK:INFO %ld %ld %d", &size, &mtime, &words) >= 2) {
-                        pthread_rwlock_wrlock(&file->lock);
-                        file->file_size = size;
-                        file->last_modified = (time_t)mtime;
-                        if (words > 0) file->word_count = words;
+                    // Parse response into local variables (don't modify shared file metadata)
+                    if (sscanf(ss_response, "ACK:INFO %ld %ld %d", &size, &mtime, &words) < 2) {
+                        // Fallback to stored values if query fails
+                        pthread_rwlock_rdlock(&file->lock);
+                        size = file->file_size;
+                        words = file->word_count;
+                        mtime = file->last_modified;
                         pthread_rwlock_unlock(&file->lock);
                     }
+                } else {
+                    // SS query failed, use cached values
+                    pthread_rwlock_rdlock(&file->lock);
+                    size = file->file_size;
+                    words = file->word_count;
+                    mtime = file->last_modified;
+                    pthread_rwlock_unlock(&file->lock);
                 }
+            } else {
+                // SS offline, use cached values
+                pthread_rwlock_rdlock(&file->lock);
+                size = file->file_size;
+                words = file->word_count;
+                mtime = file->last_modified;
+                pthread_rwlock_unlock(&file->lock);
             }
             
             char time_str[20];
-            struct tm* tm_info = localtime(&file->last_modified);
+            struct tm* tm_info = localtime(&mtime);
             strftime(time_str, 20, "%Y-%m-%d %H:%M", tm_info);
             
-            if (show_all) {
-                // VIEW -al: Include owner
-                offset += snprintf(response + offset, sizeof(response) - offset,
-                                  "| %-12s | %-6d | %-6ld | %-18s | %-6s |\n",
-                                  file->filename, file->word_count, file->file_size,
-                                  time_str, file->owner);
-            } else {
-                // VIEW -l: No owner
-                offset += snprintf(response + offset, sizeof(response) - offset,
-                                  "| %-12s | %-6d | %-6ld | %-18s |\n",
-                                  file->filename, file->word_count, file->file_size,
-                                  time_str);
-            }
+            // Get owner (thread-safe read)
+            char owner_copy[MAX_USERNAME_LEN];
+            pthread_rwlock_rdlock(&file->lock);
+            strncpy(owner_copy, file->owner, MAX_USERNAME_LEN - 1);
+            owner_copy[MAX_USERNAME_LEN - 1] = '\0';
+            pthread_rwlock_unlock(&file->lock);
+            
+            // VIEW -l or VIEW -al: Always show owner in details view
+            offset += snprintf(response + offset, sizeof(response) - offset,
+                              "| %-12s | %-6d | %-6ld | %-20s | %-8s |\n",
+                              file->filename, words, size, time_str, owner_copy);
         } else {
             // VIEW or VIEW -a: Just filename
             offset += snprintf(response + offset, sizeof(response) - offset,
@@ -1073,8 +1094,11 @@ static void handle_view_command(Client* client, char* args) {
     
     if (show_details) {
         offset += snprintf(response + offset, sizeof(response) - offset,
-                          "-------------------------------------------------------------\n");
+                          "|--------------|--------|--------|----------------------|----------|\n");
     }
+    
+    offset += snprintf(response + offset, sizeof(response) - offset,
+                      "\nTotal: %d file(s) displayed\n", displayed);
     
     write(client->socket_fd, response, strlen(response));
     nm_log_operation(client->ip, client->nm_port, client->username, "VIEW", 
