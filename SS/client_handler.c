@@ -1007,6 +1007,23 @@ void handle_listcheckpoints_command(int client_socket, char* buffer) {
     free(list);
 }
 
+void handle_diff_command(int client_socket, char* buffer) {
+    char filename[256], tag1[64], tag2[64];
+    
+    if (sscanf(buffer, "DIFF %255s %63s %63s", filename, tag1, tag2) != 3) {
+        write(client_socket, "ERR:400:BAD_REQUEST (Usage: DIFF <filename> <tag1> <tag2>)\n", 60);
+        return;
+    }
+    
+    logger("[SS-Thread] DIFF request: %s (%s vs %s)\n", filename, tag1, tag2);
+    
+    // NM already verified permissions before sending client here
+    
+    char* diff = diff_checkpoints(filename, tag1, tag2);
+    write(client_socket, diff, strlen(diff));
+    free(diff);
+}
+
 // ============= END CHECKPOINT HANDLERS =============
 
 void *handle_client_request(void *arg) {
@@ -1053,6 +1070,9 @@ void *handle_client_request(void *arg) {
         }
         else if (strncmp(buffer, "LISTCHECKPOINTS", 15) == 0) {
             handle_listcheckpoints_command(client_socket, buffer);
+        }
+        else if (strncmp(buffer, "DIFF", 4) == 0) {
+            handle_diff_command(client_socket, buffer);
         }
         else {
             // Unknown command

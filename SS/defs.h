@@ -80,6 +80,7 @@ int create_checkpoint(const char* filename, const char* tag);
 char* get_checkpoint_content(const char* filename, const char* tag);
 int revert_to_checkpoint(const char* filename, const char* tag);
 char* list_checkpoints(const char* filename);
+char* diff_checkpoints(const char* filename, const char* tag1, const char* tag2);
 
 // We still need a way to get a physical mutex for the file to prevent data corruption
 pthread_mutex_t* get_file_mutex(const char* filename);

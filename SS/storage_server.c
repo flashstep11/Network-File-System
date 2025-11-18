@@ -435,6 +435,93 @@ char* list_checkpoints(const char* filename) {
     return strdup("No checkpoints found.\n");
 }
 
+char* diff_checkpoints(const char* filename, const char* tag1, const char* tag2) {
+    // Get both checkpoint contents
+    char* content1 = get_checkpoint_content(filename, tag1);
+    char* content2 = get_checkpoint_content(filename, tag2);
+    
+    if (!content1 || !content2) {
+        char* error = malloc(256);
+        snprintf(error, 256, "ERROR: Could not find one or both checkpoints ('%s' and '%s').\n", tag1, tag2);
+        free(content1);
+        free(content2);
+        return error;
+    }
+    
+    // Split content into lines
+    char** lines1 = malloc(sizeof(char*) * 10000);
+    char** lines2 = malloc(sizeof(char*) * 10000);
+    int count1 = 0, count2 = 0;
+    
+    // Parse content1 into lines
+    char* tmp1 = strdup(content1);
+    char* line = strtok(tmp1, "\n");
+    while (line && count1 < 10000) {
+        lines1[count1++] = strdup(line);
+        line = strtok(NULL, "\n");
+    }
+    free(tmp1);
+    
+    // Parse content2 into lines
+    char* tmp2 = strdup(content2);
+    line = strtok(tmp2, "\n");
+    while (line && count2 < 10000) {
+        lines2[count2++] = strdup(line);
+        line = strtok(NULL, "\n");
+    }
+    free(tmp2);
+    
+    // Build diff output (simple line-by-line comparison)
+    char* result = malloc(100000);
+    result[0] = '\0';
+    
+    char header[256];
+    snprintf(header, sizeof(header), "Diff: %s (%s) vs (%s)\n", filename, tag1, tag2);
+    strcat(result, header);
+    strcat(result, "=====================================\n");
+    
+    int max_lines = (count1 > count2) ? count1 : count2;
+    
+    for (int i = 0; i < max_lines; i++) {
+        if (i < count1 && i < count2) {
+            // Both checkpoints have this line
+            if (strcmp(lines1[i], lines2[i]) == 0) {
+                // Same line - show context
+                char line_buf[2048];
+                snprintf(line_buf, sizeof(line_buf), "  %s\n", lines1[i]);
+                strcat(result, line_buf);
+            } else {
+                // Different lines
+                char line_buf[2048];
+                snprintf(line_buf, sizeof(line_buf), "- %s\n", lines1[i]);
+                strcat(result, line_buf);
+                snprintf(line_buf, sizeof(line_buf), "+ %s\n", lines2[i]);
+                strcat(result, line_buf);
+            }
+        } else if (i < count1) {
+            // Line only in tag1 (removed in tag2)
+            char line_buf[2048];
+            snprintf(line_buf, sizeof(line_buf), "- %s\n", lines1[i]);
+            strcat(result, line_buf);
+        } else if (i < count2) {
+            // Line only in tag2 (added in tag2)
+            char line_buf[2048];
+            snprintf(line_buf, sizeof(line_buf), "+ %s\n", lines2[i]);
+            strcat(result, line_buf);
+        }
+    }
+    
+    // Cleanup
+    for (int i = 0; i < count1; i++) free(lines1[i]);
+    for (int i = 0; i < count2; i++) free(lines2[i]);
+    free(lines1);
+    free(lines2);
+    free(content1);
+    free(content2);
+    
+    return result;
+}
+
 // ============= END CHECKPOINT IMPLEMENTATION =============
 
 int main(int argc, char *argv[]) {

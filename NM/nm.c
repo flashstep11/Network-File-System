@@ -823,6 +823,33 @@ static void handle_listcheckpoints_command(Client* client, char* filename) {
     nm_log_operation(client->ip, client->nm_port, client->username, "LISTCHECKPOINTS", filename, ERR_NONE);
 }
 
+static void handle_diff_command(Client* client, char* args) {
+    char filename[256], tag1[64], tag2[64];
+    if (sscanf(args, "%255s %63s %63s", filename, tag1, tag2) != 3) {
+        send_error(client->socket_fd, ERR_ACCESS_DENIED-3, "Usage: DIFF <filename> <tag1> <tag2>");
+        return;
+    }
+    
+    FileMetadata* file_info = file_lookup(&g_nm, filename);
+    if (!file_info) {
+        send_error(client->socket_fd, ERR_FILE_NOT_FOUND, "File not found");
+        return;
+    }
+    if (!acl_check_read(file_info, client->username)) {
+        send_error(client->socket_fd, ERR_ACCESS_DENIED, "No read permission");
+        return;
+    }
+    StorageServer* ss = ss_get_by_id(&g_nm, file_info->ss_id);
+    if (!ss || !ss->is_active) {
+        send_error(client->socket_fd, ERR_SS_OFFLINE, "SS unavailable");
+        return;
+    }
+    char response[BUFFER_SIZE];
+    snprintf(response, sizeof(response), "ACK:SS_INFO %s %d\n", ss->ip, ss->client_port);
+    write(client->socket_fd, response, strlen(response));
+    nm_log_operation(client->ip, client->nm_port, client->username, "DIFF", filename, ERR_NONE);
+}
+
 static void handle_delete_command(Client* client, char* filename) {
     FileMetadata* file_info = file_lookup(&g_nm, filename);
     if (!file_info) {
@@ -1778,6 +1805,7 @@ void* handle_client_connection(void* arg) {
         else if (strcmp(command, "VIEWCHECKPOINT") == 0) handle_viewcheckpoint_command(client, args);
         else if (strcmp(command, "REVERT") == 0) handle_revert_command(client, args);
         else if (strcmp(command, "LISTCHECKPOINTS") == 0) handle_listcheckpoints_command(client, args);
+        else if (strcmp(command, "DIFF") == 0) handle_diff_command(client, args);
         // Bonus feature: Request Access [5]
         else if (strcmp(command, "REQUESTACCESS") == 0) handle_requestaccess_command(client, args);
         else if (strcmp(command, "VIEWREQUESTS") == 0) handle_viewrequests_command(client);
