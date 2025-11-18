@@ -751,6 +751,27 @@ static void handle_write_command(Client* client, char* filename) {
     nm_log_operation(client->ip, client->nm_port, client->username, "WRITE", filename, ERR_NONE);
 }
 
+static void handle_replace_command(Client* client, char* filename) {
+    FileMetadata* file_info = file_lookup(&g_nm, filename);
+    if (!file_info) {
+        send_error(client->socket_fd, ERR_FILE_NOT_FOUND, "File not found");
+        return;
+    }
+    if (!acl_check_write(file_info, client->username)) {
+        send_error(client->socket_fd, ERR_ACCESS_DENIED, "No write permission");
+        return;
+    }
+    StorageServer* ss = ss_get_by_id(&g_nm, file_info->ss_id);
+    if (!ss || !ss->is_active) {
+        send_error(client->socket_fd, ERR_SS_OFFLINE, "SS unavailable");
+        return;
+    }
+    char response[BUFFER_SIZE];
+    snprintf(response, sizeof(response), "SS_INFO:%s:%d\n", ss->ip, ss->client_port);
+    write(client->socket_fd, response, strlen(response));
+    nm_log_operation(client->ip, client->nm_port, client->username, "REPLACE", filename, ERR_NONE);
+}
+
 // Checkpoint command handlers - route to SS like READ/WRITE
 static void handle_checkpoint_command(Client* client, char* filename) {
     FileMetadata* file_info = file_lookup(&g_nm, filename);
@@ -1802,6 +1823,7 @@ void* handle_client_connection(void* arg) {
         else if (strcmp(command, "READ") == 0) handle_read_command(client, args);
         else if (strcmp(command, "CREATE") == 0) handle_create_command(client, args);
         else if (strcmp(command, "WRITE") == 0) handle_write_command(client, args);
+        else if (strcmp(command, "REPLACE") == 0) handle_replace_command(client, args);
         else if (strcmp(command, "DELETE") == 0) handle_delete_command(client, args);
         else if (strcmp(command, "INFO") == 0) handle_info_command(client, args);
         else if (strcmp(command, "STREAM") == 0) handle_stream_command(client, args);
