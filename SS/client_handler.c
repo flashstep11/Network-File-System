@@ -61,6 +61,55 @@ int check_permissions(int client_socket, const char *filename, const char *mode)
     logger("[AccessControl] Denied access to %s for %s on file %s\n", client_ip, mode, filename);
     return 0; // Denied
 }
+
+// Bonus feature: Notify NM about editing activity (real-time collaborative awareness)
+void notify_nm_editing(int client_socket, const char* filename, const char* action, int sentence_idx) {
+    // Get client's username by IP (same method as check_permissions)
+    struct sockaddr_in addr;
+    socklen_t addr_size = sizeof(struct sockaddr_in);
+    if (getpeername(client_socket, (struct sockaddr *)&addr, &addr_size) < 0) {
+        logger("[Notify] getpeername failed\n");
+        return; // Non-critical, just skip notification
+    }
+    char client_ip[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &addr.sin_addr, client_ip, INET_ADDRSTRLEN);
+    
+    // Connect to NM
+    int nm_sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (nm_sock < 0) {
+        logger("[Notify] Failed to create socket to NM\n");
+        return;
+    }
+
+    struct sockaddr_in nm_addr;
+    nm_addr.sin_family = AF_INET;
+    nm_addr.sin_port = htons(NM_PORT);
+    if (inet_pton(AF_INET, NM_IP, &nm_addr.sin_addr) <= 0) {
+        close(nm_sock);
+        return;
+    }
+
+    if (connect(nm_sock, (struct sockaddr *)&nm_addr, sizeof(nm_addr)) < 0) {
+        close(nm_sock);
+        return; // NM unreachable, skip notification
+    }
+    
+    // We need to get username from IP - ask NM via special query
+    // For simplicity, we'll send IP and let NM map it
+    // Format: NOTIFY_EDIT <client_ip> <filename> <action> <sentence_idx>
+    char notify_msg[512];
+    snprintf(notify_msg, sizeof(notify_msg), "NOTIFY_EDIT %s %s %s %d\n", 
+             client_ip, filename, action, sentence_idx);
+    write(nm_sock, notify_msg, strlen(notify_msg));
+    
+    // Read acknowledgment (optional)
+    char ack[64] = {0};
+    read(nm_sock, ack, 63);
+    close(nm_sock);
+    
+    logger("[Notify] Sent editing notification: %s\n", notify_msg);
+}
+
 void handle_read_command(int client_socket, char* buffer) {
     char filename[256]; // Use 256 for a standard filename buffer
 
@@ -196,6 +245,9 @@ void handle_write_command(int client_socket, char* buffer) {
     
     logger("[SS-Thread] Sentence lock acquired for %s sentence %d\n", filename, sentence_num);
     
+    // **BONUS: Notify NM that editing started (collaborative awareness)**
+    notify_nm_editing(client_socket, filename, "START", sentence_num);
+    
     // Send ACK to client to start interactive editing
     const char* ack_msg = "ACK:SENTENCE_LOCKED Enter word updates (word_index content) or ETIRW to finish\n";
     write(client_socket, ack_msg, strlen(ack_msg));
@@ -285,15 +337,45 @@ void handle_write_command(int client_socket, char* buffer) {
             logger("[SS-Thread] Parse OK: word_index=%d, content='%s', working_data='%s'\n", 
                    word_index, content, working_data);
             
+            // Convert \n to actual newlines in content FIRST
+            char processed_content[900];
+            int src = 0, dst = 0;
+            while (content[src] != '\0' && dst < 899) {
+                if (content[src] == '\\' && content[src + 1] == 'n') {
+                    processed_content[dst++] = '\n';
+                    src += 2;
+                } else {
+                    processed_content[dst++] = content[src++];
+                }
+            }
+            processed_content[dst] = '\0';
+            
             // Split content by spaces to get individual words
+            // NOTE: We keep newlines WITHIN words, they won't be split
             char* words[100]; // Max 100 words per command
             int word_count = 0;
-            char* content_copy = strdup(content);
-            char* token = strtok(content_copy, " ");
-            while (token != NULL && word_count < 100) {
-                words[word_count++] = strdup(token);
-                token = strtok(NULL, " ");
+            char* content_copy = strdup(processed_content);
+            
+            // Manual tokenization to preserve newlines within words
+            char* ptr = content_copy;
+            char* word_start = ptr;
+            while (*ptr != '\0' && word_count < 100) {
+                if (*ptr == ' ') {
+                    if (ptr > word_start) {
+                        *ptr = '\0';
+                        words[word_count++] = strdup(word_start);
+                    }
+                    ptr++;
+                    word_start = ptr;
+                } else {
+                    ptr++;
+                }
             }
+            // Last word
+            if (ptr > word_start && word_count < 100) {
+                words[word_count++] = strdup(word_start);
+            }
+            
             free(content_copy);
             
             logger("[SS-Thread] Split into %d words\n", word_count);
@@ -636,6 +718,9 @@ void handle_write_command(int client_socket, char* buffer) {
     // Cleanup
     if (file_data) free(file_data);
     if (working_data) free(working_data);
+    
+    // **BONUS: Notify NM that editing finished (collaborative awareness)**
+    notify_nm_editing(client_socket, filename, "END", sentence_num);
     
     // Release locks
     pthread_mutex_unlock(f_mutex);

@@ -129,6 +129,69 @@ void handle_delete_command(int nm_socket, char* buffer) {
     pthread_mutex_unlock(file_lock);
 }
 
+void handle_move_command(int nm_socket, char* buffer) {
+    char source[256], dest[256];
+
+    // 1. Parse: MOVE <source> <dest>
+    if (sscanf(buffer, "MOVE %255s %255s", source, dest) != 2) {
+        char *err = "ERR:400:BAD_MOVE_COMMAND\n";
+        logger("[NM-Thread] Failed to parse MOVE command.\n");
+        write(nm_socket, err, strlen(err));
+        return;
+    }
+
+    // 2. Build full paths
+    char source_full_path[512], dest_full_path[512];
+    get_full_path(source_full_path, sizeof(source_full_path), source);
+    get_full_path(dest_full_path, sizeof(dest_full_path), dest);
+
+    // 3. Create destination directory if needed
+    char dest_dir[512];
+    strncpy(dest_dir, dest_full_path, sizeof(dest_dir));
+    char* last_slash = strrchr(dest_dir, '/');
+    if (last_slash) {
+        *last_slash = '\0';
+        // Create directory recursively
+        char cmd[1024];
+        snprintf(cmd, sizeof(cmd), "mkdir -p \"%s\"", dest_dir);
+        system(cmd);
+    }
+
+    // 4. Check if source exists
+    if (access(source_full_path, F_OK) != 0) {
+        logger("[NM-Thread] Source file %s not found for move.\n", source);
+        char *err = "ERR:404:SOURCE_FILE_NOT_FOUND\n";
+        write(nm_socket, err, strlen(err));
+        return;
+    }
+
+    // 5. Lock both files
+    pthread_mutex_t* source_lock = get_file_mutex(source);
+    pthread_mutex_t* dest_lock = get_file_mutex(dest);
+    pthread_mutex_lock(source_lock);
+    pthread_mutex_lock(dest_lock);
+
+    // 6. Move/rename the file
+    if (rename(source_full_path, dest_full_path) == 0) {
+        // Success - also move backup file if it exists
+        char source_bak[512], dest_bak[512];
+        snprintf(source_bak, sizeof(source_bak), "%s.bak", source_full_path);
+        snprintf(dest_bak, sizeof(dest_bak), "%s.bak", dest_full_path);
+        rename(source_bak, dest_bak);  // Ignore error if backup doesn't exist
+        
+        char *ack = "ACK:MOVE_OK\n";
+        logger("[NM-Thread] Moved file: %s -> %s\n", source, dest);
+        write(nm_socket, ack, strlen(ack));
+    } else {
+        char *err = "ERR:500:MOVE_FAILED\n";
+        logger("[NM-Thread] Failed to move file: %s -> %s (%s)\n", source, dest, strerror(errno));
+        write(nm_socket, err, strlen(err));
+    }
+
+    pthread_mutex_unlock(dest_lock);
+    pthread_mutex_unlock(source_lock);
+}
+
 void handle_get_info_command(int nm_socket, char* buffer) {
     char filename[256];
     char reply_buffer[512]; 
@@ -248,6 +311,10 @@ void *handle_nm_commands(void *arg) {
         // Command: "DELETE <filename>\n"
         else if (strncmp(buffer, "DELETE", 6) == 0) {
             handle_delete_command(nm_socket, buffer);
+        }
+        // Command: "MOVE <source> <dest>\n"
+        else if (strncmp(buffer, "MOVE", 4) == 0) {
+            handle_move_command(nm_socket, buffer);
         }
         // ... (you can add more else if blocks for other NS commands) ...
         else if (strncmp(buffer, "GET_INFO", 8) == 0) {

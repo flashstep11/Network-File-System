@@ -46,6 +46,7 @@ int persist_save_file_entry(FILE* fp, FileMetadata* file_info) {
     fwrite(&file_info->file_size, sizeof(long), 1, fp);
     fwrite(&file_info->word_count, sizeof(int), 1, fp);
     fwrite(&file_info->char_count, sizeof(int), 1, fp);
+    fwrite(&file_info->is_folder, sizeof(int), 1, fp);
     
     // ACL
     int acl_count = 0;
@@ -115,6 +116,7 @@ FileMetadata* persist_load_file_entry(FILE* fp) {
     fread(&file_info->file_size, sizeof(long), 1, fp);
     fread(&file_info->word_count, sizeof(int), 1, fp);
     fread(&file_info->char_count, sizeof(int), 1, fp);
+    fread(&file_info->is_folder, sizeof(int), 1, fp);
     
     // Initialize lock
     pthread_rwlock_init(&file_info->lock, NULL);
@@ -205,8 +207,34 @@ int persist_save_metadata(NameServer* nm) {
         pthread_rwlock_unlock(&files[i]->lock);
     }
     
+    // **BONUS: Save access requests**
+    pthread_rwlock_rdlock(&nm->request_lock);
+    int active_requests = 0;
+    for (int i = 0; i < nm->request_count; i++) {
+        if (nm->access_requests[i].is_active) active_requests++;
+    }
+    fwrite(&active_requests, sizeof(int), 1, fp);
+    
+    for (int i = 0; i < nm->request_count; i++) {
+        if (nm->access_requests[i].is_active) {
+            AccessRequest* req = &nm->access_requests[i];
+            int username_len = strlen(req->username);
+            int filename_len = strlen(req->filename);
+            int flag_len = strlen(req->flag);
+            
+            fwrite(&username_len, sizeof(int), 1, fp);
+            fwrite(req->username, 1, username_len, fp);
+            fwrite(&filename_len, sizeof(int), 1, fp);
+            fwrite(req->filename, 1, filename_len, fp);
+            fwrite(&flag_len, sizeof(int), 1, fp);
+            fwrite(req->flag, 1, flag_len, fp);
+            fwrite(&req->request_time, sizeof(time_t), 1, fp);
+        }
+    }
+    pthread_rwlock_unlock(&nm->request_lock);
+    
     fclose(fp);
-    nm_log("[PERSIST] Saved %d files to %s\n", file_count, METADATA_FILE);
+    nm_log("[PERSIST] Saved %d files and %d access requests to %s\n", file_count, active_requests, METADATA_FILE);
     return 0;
 }
 
@@ -260,7 +288,44 @@ int persist_load_metadata(NameServer* nm) {
         }
     }
     
+    // **BONUS: Load access requests**
+    int request_count = 0;
+    if (fread(&request_count, sizeof(int), 1, fp) == 1) {
+        nm_log("[PERSIST] Loading %d access requests...\n", request_count);
+        
+        pthread_rwlock_wrlock(&nm->request_lock);
+        for (int i = 0; i < request_count && nm->request_count < MAX_ACCESS_REQUESTS; i++) {
+            AccessRequest* req = &nm->access_requests[nm->request_count];
+            
+            int username_len, filename_len, flag_len;
+            if (fread(&username_len, sizeof(int), 1, fp) != 1) break;
+            if (username_len >= MAX_USERNAME_LEN) break;
+            fread(req->username, 1, username_len, fp);
+            req->username[username_len] = '\0';
+            
+            if (fread(&filename_len, sizeof(int), 1, fp) != 1) break;
+            if (filename_len >= MAX_FILENAME_LEN) break;
+            fread(req->filename, 1, filename_len, fp);
+            req->filename[filename_len] = '\0';
+            
+            if (fread(&flag_len, sizeof(int), 1, fp) != 1) break;
+            if (flag_len >= 8) break;
+            fread(req->flag, 1, flag_len, fp);
+            req->flag[flag_len] = '\0';
+            
+            fread(&req->request_time, sizeof(time_t), 1, fp);
+            req->is_active = 1;
+            nm->request_count++;
+            
+            nm_log("[PERSIST] Loaded request: %s wants %s for %s\n",
+                   req->username, req->flag, req->filename);
+        }
+        pthread_rwlock_unlock(&nm->request_lock);
+        nm_log("[PERSIST] Loaded %d access requests\n", nm->request_count);
+    }
+    
     fclose(fp);
-    nm_log("[PERSIST] Successfully loaded %d/%d files\n", loaded, file_count);
+    nm_log("[PERSIST] Successfully loaded %d/%d files and %d requests\n", 
+           loaded, file_count, nm->request_count);
     return 0;
 }

@@ -16,6 +16,7 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <limits.h>
 #include "../comms/def.h"
 
 // ======================== CONSTANTS ========================
@@ -38,7 +39,7 @@ typedef struct AccessEntry {
 } AccessEntry;
 
 typedef struct FileMetadata {
-    char filename[MAX_FILENAME_LEN];
+    char filename[MAX_FILENAME_LEN];  // Full path: "folder/subfolder/file.txt"
     char owner[MAX_USERNAME_LEN];
     int ss_id;
     time_t created_time;
@@ -47,6 +48,7 @@ typedef struct FileMetadata {
     long file_size;
     int word_count;
     int char_count;
+    int is_folder;  // 1 if this is a folder, 0 if file
     AccessEntry* acl;
     pthread_rwlock_t lock;
 } FileMetadata;
@@ -65,6 +67,7 @@ typedef struct StorageServer {
     int is_active;
     int socket_fd;
     time_t last_heartbeat;
+    int file_count;  // Track number of files on this SS
     pthread_mutex_t lock;
 } StorageServer;
 
@@ -95,6 +98,17 @@ typedef struct LRUCache {
     pthread_mutex_t lock;
 } LRUCache;
 
+// Access request structure for bonus feature [5]
+typedef struct AccessRequest {
+    char username[MAX_USERNAME_LEN];      // Who is requesting
+    char filename[MAX_FILENAME_LEN];      // Which file
+    char flag[8];                         // "-R" or "-W"
+    time_t request_time;
+    int is_active;                        // 1 if pending, 0 if processed
+} AccessRequest;
+
+#define MAX_ACCESS_REQUESTS 200
+
 typedef struct NameServer {
     StorageServer storage_servers[MAX_STORAGE_SERVERS];
     int ss_count;
@@ -108,6 +122,11 @@ typedef struct NameServer {
     pthread_rwlock_t trie_lock;
     
     LRUCache* search_cache;
+    
+    // Access requests (bonus feature)
+    AccessRequest access_requests[MAX_ACCESS_REQUESTS];
+    int request_count;
+    pthread_rwlock_t request_lock;
     
     int server_socket;
     int running;
@@ -170,6 +189,16 @@ int acl_check_read(FileMetadata* file_info, const char* username);
 int acl_check_write(FileMetadata* file_info, const char* username);
 int acl_add_access(FileMetadata* file_info, const char* username, int read, int write);
 int acl_remove_access(FileMetadata* file_info, const char* username);
+
+// Access request management (bonus feature [5])
+int request_add(NameServer* nm, const char* username, const char* filename, const char* flag);
+int request_exists(NameServer* nm, const char* username, const char* filename);
+int request_remove(NameServer* nm, const char* username, const char* filename);
+void request_get_for_owner(NameServer* nm, const char* owner, AccessRequest* results, int* count, int max_count);
+
+// Notification system (bonus: The Unique Factor)
+void notify_clients_editing(NameServer* nm, const char* filename, const char* editor_username, 
+                            const char* action, int sentence_idx);
 
 // Command handlers (pthread functions return void*)
 void* handle_client_connection(void* arg);

@@ -1,4 +1,4 @@
-// nm.c - Complete Name Server implementation (all modules consolidated)
+
 
 #include "nm.h"
 #include "persistence.h"
@@ -308,6 +308,7 @@ FileMetadata* file_create_metadata(const char* filename, const char* owner, int 
     file_info->file_size = 0;
     file_info->word_count = 0;
     file_info->char_count = 0;
+    file_info->is_folder = 0;  // Default: not a folder
     file_info->acl = NULL;
     pthread_rwlock_init(&file_info->lock, NULL);
     acl_add_access(file_info, owner, 1, 1);
@@ -468,6 +469,7 @@ int ss_register(NameServer* nm, const char* ip, int nm_port, int client_port,
     ss->is_active = 1;
     ss->socket_fd = socket_fd;
     ss->last_heartbeat = time(NULL);
+    ss->file_count = 0;  // Initialize file count
     pthread_mutex_init(&ss->lock, NULL);
     nm->ss_count++;
     pthread_rwlock_unlock(&nm->ss_lock);
@@ -502,6 +504,12 @@ int ss_register(NameServer* nm, const char* ip, int nm_port, int client_port,
             token = strtok(NULL, " \t\n");
         }
         free(file_list_copy);
+        
+        // Update file count for this SS
+        pthread_rwlock_wrlock(&nm->ss_lock);
+        ss->file_count = file_count;
+        pthread_rwlock_unlock(&nm->ss_lock);
+        
         nm_log("[SS%d] Registered %d files (%d new, %d existing with preserved metadata)\n", 
                ss_id, file_count, new_files, existing_files);
     }
@@ -626,6 +634,9 @@ void client_disconnect(NameServer* nm, int socket_fd) {
     pthread_rwlock_unlock(&nm->client_lock);
 }
 
+// ======================== FORWARD DECLARATIONS ========================
+static void trie_collect_files(TrieNode* node, FileMetadata** files, int* count, int max_count);
+
 // ======================== COMMAND HANDLERS (Part 1 of 2) ========================
 // Due to size, splitting into logical sections
 
@@ -637,10 +648,13 @@ static void handle_create_command(Client* client, char* filename) {
     }
     pthread_rwlock_rdlock(&g_nm.ss_lock);
     StorageServer* ss = NULL;
+    int min_files = INT_MAX;
+    
+    // Find the active SS with the least number of files (least-loaded)
     for (int i = 0; i < g_nm.ss_count; i++) {
-        if (g_nm.storage_servers[i].is_active) {
+        if (g_nm.storage_servers[i].is_active && g_nm.storage_servers[i].file_count < min_files) {
             ss = &g_nm.storage_servers[i];
-            break;
+            min_files = g_nm.storage_servers[i].file_count;
         }
     }
     pthread_rwlock_unlock(&g_nm.ss_lock);
@@ -659,7 +673,15 @@ static void handle_create_command(Client* client, char* filename) {
         FileMetadata* file_info = file_create_metadata(filename, client->username, ss->id);
         if (file_info) {
             file_add_to_registry(&g_nm, file_info);
+            
+            // Increment file count for this SS
+            pthread_rwlock_wrlock(&g_nm.ss_lock);
+            ss->file_count++;
+            pthread_rwlock_unlock(&g_nm.ss_lock);
+            
             send_success(client->socket_fd, "CREATE_OK");
+            nm_log("[LoadBalance] Created file %s on SS%d (now has %d files)\n", 
+                   filename, ss->id, ss->file_count);
             nm_log_operation(client->ip, client->nm_port, client->username, "CREATE", filename, ERR_NONE);
             // Save metadata after creating file
             persist_save_metadata(&g_nm);
@@ -740,7 +762,15 @@ static void handle_delete_command(Client* client, char* filename) {
     }
     if (strncmp(ss_response, "ACK:", 4) == 0) {
         file_delete_from_registry(&g_nm, filename);
+        
+        // Decrement file count for this SS
+        pthread_rwlock_wrlock(&g_nm.ss_lock);
+        if (ss->file_count > 0) ss->file_count--;
+        pthread_rwlock_unlock(&g_nm.ss_lock);
+        
         send_success(client->socket_fd, "DELETE_OK");
+        nm_log("[LoadBalance] Deleted file %s from SS%d (now has %d files)\n", 
+               filename, ss->id, ss->file_count);
         nm_log_operation(client->ip, client->nm_port, client->username, "DELETE", filename, ERR_NONE);
         // Save metadata after deleting file
         persist_save_metadata(&g_nm);
@@ -1020,6 +1050,190 @@ static void handle_undo_command(Client* client, char* filename) {
     nm_log_operation(client->ip, client->nm_port, client->username, "UNDO", filename, status);
 }
 
+static void handle_createfolder_command(Client* client, char* foldername) {
+    // Check if folder already exists
+    FileMetadata* existing = file_lookup(&g_nm, foldername);
+    if (existing) {
+        send_error(client->socket_fd, ERR_FILE_NOT_FOUND+5, "Folder/File already exists");
+        return;
+    }
+    
+    // Folders don't need to be on any SS - they're virtual in NM
+    FileMetadata* folder_info = file_create_metadata(foldername, client->username, -1);
+    if (!folder_info) {
+        send_error(client->socket_fd, ERR_UNKNOWN, "Failed to create folder");
+        return;
+    }
+    
+    folder_info->is_folder = 1;  // Mark as folder
+    file_add_to_registry(&g_nm, folder_info);
+    send_success(client->socket_fd, "FOLDER_CREATED");
+    nm_log("[Folder] Created folder: %s (owner=%s)\n", foldername, client->username);
+    nm_log_operation(client->ip, client->nm_port, client->username, "CREATEFOLDER", foldername, ERR_NONE);
+    persist_save_metadata(&g_nm);
+}
+
+static void handle_move_command(Client* client, char* args) {
+    char source[MAX_FILENAME_LEN];
+    char dest_folder[MAX_FILENAME_LEN];
+    
+    // Parse: MOVE <filename> <foldername>
+    if (sscanf(args, "%255s %255s", source, dest_folder) != 2) {
+        send_error(client->socket_fd, ERR_UNKNOWN, "Usage: MOVE <filename> <foldername>");
+        return;
+    }
+    
+    // Check if source file exists
+    FileMetadata* file_info = file_lookup(&g_nm, source);
+    if (!file_info) {
+        send_error(client->socket_fd, ERR_FILE_NOT_FOUND, "Source file not found");
+        return;
+    }
+    
+    // Check if user has write permission
+    if (!acl_check_write(file_info, client->username)) {
+        send_error(client->socket_fd, ERR_ACCESS_DENIED, "No write permission on source");
+        return;
+    }
+    
+    // Check if destination folder exists
+    FileMetadata* folder_info = file_lookup(&g_nm, dest_folder);
+    if (!folder_info || !folder_info->is_folder) {
+        send_error(client->socket_fd, ERR_FILE_NOT_FOUND, "Destination folder not found");
+        return;
+    }
+    
+    // Extract filename from source path
+    char* filename = strrchr(source, '/');
+    if (filename) {
+        filename++;  // Skip the '/'
+    } else {
+        filename = source;  // No path, just filename
+    }
+    
+    // Build new path: dest_folder/filename
+    char new_path[MAX_FILENAME_LEN];
+    snprintf(new_path, sizeof(new_path), "%s/%s", dest_folder, filename);
+    
+    // Check if destination already exists
+    if (file_lookup(&g_nm, new_path)) {
+        send_error(client->socket_fd, ERR_UNKNOWN, "File already exists in destination");
+        return;
+    }
+    
+    // If it's an actual file (not folder), ask SS to move it
+    if (!file_info->is_folder) {
+        StorageServer* ss = ss_get_by_id(&g_nm, file_info->ss_id);
+        if (!ss || !ss->is_active) {
+            send_error(client->socket_fd, ERR_SS_OFFLINE, "SS unavailable");
+            return;
+        }
+        
+        // Send MOVE command to SS
+        char command[BUFFER_SIZE];
+        snprintf(command, sizeof(command), "MOVE %s %s\n", source, new_path);
+        char ss_response[BUFFER_SIZE];
+        if (ss_send_command(ss, command, ss_response, sizeof(ss_response)) < 0) {
+            send_error(client->socket_fd, ERR_SS_OFFLINE, "SS communication failed");
+            return;
+        }
+        
+        if (strncmp(ss_response, "ACK:", 4) != 0) {
+            write(client->socket_fd, ss_response, strlen(ss_response));
+            return;
+        }
+    }
+    
+    // Update metadata: remove old entry, add new one
+    file_delete_from_registry(&g_nm, source);
+    
+    // Create new entry with updated path
+    FileMetadata* new_file_info = file_create_metadata(new_path, file_info->owner, file_info->ss_id);
+    if (new_file_info) {
+        new_file_info->is_folder = file_info->is_folder;
+        new_file_info->file_size = file_info->file_size;
+        new_file_info->word_count = file_info->word_count;
+        new_file_info->char_count = file_info->char_count;
+        new_file_info->created_time = file_info->created_time;
+        new_file_info->last_modified = time(NULL);
+        new_file_info->last_accessed = file_info->last_accessed;
+        
+        // Copy ACL
+        AccessEntry* ace = file_info->acl;
+        while (ace) {
+            acl_add_access(new_file_info, ace->username, ace->can_read, ace->can_write);
+            ace = ace->next;
+        }
+        
+        file_add_to_registry(&g_nm, new_file_info);
+        send_success(client->socket_fd, "FILE_MOVED");
+        nm_log("[Move] Moved %s to %s\n", source, new_path);
+        nm_log_operation(client->ip, client->nm_port, client->username, "MOVE", args, ERR_NONE);
+        persist_save_metadata(&g_nm);
+    } else {
+        send_error(client->socket_fd, ERR_UNKNOWN, "Failed to update metadata");
+    }
+}
+
+static void handle_viewfolder_command(Client* client, char* foldername) {
+    // Check if folder exists
+    FileMetadata* folder_info = file_lookup(&g_nm, foldername);
+    if (!folder_info) {
+        send_error(client->socket_fd, ERR_FILE_NOT_FOUND, "Folder not found");
+        return;
+    }
+    
+    if (!folder_info->is_folder) {
+        send_error(client->socket_fd, ERR_UNKNOWN, "Not a folder");
+        return;
+    }
+    
+    // Collect all files in this folder
+    FileMetadata* files[1000];
+    int file_count = 0;
+    
+    pthread_rwlock_rdlock(&g_nm.trie_lock);
+    trie_collect_files(g_nm.file_trie_root, files, &file_count, 1000);
+    pthread_rwlock_unlock(&g_nm.trie_lock);
+    
+    // Build folder prefix
+    char folder_prefix[MAX_FILENAME_LEN + 2];
+    snprintf(folder_prefix, sizeof(folder_prefix), "%s/", foldername);
+    int prefix_len = strlen(folder_prefix);
+    
+    // Filter files in this folder
+    char response[BUFFER_SIZE * 4];
+    int offset = snprintf(response, sizeof(response), "Contents of folder '%s':\n", foldername);
+    
+    int found_count = 0;
+    for (int i = 0; i < file_count; i++) {
+        // Check if file is directly in this folder (not in subfolder)
+        if (strncmp(files[i]->filename, folder_prefix, prefix_len) == 0) {
+            const char* relative_name = files[i]->filename + prefix_len;
+            
+            // Make sure it's directly in this folder (no more slashes)
+            if (strchr(relative_name, '/') == NULL) {
+                pthread_rwlock_rdlock(&files[i]->lock);
+                const char* type = files[i]->is_folder ? "[DIR]" : "[FILE]";
+                offset += snprintf(response + offset, sizeof(response) - offset,
+                                 "  %s %s (owner: %s)\n", 
+                                 type, relative_name, files[i]->owner);
+                pthread_rwlock_unlock(&files[i]->lock);
+                found_count++;
+                
+                if (offset >= sizeof(response) - 100) break;
+            }
+        }
+    }
+    
+    if (found_count == 0) {
+        offset += snprintf(response + offset, sizeof(response) - offset, "  (empty)\n");
+    }
+    
+    write(client->socket_fd, response, strlen(response));
+    nm_log_operation(client->ip, client->nm_port, client->username, "VIEWFOLDER", foldername, ERR_NONE);
+}
+
 // Helper to collect all files from trie (recursive)
 static void trie_collect_files(TrieNode* node, FileMetadata** files, int* count, int max_count) {
     if (!node || *count >= max_count) return;
@@ -1156,6 +1370,328 @@ static void handle_view_command(Client* client, char* args) {
                      args ? args : "", ERR_NONE);
 }
 
+// ======================== ACCESS REQUEST MANAGEMENT (BONUS [5]) ========================
+
+int request_add(NameServer* nm, const char* username, const char* filename, const char* flag) {
+    if (!nm || !username || !filename || !flag) return -1;
+    
+    pthread_rwlock_wrlock(&nm->request_lock);
+    if (nm->request_count >= MAX_ACCESS_REQUESTS) {
+        pthread_rwlock_unlock(&nm->request_lock);
+        return -1;
+    }
+    
+    AccessRequest* req = &nm->access_requests[nm->request_count];
+    strncpy(req->username, username, MAX_USERNAME_LEN - 1);
+    req->username[MAX_USERNAME_LEN - 1] = '\0';
+    strncpy(req->filename, filename, MAX_FILENAME_LEN - 1);
+    req->filename[MAX_FILENAME_LEN - 1] = '\0';
+    strncpy(req->flag, flag, 7);
+    req->flag[7] = '\0';
+    req->request_time = time(NULL);
+    req->is_active = 1;
+    nm->request_count++;
+    pthread_rwlock_unlock(&nm->request_lock);
+    return 0;
+}
+
+int request_exists(NameServer* nm, const char* username, const char* filename) {
+    if (!nm || !username || !filename) return 0;
+    
+    pthread_rwlock_rdlock(&nm->request_lock);
+    for (int i = 0; i < nm->request_count; i++) {
+        if (nm->access_requests[i].is_active &&
+            strcmp(nm->access_requests[i].username, username) == 0 &&
+            strcmp(nm->access_requests[i].filename, filename) == 0) {
+            pthread_rwlock_unlock(&nm->request_lock);
+            return 1;
+        }
+    }
+    pthread_rwlock_unlock(&nm->request_lock);
+    return 0;
+}
+
+int request_remove(NameServer* nm, const char* username, const char* filename) {
+    if (!nm || !username || !filename) return -1;
+    
+    pthread_rwlock_wrlock(&nm->request_lock);
+    for (int i = 0; i < nm->request_count; i++) {
+        if (nm->access_requests[i].is_active &&
+            strcmp(nm->access_requests[i].username, username) == 0 &&
+            strcmp(nm->access_requests[i].filename, filename) == 0) {
+            nm->access_requests[i].is_active = 0;
+            pthread_rwlock_unlock(&nm->request_lock);
+            return 0;
+        }
+    }
+    pthread_rwlock_unlock(&nm->request_lock);
+    return -1;
+}
+
+void request_get_for_owner(NameServer* nm, const char* owner, AccessRequest* results, int* count, int max_count) {
+    if (!nm || !owner || !results || !count) return;
+    
+    *count = 0;
+    pthread_rwlock_rdlock(&nm->request_lock);
+    for (int i = 0; i < nm->request_count && *count < max_count; i++) {
+        if (!nm->access_requests[i].is_active) continue;
+        
+        // Check if this user owns the file
+        FileMetadata* file_info = file_lookup(nm, nm->access_requests[i].filename);
+        if (file_info && strcmp(file_info->owner, owner) == 0) {
+            results[*count] = nm->access_requests[i];
+            (*count)++;
+        }
+    }
+    pthread_rwlock_unlock(&nm->request_lock);
+}
+
+// ======================== NOTIFICATION SYSTEM (BONUS: UNIQUE FACTOR) ========================
+
+void notify_clients_editing(NameServer* nm, const char* filename, const char* editor_username, 
+                            const char* action, int sentence_idx) {
+    if (!nm || !filename || !editor_username || !action) return;
+    
+    FileMetadata* file_info = file_lookup(nm, filename);
+    if (!file_info) return;
+    
+    char notification[BUFFER_SIZE];
+    if (strcmp(action, "START") == 0) {
+        snprintf(notification, sizeof(notification), 
+                "NOTIFICATION:[LIVE] %s is editing sentence %d of %s\n", 
+                editor_username, sentence_idx, filename);
+    } else if (strcmp(action, "END") == 0) {
+        snprintf(notification, sizeof(notification),
+                "NOTIFICATION:[LIVE] %s finished editing %s\n",
+                editor_username, filename);
+    } else if (strcmp(action, "ACCESS_GRANTED") == 0) {
+        snprintf(notification, sizeof(notification),
+                "NOTIFICATION:[ACCESS] Your request for %s has been APPROVED\n",
+                filename);
+    } else if (strcmp(action, "ACCESS_DENIED") == 0) {
+        snprintf(notification, sizeof(notification),
+                "NOTIFICATION:[ACCESS] Your request for %s has been DENIED\n",
+                filename);
+    } else {
+        return;
+    }
+    
+    pthread_rwlock_rdlock(&nm->client_lock);
+    for (int i = 0; i < nm->client_count; i++) {
+        if (!nm->clients[i].is_active) continue;
+        
+        // For editing notifications: send to all users with read access (except the editor)
+        if (strcmp(action, "START") == 0 || strcmp(action, "END") == 0) {
+            if (strcmp(nm->clients[i].username, editor_username) == 0) continue;
+            if (!acl_check_read(file_info, nm->clients[i].username)) continue;
+            
+            nm_log("[NOTIFY-SEND] Sending to %s (socket %d): %s", 
+                   nm->clients[i].username, nm->clients[i].socket_fd, notification);
+        }
+        // For access notifications: send only to the requester
+        else if (strcmp(action, "ACCESS_GRANTED") == 0 || strcmp(action, "ACCESS_DENIED") == 0) {
+            if (strcmp(nm->clients[i].username, editor_username) != 0) continue;
+            
+            nm_log("[NOTIFY-SEND] Sending to %s (socket %d): %s", 
+                   nm->clients[i].username, nm->clients[i].socket_fd, notification);
+        }
+        
+        // Send notification (non-blocking)
+        ssize_t sent = write(nm->clients[i].socket_fd, notification, strlen(notification));
+        if (sent < 0) {
+            nm_log("[NOTIFY-ERROR] Failed to send to %s: %s\n", 
+                   nm->clients[i].username, strerror(errno));
+        } else {
+            nm_log("[NOTIFY-SUCCESS] Sent %zd bytes to %s\n", sent, nm->clients[i].username);
+        }
+    }
+    pthread_rwlock_unlock(&nm->client_lock);
+    
+    nm_log("[NOTIFY] %s: %s\n", action, notification);
+}
+
+// ======================== ACCESS REQUEST COMMAND HANDLERS ========================
+
+static void handle_requestaccess_command(Client* client, char* args) {
+    char filename[MAX_FILENAME_LEN], flag[8];
+    if (sscanf(args, "%255s %7s", filename, flag) != 2) {
+        send_error(client->socket_fd, ERR_ACCESS_DENIED-3, "Usage: REQUESTACCESS <filename> <-R|-W>");
+        return;
+    }
+    
+    // Validate flag
+    if (strcmp(flag, "-R") != 0 && strcmp(flag, "-W") != 0) {
+        send_error(client->socket_fd, ERR_ACCESS_DENIED-3, "Flag must be -R or -W");
+        return;
+    }
+    
+    // Check if file exists
+    FileMetadata* file_info = file_lookup(&g_nm, filename);
+    if (!file_info) {
+        send_error(client->socket_fd, ERR_FILE_NOT_FOUND, "File not found");
+        return;
+    }
+    
+    // Check if already owner or has access
+    if (strcmp(file_info->owner, client->username) == 0) {
+        send_error(client->socket_fd, ERR_UNKNOWN, "You already own this file");
+        return;
+    }
+    
+    if ((strcmp(flag, "-R") == 0 && acl_check_read(file_info, client->username)) ||
+        (strcmp(flag, "-W") == 0 && acl_check_write(file_info, client->username))) {
+        send_error(client->socket_fd, ERR_UNKNOWN, "You already have this access");
+        return;
+    }
+    
+    // Check if request already exists
+    if (request_exists(&g_nm, client->username, filename)) {
+        send_error(client->socket_fd, ERR_UNKNOWN, "Request already pending");
+        return;
+    }
+    
+    // Add request
+    if (request_add(&g_nm, client->username, filename, flag) < 0) {
+        send_error(client->socket_fd, ERR_UNKNOWN, "Failed to add request");
+        return;
+    }
+    
+    send_success(client->socket_fd, "REQUEST_SUBMITTED");
+    nm_log("[REQUEST] %s requested %s access to %s (owner: %s)\n", 
+           client->username, flag, filename, file_info->owner);
+    nm_log_operation(client->ip, client->nm_port, client->username, "REQUESTACCESS", args, ERR_NONE);
+}
+
+static void handle_viewrequests_command(Client* client) {
+    AccessRequest requests[MAX_ACCESS_REQUESTS];
+    int count = 0;
+    
+    request_get_for_owner(&g_nm, client->username, requests, &count, MAX_ACCESS_REQUESTS);
+    
+    char response[BUFFER_SIZE * 2];
+    int offset = snprintf(response, sizeof(response), "PENDING ACCESS REQUESTS:\n");
+    
+    if (count == 0) {
+        offset += snprintf(response + offset, sizeof(response) - offset, "  (no pending requests)\n");
+    } else {
+        for (int i = 0; i < count && offset < sizeof(response) - 200; i++) {
+            char time_str[20];
+            struct tm* tm_info = localtime(&requests[i].request_time);
+            strftime(time_str, 20, "%Y-%m-%d %H:%M", tm_info);
+            
+            offset += snprintf(response + offset, sizeof(response) - offset,
+                             "  %s wants %s access to %s (requested: %s)\n",
+                             requests[i].username, requests[i].flag, 
+                             requests[i].filename, time_str);
+        }
+        offset += snprintf(response + offset, sizeof(response) - offset,
+                         "\nTotal: %d request(s)\n", count);
+    }
+    
+    write(client->socket_fd, response, strlen(response));
+    nm_log_operation(client->ip, client->nm_port, client->username, "VIEWREQUESTS", "", ERR_NONE);
+}
+
+static void handle_approverequest_command(Client* client, char* args) {
+    char username[MAX_USERNAME_LEN], filename[MAX_FILENAME_LEN];
+    if (sscanf(args, "%63s %255s", username, filename) != 2) {
+        send_error(client->socket_fd, ERR_ACCESS_DENIED-3, "Usage: APPROVEREQUEST <username> <filename>");
+        return;
+    }
+    
+    // Check if file exists and client is owner
+    FileMetadata* file_info = file_lookup(&g_nm, filename);
+    if (!file_info) {
+        send_error(client->socket_fd, ERR_FILE_NOT_FOUND, "File not found");
+        return;
+    }
+    
+    if (strcmp(file_info->owner, client->username) != 0) {
+        send_error(client->socket_fd, ERR_ACCESS_DENIED, "Only owner can approve requests");
+        return;
+    }
+    
+    // Find the request
+    AccessRequest* req = NULL;
+    pthread_rwlock_rdlock(&g_nm.request_lock);
+    for (int i = 0; i < g_nm.request_count; i++) {
+        if (g_nm.access_requests[i].is_active &&
+            strcmp(g_nm.access_requests[i].username, username) == 0 &&
+            strcmp(g_nm.access_requests[i].filename, filename) == 0) {
+            req = &g_nm.access_requests[i];
+            break;
+        }
+    }
+    
+    if (!req) {
+        pthread_rwlock_unlock(&g_nm.request_lock);
+        send_error(client->socket_fd, ERR_FILE_NOT_FOUND, "Request not found");
+        return;
+    }
+    
+    // Grant access based on flag
+    int read_access = 1;
+    int write_access = (strcmp(req->flag, "-W") == 0) ? 1 : 0;
+    char flag_copy[8];
+    strncpy(flag_copy, req->flag, 7);
+    flag_copy[7] = '\0';
+    pthread_rwlock_unlock(&g_nm.request_lock);
+    
+    if (acl_add_access(file_info, username, read_access, write_access) < 0) {
+        send_error(client->socket_fd, ERR_UNKNOWN, "Failed to grant access");
+        return;
+    }
+    
+    // Remove request
+    request_remove(&g_nm, username, filename);
+    
+    // Notify the requester
+    notify_clients_editing(&g_nm, filename, username, "ACCESS_GRANTED", 0);
+    
+    send_success(client->socket_fd, "REQUEST_APPROVED");
+    nm_log("[APPROVE] %s granted %s access to %s for %s\n", 
+           client->username, flag_copy, filename, username);
+    nm_log_operation(client->ip, client->nm_port, client->username, "APPROVEREQUEST", args, ERR_NONE);
+    persist_save_metadata(&g_nm);
+}
+
+static void handle_denyrequest_command(Client* client, char* args) {
+    char username[MAX_USERNAME_LEN], filename[MAX_FILENAME_LEN];
+    if (sscanf(args, "%63s %255s", username, filename) != 2) {
+        send_error(client->socket_fd, ERR_ACCESS_DENIED-3, "Usage: DENYREQUEST <username> <filename>");
+        return;
+    }
+    
+    // Check if file exists and client is owner
+    FileMetadata* file_info = file_lookup(&g_nm, filename);
+    if (!file_info) {
+        send_error(client->socket_fd, ERR_FILE_NOT_FOUND, "File not found");
+        return;
+    }
+    
+    if (strcmp(file_info->owner, client->username) != 0) {
+        send_error(client->socket_fd, ERR_ACCESS_DENIED, "Only owner can deny requests");
+        return;
+    }
+    
+    // Check if request exists
+    if (!request_exists(&g_nm, username, filename)) {
+        send_error(client->socket_fd, ERR_FILE_NOT_FOUND, "Request not found");
+        return;
+    }
+    
+    // Remove request
+    request_remove(&g_nm, username, filename);
+    
+    // Notify the requester
+    notify_clients_editing(&g_nm, filename, username, "ACCESS_DENIED", 0);
+    
+    send_success(client->socket_fd, "REQUEST_DENIED");
+    nm_log("[DENY] %s denied access request for %s from %s\n", 
+           client->username, filename, username);
+    nm_log_operation(client->ip, client->nm_port, client->username, "DENYREQUEST", args, ERR_NONE);
+}
+
 // ======================== CONNECTION HANDLERS ========================
 
 void* handle_client_connection(void* arg) {
@@ -1217,6 +1753,14 @@ void* handle_client_connection(void* arg) {
         else if (strcmp(command, "REMACCESS") == 0) handle_remaccess_command(client, args);
         else if (strcmp(command, "EXEC") == 0) handle_exec_command(client, args);
         else if (strcmp(command, "UNDO") == 0) handle_undo_command(client, args);
+        else if (strcmp(command, "CREATEFOLDER") == 0) handle_createfolder_command(client, args);
+        else if (strcmp(command, "MOVE") == 0) handle_move_command(client, args);
+        else if (strcmp(command, "VIEWFOLDER") == 0) handle_viewfolder_command(client, args);
+        // Bonus feature: Request Access [5]
+        else if (strcmp(command, "REQUESTACCESS") == 0) handle_requestaccess_command(client, args);
+        else if (strcmp(command, "VIEWREQUESTS") == 0) handle_viewrequests_command(client);
+        else if (strcmp(command, "APPROVEREQUEST") == 0) handle_approverequest_command(client, args);
+        else if (strcmp(command, "DENYREQUEST") == 0) handle_denyrequest_command(client, args);
         else if (strcmp(command, "QUIT") == 0 || strcmp(command, "EXIT") == 0) {
             send_success(client_socket, "GOODBYE");
             break;
@@ -1307,6 +1851,8 @@ void nm_init(NameServer* nm) {
     }
     nm->ss_count = 0;
     nm->client_count = 0;
+    nm->request_count = 0;  // Initialize access request count
+    pthread_rwlock_init(&nm->request_lock, NULL);  // Initialize request lock
     nm->running = 1;
     nm_log("Name Server initialized successfully\n");
     
@@ -1341,6 +1887,7 @@ void nm_cleanup(NameServer* nm) {
     pthread_rwlock_destroy(&nm->ss_lock);
     pthread_rwlock_destroy(&nm->client_lock);
     pthread_rwlock_destroy(&nm->trie_lock);
+    pthread_rwlock_destroy(&nm->request_lock);  // Cleanup request lock
     if (nm->server_socket > 0) close(nm->server_socket);
     nm_log("Name Server shutdown complete\n");
 }
@@ -1463,6 +2010,41 @@ int main(int argc, char* argv[]) {
                     }
                 } else {
                     write(new_socket, "ACK:NO Bad request\n", 19);
+                }
+            }
+            close(new_socket);
+            free(socket_ptr);
+            continue;
+        } else if (strncmp(peek_buf, "NOTIFY_EDIT", 11) == 0) {
+            // Handle NOTIFY_EDIT from SS (bonus: collaborative editing notifications)
+            char buffer[512];
+            ssize_t n = read(new_socket, buffer, sizeof(buffer) - 1);
+            if (n > 0) {
+                buffer[n] = '\0';
+                
+                // Parse: NOTIFY_EDIT <client_ip> <filename> <action> <sentence_idx>
+                char client_ip_str[MAX_IP_LEN], filename[MAX_FILENAME_LEN], action[16];
+                int sentence_idx = 0;
+                if (sscanf(buffer, "NOTIFY_EDIT %15s %255s %15s %d", client_ip_str, filename, action, &sentence_idx) >= 3) {
+                    // Find username by IP
+                    char* username = NULL;
+                    pthread_rwlock_rdlock(&g_nm.client_lock);
+                    for (int i = 0; i < g_nm.client_count; i++) {
+                        if (g_nm.clients[i].is_active && strcmp(g_nm.clients[i].ip, client_ip_str) == 0) {
+                            username = g_nm.clients[i].username;
+                            break;
+                        }
+                    }
+                    pthread_rwlock_unlock(&g_nm.client_lock);
+                    
+                    if (username) {
+                        notify_clients_editing(&g_nm, filename, username, action, sentence_idx);
+                        write(new_socket, "ACK:NOTIFIED\n", 13);
+                    } else {
+                        write(new_socket, "ACK:USER_NOT_FOUND\n", 19);
+                    }
+                } else {
+                    write(new_socket, "ACK:BAD_FORMAT\n", 15);
                 }
             }
             close(new_socket);
