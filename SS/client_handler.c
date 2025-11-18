@@ -2,7 +2,65 @@
 #include "log.h"  // For the logger
 #include "client_handler.h" // For its own declaration
 
-// Permission checking removed - NM verifies all access before directing clients to SS
+int check_permissions(int client_socket, const char *filename, const char *mode) {
+    logger("[AccessControl] Checking %s permission for file %s\n", mode, filename);
+
+    // 1. Get Client IP Address
+    struct sockaddr_in addr;
+    socklen_t addr_size = sizeof(struct sockaddr_in);
+    if (getpeername(client_socket, (struct sockaddr *)&addr, &addr_size) < 0) {
+        logger("[AccessControl] getpeername failed\n");
+        perror("getpeername failed");
+        return 0; // Fail safe
+    }
+    char client_ip[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &addr.sin_addr, client_ip, INET_ADDRSTRLEN);
+    logger("[AccessControl] Client IP: %s\n", client_ip);
+
+    // 2. Connect to NM
+    int nm_sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (nm_sock < 0) {
+        logger("[AccessControl] Failed to create socket to NM\n");
+        return 0;
+    }
+
+    struct sockaddr_in nm_addr;
+    nm_addr.sin_family = AF_INET;
+    nm_addr.sin_port = htons(NM_PORT);
+    if (inet_pton(AF_INET, NM_IP, &nm_addr.sin_addr) <= 0) {
+        logger("[AccessControl] Invalid NM IP\n");
+        close(nm_sock);
+        return 0;
+    }
+
+    if (connect(nm_sock, (struct sockaddr *)&nm_addr, sizeof(nm_addr)) < 0) {
+        logger("[AccessControl] Could not reach NM to verify permissions.\n");
+        close(nm_sock);
+        return 0; // If NM is down, deny access for security
+    }
+
+    logger("[AccessControl] Connected to NM\n");
+
+    // 3. Send Query: CHECK_ACCESS <IP> <FILENAME> <MODE>
+    char query[512];
+    sprintf(query, "CHECK_ACCESS %s %s %s\n", client_ip, filename, mode);
+    write(nm_sock, query, strlen(query));
+    logger("[AccessControl] Sent query: %s", query);
+
+    // 4. Read Response
+    char response[64] = {0};
+    ssize_t n = read(nm_sock, response, 63);
+    logger("[AccessControl] Received response (%zd bytes): %s\n", n, response);
+    close(nm_sock);
+
+    if (strncmp(response, "ACK:YES", 7) == 0) {
+        logger("[AccessControl] Access GRANTED\n");
+        return 1; // Allowed
+    }
+
+    logger("[AccessControl] Denied access to %s for %s on file %s\n", client_ip, mode, filename);
+    return 0; // Denied
+}
 
 void handle_read_command(int client_socket, char* buffer, const char* username) {
     char filename[256]; // Use 256 for a standard filename buffer
@@ -17,7 +75,12 @@ void handle_read_command(int client_socket, char* buffer, const char* username) 
 
     logger("[SS-Thread] Read request for: %s\n", filename);
 
-    // NM already verified permissions before sending client here
+    // 2. Check permissions
+    if (!check_permissions(client_socket, filename, "READ")) {
+        char *err = "ERR:403:ACCESS_DENIED\n";
+        write(client_socket, err, strlen(err));
+        return;
+    }
 
     // 3. --- Read the file ---
     char full_path[512];
@@ -57,7 +120,12 @@ void handle_write_command(int client_socket, char* buffer, const char* username)
     
     logger("[SS-Thread] WRITE request: %s sentence %d\n", filename, sentence_num);
 
-    // 2. NM already verified permissions before sending client here
+    // 2. Check permissions
+    if (!check_permissions(client_socket, filename, "WRITE")) {
+        write(client_socket, "ERR:403:ACCESS_DENIED\n", 22);
+        logger("[SS-Thread] WRITE denied - no permission\n");
+        return;
+    }
 
     // 3. PRE-VALIDATION: Check if sentence exists before acquiring lock
     // Load file to validate sentence exists (or if it's sentence 0 which can be created)
@@ -628,7 +696,11 @@ void handle_write_command_old_single_shot(int client_socket, char* buffer, const
     char *nl = strrchr(content, '\n');
     if(nl) *nl = '\0';
 
-    // 2. NM already verified permissions before sending client here
+    // 2. Check permissions
+    if (!check_permissions(client_socket, filename, "WRITE")) {
+        write(client_socket, "ERR:403:ACCESS_DENIED\n", 22);
+        return;
+    }
 
     // 3. SENTENCE LOCK (The Critical Requirement)
     // This check ensures no one else is editing THIS sentence right now.
@@ -766,7 +838,12 @@ void handle_stream_command(int client_socket, char* buffer, const char* username
         return; // Return from this function
     }
     
-    // NM already verified permissions before sending client here
+    // Check permissions
+    if (!check_permissions(client_socket, filename, "READ")) {
+        char *err = "ERR:403:ACCESS_DENIED\n";
+        write(client_socket, err, strlen(err));
+        return;
+    }
     
     logger("[SS-Thread] Stream request for: %s\n", filename);
 
@@ -843,7 +920,11 @@ void handle_checkpoint_command(int client_socket, char* buffer) {
     
     logger("[SS-Thread] CHECKPOINT request: %s tag=%s\n", filename, tag);
     
-    // NM already verified permissions before sending client here
+    // Check permissions
+    if (!check_permissions(client_socket, filename, "WRITE")) {
+        write(client_socket, "ERR:403:ACCESS_DENIED\n", 22);
+        return;
+    }
     
     if (create_checkpoint(filename, tag)) {
         char response[128];
@@ -864,7 +945,11 @@ void handle_viewcheckpoint_command(int client_socket, char* buffer) {
     
     logger("[SS-Thread] VIEWCHECKPOINT request: %s tag=%s\n", filename, tag);
     
-    // NM already verified permissions before sending client here
+    // Check permissions
+    if (!check_permissions(client_socket, filename, "READ")) {
+        write(client_socket, "ERR:403:ACCESS_DENIED\n", 22);
+        return;
+    }
     
     char* content = get_checkpoint_content(filename, tag);
     if (content) {
@@ -886,7 +971,11 @@ void handle_revert_command(int client_socket, char* buffer) {
     
     logger("[SS-Thread] REVERT request: %s tag=%s\n", filename, tag);
     
-    // NM already verified permissions before sending client here
+    // Check permissions
+    if (!check_permissions(client_socket, filename, "WRITE")) {
+        write(client_socket, "ERR:403:ACCESS_DENIED\n", 22);
+        return;
+    }
     
     if (revert_to_checkpoint(filename, tag)) {
         char response[128];
@@ -907,7 +996,11 @@ void handle_listcheckpoints_command(int client_socket, char* buffer) {
     
     logger("[SS-Thread] LISTCHECKPOINTS request: %s\n", filename);
     
-    // NM already verified permissions before sending client here
+    // Check permissions
+    if (!check_permissions(client_socket, filename, "READ")) {
+        write(client_socket, "ERR:403:ACCESS_DENIED\n", 22);
+        return;
+    }
     
     char* list = list_checkpoints(filename);
     write(client_socket, list, strlen(list));

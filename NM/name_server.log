@@ -30,3 +30,20 @@
 [2025-11-18 18:13:40] [OP] User=vik IP=127.0.0.1:5618 Op=VIEW Details= Status=SUCCESS
 [2025-11-18 18:13:46] [OP] User=vik IP=127.0.0.1:5618 Op=WRITE Details=has1.txt Status=SUCCESS
 [2025-11-18 18:13:46] [CONNECT] New connection from 127.0.0.1:48120
+[2025-11-18 18:25:01] 
+========== NAME SERVER STARTED: Tue Nov 18 18:25:01 2025 ==========
+[2025-11-18 18:25:01] Name Server initialized successfully
+[2025-11-18 18:25:01] [PERSIST] Loading 1 files from metadata...
+[2025-11-18 18:25:01] [PERSIST] Loaded: has1.txt (owner=vik, ss_id=0)
+[2025-11-18 18:25:01] [PERSIST] Loading 0 access requests...
+[2025-11-18 18:25:01] [PERSIST] Loaded 0 access requests
+[2025-11-18 18:25:01] [PERSIST] Successfully loaded 1/1 files and 0 requests
+[2025-11-18 18:25:01] Name Server listening on port 8080
+[2025-11-18 18:25:03] [CONNECT] New connection from 127.0.0.1:47140
+[2025-11-18 18:25:03] [SS0] Registered 127.0.0.1 (NM=9001, Client=9001)
+[2025-11-18 18:25:08] [CONNECT] New connection from 127.0.0.1:52836
+[2025-11-18 18:25:08] [CLIENT] vik @ 127.0.0.1:5905 registered
+[2025-11-18 18:25:26] [OP] User=vik IP=127.0.0.1:5905 Op=VIEW Details= Status=SUCCESS
+[2025-11-18 18:25:34] [OP] User=vik IP=127.0.0.1:5905 Op=WRITE Details=has1.txt Status=SUCCESS
+[2025-11-18 18:26:02] [OP] User=vik IP=127.0.0.1:5905 Op=LISTCHECKPOINTS Details=has1.txt Status=SUCCESS
+[2025-11-18 18:27:12] [CLIENT] vik disconnected

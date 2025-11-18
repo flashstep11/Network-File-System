@@ -55,3 +55,48 @@
 [2025-11-18 18:13:46] [SS-Thread] WRITE denied - no permission
 [2025-11-18 18:13:46] [SS-Thread] Client disconnected.
 [2025-11-18 18:16:14] [NM-Thread] Name Server disconnected! Command thread shutting down.
+[2025-11-18 18:25:03] 
+--- LOGGING STARTED: Tue Nov 18 18:25:03 2025 ---
+[2025-11-18 18:25:03] Checkpoint system initialized.
+[2025-11-18 18:25:03] Lock systems and checkpoints initialized.
+[2025-11-18 18:25:03] Storage Server (SS) starting up...
+[2025-11-18 18:25:03] Successfully connected to NM!
+[2025-11-18 18:25:03] Sending registration: REGISTER_SS 9001 9001
+[2025-11-18 18:25:03] Received from NM: ACK:SS_REGISTRATION_OK
+
+[2025-11-18 18:25:03] Registration complete. Private command line is active.
+[2025-11-18 18:25:03] [Main Thread] Starting public client server on port 9001...
+[2025-11-18 18:25:03] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-18 18:25:03] 
+--- Storage Server is now ONLINE. Listening on port 9001 ---
+
+[2025-11-18 18:25:34] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-18 18:25:34] [SS-Thread] New client connected.
+[2025-11-18 18:25:34] [SS-Thread] Received command: WRITE has1.txt 0
+[2025-11-18 18:25:34] [SS-Thread] WRITE request: has1.txt sentence 0
+[2025-11-18 18:25:34] [SS-Thread] Will create new sentence 0
+[2025-11-18 18:25:34] [SS-Thread] Sentence validation passed for sentence 0
+[2025-11-18 18:25:34] [SS-Thread] Sentence lock acquired for has1.txt sentence 0
+[2025-11-18 18:25:34] [SS-Thread] Loaded file has1.txt, size=0, data=0x55bc29dc5c30
+[2025-11-18 18:25:34] [SS-Thread] Backup created: storage_root/has1.txt.bak
+[2025-11-18 18:25:43] [SS-Thread] Parse OK: word_index=0, content='HELLO', working_data=''
+[2025-11-18 18:25:43] [SS-Thread] Split into 1 words
+[2025-11-18 18:25:43] [SS-Thread] Period analysis: period_found=-1, before='NULL', after='NULL'
+[2025-11-18 18:25:43] [SS-Thread] find_sentence returned 0, s_start=0, s_end=0
+[2025-11-18 18:25:43] [SS-Thread] Creating new sentence 0
+[2025-11-18 18:25:43] [SS-Thread] Added 1 words to new sentence 0
+[2025-11-18 18:25:45] [SS-Thread] Parse OK: word_index=1, content='WORLD.', working_data='HELLO'
+[2025-11-18 18:25:45] [SS-Thread] Split into 1 words
+[2025-11-18 18:25:45] [SS-Thread] Period analysis: period_found=0, before='WORLD.', after='NULL'
+[2025-11-18 18:25:45] [SS-Thread] find_sentence returned 1, s_start=0, s_end=4
+[2025-11-18 18:25:45] [SS-Thread] Inserted word 1 with period delimiter, split sentence 0
+[2025-11-18 18:25:45] [SS-Thread] Inserted 1 words at index 1 in sentence 0
+[2025-11-18 18:25:46] [SS-Thread] ETIRW received, finalizing write
+[2025-11-18 18:25:46] [SS-Thread] File has1.txt updated successfully
+[2025-11-18 18:25:46] [SS-Thread] Sentence lock released for has1.txt sentence 0
+[2025-11-18 18:25:46] [SS-Thread] Client disconnected.
+[2025-11-18 18:26:02] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-18 18:26:02] [SS-Thread] New client connected.
+[2025-11-18 18:26:02] [SS-Thread] Received command: LISTCHECKPOINTS has1.txt
+[2025-11-18 18:26:02] [SS-Thread] LISTCHECKPOINTS request: has1.txt
+[2025-11-18 18:26:02] [SS-Thread] Client disconnected.
