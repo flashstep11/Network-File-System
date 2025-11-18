@@ -436,6 +436,9 @@ void handle_replace(const char* args) {
                         if (n > 0) {
                             response[n] = '\0';
                             printf("%s", response);
+                            if (n > 0 && response[n-1] != '\n') {
+                                printf("\n");
+                            }
                         }
                         break;
                     }
@@ -447,7 +450,12 @@ void handle_replace(const char* args) {
                         break;
                     }
                     response[n] = '\0';
+                    
+                    // Print response and ensure newline
                     printf("%s", response);
+                    if (n > 0 && response[n-1] != '\n') {
+                        printf("\n");
+                    }
                 }
             } else {
                 printf("%s", response);
