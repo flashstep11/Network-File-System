@@ -8,7 +8,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <sys/time.h>
-#include <pthread.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 
 #define BUFFER_SIZE 8192
 #define NM_IP "127.0.0.1"
@@ -19,54 +20,11 @@ char username[64];
 char client_ip[16];
 int client_nm_port;
 int client_ss_port;
-int notification_running = 1;
 
-// Forward declaration
-void print_prompt();
-
-// Bonus: Background thread to listen for notifications
-void* notification_listener(void* arg) {
-    (void)arg;
-    char buffer[BUFFER_SIZE];
-    fd_set readfds;
-    struct timeval tv;
-    
-    while (notification_running) {
-        FD_ZERO(&readfds);
-        FD_SET(nm_socket, &readfds);
-        
-        // Timeout to check notification_running periodically
-        tv.tv_sec = 1;
-        tv.tv_usec = 0;
-        
-        int activity = select(nm_socket + 1, &readfds, NULL, NULL, &tv);
-        
-        if (activity > 0 && FD_ISSET(nm_socket, &readfds)) {
-            ssize_t n = recv(nm_socket, buffer, sizeof(buffer) - 1, MSG_DONTWAIT);
-            if (n > 0) {
-                buffer[n] = '\0';
-                
-                // Check if it's a notification message
-                if (strncmp(buffer, "NOTIFICATION:", 13) == 0) {
-                    // Print notification on new line without disrupting prompt
-                    printf("\r"); // Clear current line
-                    printf("%s", buffer + 13); // Print notification (skip "NOTIFICATION:")
-                    fflush(stdout);
-                    print_prompt(); // Reprint prompt
-                }
-            } else if (n == 0) {
-                // Connection closed
-                break;
-            }
-        }
-    }
-    
-    return NULL;
-}
-
-void print_prompt() {
-    printf("nfs:%s> ", username);
-    fflush(stdout);
+char* get_prompt() {
+    static char prompt[80];
+    snprintf(prompt, sizeof(prompt), "nfs:%s> ", username);
+    return prompt;
 }
 
 int connect_to_nm() {
@@ -141,6 +99,20 @@ int connect_to_ss(const char* ss_ip, int ss_port) {
 
     if (connect(ss_socket, (struct sockaddr*)&ss_addr, sizeof(ss_addr)) < 0) {
         perror("Connection to SS failed");
+        close(ss_socket);
+        return -1;
+    }
+
+    // Authenticate with SS by sending username
+    char auth_msg[128];
+    snprintf(auth_msg, sizeof(auth_msg), "AUTH %s\n", username);
+    write(ss_socket, auth_msg, strlen(auth_msg));
+    
+    // Wait for acknowledgment (optional, but good practice)
+    char ack[64] = {0};
+    read(ss_socket, ack, 63);
+    if (strncmp(ack, "ACK:AUTH_OK", 11) != 0) {
+        fprintf(stderr, "SS authentication failed\n");
         close(ss_socket);
         return -1;
     }
@@ -364,25 +336,7 @@ void send_simple_command(const char* cmd) {
         return;
     }
     response[n] = '\0';
-    
-    // Check if this is a notification that should be handled separately
-    // If so, print it and continue reading for actual response
-    char* start = response;
-    while (strncmp(start, "NOTIFICATION:", 13) == 0) {
-        char* end = strchr(start, '\n');
-        if (end) {
-            *end = '\0';
-            printf("\r%s\n", start + 13); // Print notification
-            start = end + 1;
-        } else {
-            break;
-        }
-    }
-    
-    // Print the actual command response
-    if (strlen(start) > 0) {
-        printf("%s", start);
-    }
+    printf("%s", response);
     
     // Reset to blocking mode
     tv.tv_sec = 0;
@@ -412,7 +366,8 @@ void print_help() {
     printf("  VIEWREQUESTS                 - View pending requests (owner)\n");
     printf("  APPROVEREQUEST <user> <file> - Approve access request\n");
     printf("  DENYREQUEST <user> <file>    - Deny access request\n");
-    printf("\n[BONUS] Real-time notifications enabled for editing activity!\n");
+    printf("\n  ↑/↓ Arrow Keys              - Navigate command history\n");
+    printf("  Ctrl+R                      - Reverse history search\n");
     printf("  HELP                        - Show this help\n");
     printf("  QUIT / EXIT                 - Disconnect\n\n");
 }
@@ -446,32 +401,38 @@ int main() {
         return 1;
     }
 
-    // Start notification listener thread (bonus feature)
-    pthread_t notification_thread;
-    if (pthread_create(&notification_thread, NULL, notification_listener, NULL) != 0) {
-        printf("Warning: Failed to start notification listener\n");
-    }
+    printf("\nType 'HELP' for available commands\n");
+    printf("Use UP/DOWN arrow keys to navigate command history\n\n");
 
-    printf("\nType 'HELP' for available commands\n\n");
-
-    // Main command loop
-    char line[512];
+    // Main command loop with readline
+    char* line;
     while (1) {
-        print_prompt();
-        if (!fgets(line, sizeof(line), stdin)) break;
+        line = readline(get_prompt());
         
-        // Remove newline
-        line[strcspn(line, "\n")] = 0;
+        // Handle EOF (Ctrl+D)
+        if (!line) {
+            printf("\n");
+            break;
+        }
         
         // Skip empty lines
-        if (strlen(line) == 0) continue;
+        if (strlen(line) == 0) {
+            free(line);
+            continue;
+        }
+        
+        // Add to history
+        add_history(line);
 
         // Parse command
         char cmd[64];
         char args[448];
         memset(args, 0, sizeof(args));
         
-        if (sscanf(line, "%63s", cmd) != 1) continue;
+        if (sscanf(line, "%63s", cmd) != 1) {
+            free(line);
+            continue;
+        }
         
         char* space = strchr(line, ' ');
         if (space) {
@@ -480,6 +441,7 @@ int main() {
 
         // Handle commands
         if (strcasecmp(cmd, "QUIT") == 0 || strcasecmp(cmd, "EXIT") == 0) {
+            free(line);
             send_simple_command("QUIT");
             break;
         } else if (strcasecmp(cmd, "HELP") == 0) {
@@ -494,11 +456,12 @@ int main() {
             // All other commands go directly to NM
             send_simple_command(line);
         }
+        
+        // Free readline buffer
+        free(line);
     }
 
     printf("\nDisconnecting...\n");
-    notification_running = 0;  // Stop notification thread
-    pthread_join(notification_thread, NULL);  // Wait for thread to finish
     close(nm_socket);
     return 0;
 }

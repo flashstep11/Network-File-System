@@ -1448,68 +1448,6 @@ void request_get_for_owner(NameServer* nm, const char* owner, AccessRequest* res
 
 // ======================== NOTIFICATION SYSTEM (BONUS: UNIQUE FACTOR) ========================
 
-void notify_clients_editing(NameServer* nm, const char* filename, const char* editor_username, 
-                            const char* action, int sentence_idx) {
-    if (!nm || !filename || !editor_username || !action) return;
-    
-    FileMetadata* file_info = file_lookup(nm, filename);
-    if (!file_info) return;
-    
-    char notification[BUFFER_SIZE];
-    if (strcmp(action, "START") == 0) {
-        snprintf(notification, sizeof(notification), 
-                "NOTIFICATION:[LIVE] %s is editing sentence %d of %s\n", 
-                editor_username, sentence_idx, filename);
-    } else if (strcmp(action, "END") == 0) {
-        snprintf(notification, sizeof(notification),
-                "NOTIFICATION:[LIVE] %s finished editing %s\n",
-                editor_username, filename);
-    } else if (strcmp(action, "ACCESS_GRANTED") == 0) {
-        snprintf(notification, sizeof(notification),
-                "NOTIFICATION:[ACCESS] Your request for %s has been APPROVED\n",
-                filename);
-    } else if (strcmp(action, "ACCESS_DENIED") == 0) {
-        snprintf(notification, sizeof(notification),
-                "NOTIFICATION:[ACCESS] Your request for %s has been DENIED\n",
-                filename);
-    } else {
-        return;
-    }
-    
-    pthread_rwlock_rdlock(&nm->client_lock);
-    for (int i = 0; i < nm->client_count; i++) {
-        if (!nm->clients[i].is_active) continue;
-        
-        // For editing notifications: send to all users with read access (except the editor)
-        if (strcmp(action, "START") == 0 || strcmp(action, "END") == 0) {
-            if (strcmp(nm->clients[i].username, editor_username) == 0) continue;
-            if (!acl_check_read(file_info, nm->clients[i].username)) continue;
-            
-            nm_log("[NOTIFY-SEND] Sending to %s (socket %d): %s", 
-                   nm->clients[i].username, nm->clients[i].socket_fd, notification);
-        }
-        // For access notifications: send only to the requester
-        else if (strcmp(action, "ACCESS_GRANTED") == 0 || strcmp(action, "ACCESS_DENIED") == 0) {
-            if (strcmp(nm->clients[i].username, editor_username) != 0) continue;
-            
-            nm_log("[NOTIFY-SEND] Sending to %s (socket %d): %s", 
-                   nm->clients[i].username, nm->clients[i].socket_fd, notification);
-        }
-        
-        // Send notification (non-blocking)
-        ssize_t sent = write(nm->clients[i].socket_fd, notification, strlen(notification));
-        if (sent < 0) {
-            nm_log("[NOTIFY-ERROR] Failed to send to %s: %s\n", 
-                   nm->clients[i].username, strerror(errno));
-        } else {
-            nm_log("[NOTIFY-SUCCESS] Sent %zd bytes to %s\n", sent, nm->clients[i].username);
-        }
-    }
-    pthread_rwlock_unlock(&nm->client_lock);
-    
-    nm_log("[NOTIFY] %s: %s\n", action, notification);
-}
-
 // ======================== ACCESS REQUEST COMMAND HANDLERS ========================
 
 static void handle_requestaccess_command(Client* client, char* args) {
@@ -1645,9 +1583,6 @@ static void handle_approverequest_command(Client* client, char* args) {
     // Remove request
     request_remove(&g_nm, username, filename);
     
-    // Notify the requester
-    notify_clients_editing(&g_nm, filename, username, "ACCESS_GRANTED", 0);
-    
     send_success(client->socket_fd, "REQUEST_APPROVED");
     nm_log("[APPROVE] %s granted %s access to %s for %s\n", 
            client->username, flag_copy, filename, username);
@@ -1682,9 +1617,6 @@ static void handle_denyrequest_command(Client* client, char* args) {
     
     // Remove request
     request_remove(&g_nm, username, filename);
-    
-    // Notify the requester
-    notify_clients_editing(&g_nm, filename, username, "ACCESS_DENIED", 0);
     
     send_success(client->socket_fd, "REQUEST_DENIED");
     nm_log("[DENY] %s denied access request for %s from %s\n", 
@@ -1966,85 +1898,35 @@ int main(int argc, char* argv[]) {
             if (n > 0) {
                 buffer[n] = '\0';
                 
-                // Parse: CHECK_ACCESS <client_ip> <filename> <mode>
-                char check_ip[MAX_IP_LEN], filename[MAX_FILENAME_LEN], mode[16];
-                if (sscanf(buffer, "CHECK_ACCESS %15s %255s %15s", check_ip, filename, mode) == 3) {
-                    nm_log("[CHECK_ACCESS] IP=%s File=%s Mode=%s\n", check_ip, filename, mode);
+                // Parse: CHECK_ACCESS <username> <filename> <mode>
+                char check_username[MAX_USERNAME_LEN], filename[MAX_FILENAME_LEN], mode[16];
+                if (sscanf(buffer, "CHECK_ACCESS %63s %255s %15s", check_username, filename, mode) == 3) {
+                    nm_log("[CHECK_ACCESS] User=%s File=%s Mode=%s\n", check_username, filename, mode);
                     
                     // Find file
                     FileMetadata* file_info = file_lookup(&g_nm, filename);
                     if (!file_info) {
                         write(new_socket, "ACK:NO File not found\n", 23);
+                        nm_log("[CHECK_ACCESS] File not found: %s\n", filename);
                     } else {
-                        // Find client by IP
-                        char* username = NULL;
-                        pthread_rwlock_rdlock(&g_nm.client_lock);
-                        for (int i = 0; i < g_nm.client_count; i++) {
-                            if (g_nm.clients[i].is_active && strcmp(g_nm.clients[i].ip, check_ip) == 0) {
-                                username = g_nm.clients[i].username;
-                                break;
-                            }
+                        // Check permissions directly by username
+                        int allowed = 0;
+                        if (strcmp(mode, "READ") == 0) {
+                            allowed = acl_check_read(file_info, check_username);
+                        } else if (strcmp(mode, "WRITE") == 0) {
+                            allowed = acl_check_write(file_info, check_username);
                         }
-                        pthread_rwlock_unlock(&g_nm.client_lock);
                         
-                        if (!username) {
-                            // Client not registered, deny
-                            write(new_socket, "ACK:NO User not registered\n", 28);
+                        if (allowed) {
+                            write(new_socket, "ACK:YES\n", 8);
+                            nm_log("[CHECK_ACCESS] Granted %s access to %s for %s\n", mode, filename, check_username);
                         } else {
-                            // Check permissions
-                            int allowed = 0;
-                            if (strcmp(mode, "READ") == 0) {
-                                allowed = acl_check_read(file_info, username);
-                            } else if (strcmp(mode, "WRITE") == 0) {
-                                allowed = acl_check_write(file_info, username);
-                            }
-                            
-                            if (allowed) {
-                                write(new_socket, "ACK:YES\n", 8);
-                                nm_log("[CHECK_ACCESS] Granted %s access to %s for %s\n", mode, filename, username);
-                            } else {
-                                write(new_socket, "ACK:NO No permission\n", 21);
-                                nm_log("[CHECK_ACCESS] Denied %s access to %s for %s\n", mode, filename, username);
-                            }
+                            write(new_socket, "ACK:NO No permission\n", 21);
+                            nm_log("[CHECK_ACCESS] Denied %s access to %s for %s\n", mode, filename, check_username);
                         }
                     }
                 } else {
                     write(new_socket, "ACK:NO Bad request\n", 19);
-                }
-            }
-            close(new_socket);
-            free(socket_ptr);
-            continue;
-        } else if (strncmp(peek_buf, "NOTIFY_EDIT", 11) == 0) {
-            // Handle NOTIFY_EDIT from SS (bonus: collaborative editing notifications)
-            char buffer[512];
-            ssize_t n = read(new_socket, buffer, sizeof(buffer) - 1);
-            if (n > 0) {
-                buffer[n] = '\0';
-                
-                // Parse: NOTIFY_EDIT <client_ip> <filename> <action> <sentence_idx>
-                char client_ip_str[MAX_IP_LEN], filename[MAX_FILENAME_LEN], action[16];
-                int sentence_idx = 0;
-                if (sscanf(buffer, "NOTIFY_EDIT %15s %255s %15s %d", client_ip_str, filename, action, &sentence_idx) >= 3) {
-                    // Find username by IP
-                    char* username = NULL;
-                    pthread_rwlock_rdlock(&g_nm.client_lock);
-                    for (int i = 0; i < g_nm.client_count; i++) {
-                        if (g_nm.clients[i].is_active && strcmp(g_nm.clients[i].ip, client_ip_str) == 0) {
-                            username = g_nm.clients[i].username;
-                            break;
-                        }
-                    }
-                    pthread_rwlock_unlock(&g_nm.client_lock);
-                    
-                    if (username) {
-                        notify_clients_editing(&g_nm, filename, username, action, sentence_idx);
-                        write(new_socket, "ACK:NOTIFIED\n", 13);
-                    } else {
-                        write(new_socket, "ACK:USER_NOT_FOUND\n", 19);
-                    }
-                } else {
-                    write(new_socket, "ACK:BAD_FORMAT\n", 15);
                 }
             }
             close(new_socket);

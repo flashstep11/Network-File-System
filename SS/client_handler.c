@@ -2,22 +2,10 @@
 #include "log.h"  // For the logger
 #include "client_handler.h" // For its own declaration
 
-int check_permissions(int client_socket, const char *filename, const char *mode) {
-    logger("[AccessControl] Checking %s permission for file %s\n", mode, filename);
+int check_permissions(const char* username, const char *filename, const char *mode) {
+    logger("[AccessControl] Checking %s permission for user %s on file %s\n", mode, username, filename);
     
-    // 1. Get Client IP Address
-    struct sockaddr_in addr;
-    socklen_t addr_size = sizeof(struct sockaddr_in);
-    if (getpeername(client_socket, (struct sockaddr *)&addr, &addr_size) < 0) {
-        logger("[AccessControl] getpeername failed\n");
-        perror("getpeername failed");
-        return 0; // Fail safe
-    }
-    char client_ip[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &addr.sin_addr, client_ip, INET_ADDRSTRLEN);
-    logger("[AccessControl] Client IP: %s\n", client_ip);
-
-    // 2. Connect to NM
+    // Connect to NM
     int nm_sock = socket(AF_INET, SOCK_STREAM, 0);
     if (nm_sock < 0) {
         logger("[AccessControl] Failed to create socket to NM\n");
@@ -41,13 +29,13 @@ int check_permissions(int client_socket, const char *filename, const char *mode)
     
     logger("[AccessControl] Connected to NM\n");
 
-    // 3. Send Query: CHECK_ACCESS <IP> <FILENAME> <MODE>
+    // Send Query: CHECK_ACCESS <USERNAME> <FILENAME> <MODE>
     char query[512];
-    sprintf(query, "CHECK_ACCESS %s %s %s\n", client_ip, filename, mode);
+    sprintf(query, "CHECK_ACCESS %s %s %s\n", username, filename, mode);
     write(nm_sock, query, strlen(query));
     logger("[AccessControl] Sent query: %s", query);
 
-    // 4. Read Response
+    // Read Response
     char response[64] = {0};
     ssize_t n = read(nm_sock, response, 63);
     logger("[AccessControl] Received response (%zd bytes): %s\n", n, response);
@@ -58,22 +46,12 @@ int check_permissions(int client_socket, const char *filename, const char *mode)
         return 1; // Allowed
     }
 
-    logger("[AccessControl] Denied access to %s for %s on file %s\n", client_ip, mode, filename);
+    logger("[AccessControl] Denied access to %s for %s on file %s\n", username, mode, filename);
     return 0; // Denied
 }
 
 // Bonus feature: Notify NM about editing activity (real-time collaborative awareness)
-void notify_nm_editing(int client_socket, const char* filename, const char* action, int sentence_idx) {
-    // Get client's username by IP (same method as check_permissions)
-    struct sockaddr_in addr;
-    socklen_t addr_size = sizeof(struct sockaddr_in);
-    if (getpeername(client_socket, (struct sockaddr *)&addr, &addr_size) < 0) {
-        logger("[Notify] getpeername failed\n");
-        return; // Non-critical, just skip notification
-    }
-    char client_ip[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &addr.sin_addr, client_ip, INET_ADDRSTRLEN);
-    
+void notify_nm_editing(const char* username, const char* filename, const char* action, int sentence_idx) {
     // Connect to NM
     int nm_sock = socket(AF_INET, SOCK_STREAM, 0);
     if (nm_sock < 0) {
@@ -94,12 +72,10 @@ void notify_nm_editing(int client_socket, const char* filename, const char* acti
         return; // NM unreachable, skip notification
     }
     
-    // We need to get username from IP - ask NM via special query
-    // For simplicity, we'll send IP and let NM map it
-    // Format: NOTIFY_EDIT <client_ip> <filename> <action> <sentence_idx>
+    // Format: NOTIFY_EDIT <username> <filename> <action> <sentence_idx>
     char notify_msg[512];
     snprintf(notify_msg, sizeof(notify_msg), "NOTIFY_EDIT %s %s %s %d\n", 
-             client_ip, filename, action, sentence_idx);
+             username, filename, action, sentence_idx);
     write(nm_sock, notify_msg, strlen(notify_msg));
     
     // Read acknowledgment (optional)
@@ -110,7 +86,7 @@ void notify_nm_editing(int client_socket, const char* filename, const char* acti
     logger("[Notify] Sent editing notification: %s\n", notify_msg);
 }
 
-void handle_read_command(int client_socket, char* buffer) {
+void handle_read_command(int client_socket, char* buffer, const char* username) {
     char filename[256]; // Use 256 for a standard filename buffer
 
     // 1. --- Parse the command ---
@@ -123,7 +99,7 @@ void handle_read_command(int client_socket, char* buffer) {
 
     logger("[SS-Thread] Read request for: %s\n", filename);
 
-    if (!check_permissions(client_socket, filename, "READ")) {
+    if (!check_permissions(username, filename, "READ")) {
         char *err = "ERR:403:ACCESS_DENIED\n";
         write(client_socket, err, strlen(err));
         return;
@@ -153,7 +129,7 @@ void handle_read_command(int client_socket, char* buffer) {
         write(client_socket, err, strlen(err));
     }
 }
-void handle_write_command(int client_socket, char* buffer) {
+void handle_write_command(int client_socket, char* buffer, const char* username) {
     char filename[256];
     int sentence_num;
     
@@ -167,7 +143,7 @@ void handle_write_command(int client_socket, char* buffer) {
     logger("[SS-Thread] WRITE request: %s sentence %d\n", filename, sentence_num);
 
     // 2. ACCESS CONTROL
-    if (!check_permissions(client_socket, filename, "WRITE")) {
+    if (!check_permissions(username, filename, "WRITE")) {
         write(client_socket, "ERR:403:ACCESS_DENIED\n", 22);
         logger("[SS-Thread] WRITE denied - no permission\n");
         return;
@@ -244,9 +220,6 @@ void handle_write_command(int client_socket, char* buffer) {
     }
     
     logger("[SS-Thread] Sentence lock acquired for %s sentence %d\n", filename, sentence_num);
-    
-    // **BONUS: Notify NM that editing started (collaborative awareness)**
-    notify_nm_editing(client_socket, filename, "START", sentence_num);
     
     // Send ACK to client to start interactive editing
     const char* ack_msg = "ACK:SENTENCE_LOCKED Enter word updates (word_index content) or ETIRW to finish\n";
@@ -719,15 +692,12 @@ void handle_write_command(int client_socket, char* buffer) {
     if (file_data) free(file_data);
     if (working_data) free(working_data);
     
-    // **BONUS: Notify NM that editing finished (collaborative awareness)**
-    notify_nm_editing(client_socket, filename, "END", sentence_num);
-    
     // Release locks
     pthread_mutex_unlock(f_mutex);
     release_sentence_lock(filename, sentence_num);
     logger("[SS-Thread] Sentence lock released for %s sentence %d\n", filename, sentence_num);
 }
-void handle_write_command_old_single_shot(int client_socket, char* buffer) {
+void handle_write_command_old_single_shot(int client_socket, char* buffer, const char* username) {
     // OLD IMPLEMENTATION - KEPT FOR REFERENCE
     char filename[256];
     int sentence_num, word_index;
@@ -747,7 +717,7 @@ void handle_write_command_old_single_shot(int client_socket, char* buffer) {
     if(nl) *nl = '\0';
 
     // 2. ACCESS CONTROL
-    if (!check_permissions(client_socket, filename, "WRITE")) {
+    if (!check_permissions(username, filename, "WRITE")) {
         write(client_socket, "ERR:403:ACCESS_DENIED\n", 22);
         return;
     }
@@ -877,7 +847,7 @@ void handle_write_command_old_single_shot(int client_socket, char* buffer) {
     release_sentence_lock(filename, sentence_num);
 }
 
-void handle_stream_command(int client_socket, char* buffer) {
+void handle_stream_command(int client_socket, char* buffer, const char* username) {
     char filename[256];
     
     // 1. --- Parse the command ---
@@ -887,7 +857,7 @@ void handle_stream_command(int client_socket, char* buffer) {
         write(client_socket, err, strlen(err));
         return; // Return from this function
     }
-    if (!check_permissions(client_socket, filename, "READ")) {
+    if (!check_permissions(username, filename, "READ")) {
         char *err = "ERR:403:ACCESS_DENIED\n";
         write(client_socket, err, strlen(err));
         return;
@@ -961,17 +931,41 @@ void *handle_client_request(void *arg) {
 
     char buffer[BUFFER_SIZE];
     int read_size;
+    char client_username[64] = {0};  // Store authenticated username
 
-    logger("[SS-Thread] New client connected. Waiting for commands...\n");
+    logger("[SS-Thread] New client connected. Waiting for AUTH...\n");
 
-    // 2. Loop to read commands from this client
-    // read() blocks until data is received or connection is closed
+    // 2. First command MUST be AUTH
+    read_size = read(client_socket, buffer, BUFFER_SIZE - 1);
+    if (read_size <= 0) {
+        logger("[SS-Thread] Client disconnected before AUTH\n");
+        close(client_socket);
+        pthread_exit(NULL);
+    }
+    
+    buffer[read_size] = '\0';
+    logger("[SS-Thread] Received: %s", buffer);
+    
+    if (strncmp(buffer, "AUTH ", 5) == 0) {
+        // Parse: AUTH <username>
+        sscanf(buffer + 5, "%63s", client_username);
+        client_username[63] = '\0';
+        logger("[SS-Thread] Client authenticated as: %s\n", client_username);
+        write(client_socket, "ACK:AUTH_OK\n", 12);
+    } else {
+        logger("[SS-Thread] First command was not AUTH, rejecting\n");
+        write(client_socket, "ERR:401:UNAUTHORIZED:AUTH required\n", 35);
+        close(client_socket);
+        pthread_exit(NULL);
+    }
+
+    // 3. Loop to read commands from this authenticated client
     while ((read_size = read(client_socket, buffer, BUFFER_SIZE - 1)) > 0) {
         // Null-terminate the received string
         buffer[read_size] = '\0';
-        logger("[SS-Thread] Received command: %s", buffer);
-        if (strncmp(buffer, "CREATE", 6) == 0 || strncmp(buffer, "DELETE", 6) == 0 )
-        {
+        logger("[SS-Thread] Received command from %s: %s", client_username, buffer);
+        
+        if (strncmp(buffer, "CREATE", 6) == 0 || strncmp(buffer, "DELETE", 6) == 0 ) {
             char *err = "ERR:401:UNAUTHORIZED (Clients cannot use this command)\n";
             write(client_socket, err, strlen(err));
             continue; // Ignore and wait for next command
@@ -980,30 +974,25 @@ void *handle_client_request(void *arg) {
             handle_undo_command(client_socket, buffer);
         }
         else if (strncmp(buffer, "READ", 4) == 0) {
-            handle_read_command(client_socket, buffer);
+            handle_read_command(client_socket, buffer, client_username);
         }
         else if (strncmp(buffer, "WRITE", 5) == 0) {
-          handle_write_command(client_socket, buffer);
+          handle_write_command(client_socket, buffer, client_username);
         } 
         else if (strncmp(buffer, "STREAM", 6) == 0) {
-            // Just call your new function
-            handle_stream_command(client_socket, buffer);
+            handle_stream_command(client_socket, buffer, client_username);
         }
-
         else {
             // Unknown command
             char *err = "ERR:400:UNKNOWN_COMMAND\n";
             write(client_socket, err, strlen(err));
         }
-         // 3. Send a generic ACK back to the client
-        // write(client_socket, "ACK: Command received and processed.\n", 37);
-        // Clear the buffer for the next read
         memset(buffer, 0, BUFFER_SIZE);
     }
 
     // 4. Handle client disconnect
     if (read_size == 0) {
-        logger("[SS-Thread] Client disconnected.\n");
+        logger("[SS-Thread] Client %s disconnected.\n", client_username);
     } else if (read_size == -1) {
         perror("[SS-Thread] read failed");
     }

@@ -29,7 +29,7 @@ client: client/client
 
 client/client: client/client.c
 	@echo "Building Client..."
-	$(CC) $(CFLAGS) client/client.c -o client/client $(LDFLAGS)
+	$(CC) $(CFLAGS) client/client.c -o client/client $(LDFLAGS) -lreadline
 	@echo "Client built successfully!"
 
 clean:
