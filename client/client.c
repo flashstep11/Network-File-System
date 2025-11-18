@@ -336,6 +336,7 @@ void print_help() {
     printf("  READ <filename>             - Read file contents\n");
     printf("  CREATE <filename>           - Create new file\n");
     printf("  WRITE <file> <sentence#>    - Edit file (interactive)\n");
+    printf("  REPLACE <file> <sentence#>  - Replace words in sentence\n");
     printf("  DELETE <filename>           - Delete file\n");
     printf("  INFO <filename>             - Show file details\n");
     printf("  STREAM <filename>           - Stream file word-by-word\n");
@@ -363,6 +364,108 @@ void print_help() {
     printf("\n");
     printf("  HELP                        - Show this help\n");
     printf("  QUIT / EXIT                 - Disconnect\n\n");
+}
+
+// ============= REPLACE HANDLER (BONUS) =============
+
+void handle_replace(const char* args) {
+    // REPLACE <filename> <sentence_number>
+    char filename[256];
+    int sentence_num;
+    if (sscanf(args, "%255s %d", filename, &sentence_num) != 2) {
+        printf("Usage: REPLACE <filename> <sentence_number>\n");
+        return;
+    }
+
+    char command[256];
+    snprintf(command, sizeof(command), "REPLACE %s\n", filename);
+    write(nm_socket, command, strlen(command));
+
+    char response[BUFFER_SIZE];
+    ssize_t n = read(nm_socket, response, sizeof(response) - 1);
+    if (n <= 0) {
+        printf("No response from NM\n");
+        return;
+    }
+    response[n] = '\0';
+
+    if (strncmp(response, "SS_INFO:", 8) == 0) {
+        char ss_ip[16];
+        int ss_port;
+        if (sscanf(response, "SS_INFO:%15[^:]:%d", ss_ip, &ss_port) == 2) {
+            int ss_socket = connect_to_ss(ss_ip, ss_port);
+            if (ss_socket < 0) {
+                printf("Failed to connect to SS\n");
+                return;
+            }
+
+            // Send REPLACE command to SS
+            snprintf(command, sizeof(command), "REPLACE %s %d\n", filename, sentence_num);
+            write(ss_socket, command, strlen(command));
+            
+            // Read acknowledgment
+            n = read(ss_socket, response, sizeof(response) - 1);
+            if (n <= 0) {
+                printf("No response from SS\n");
+                close(ss_socket);
+                return;
+            }
+            response[n] = '\0';
+            
+            // Check if sentence locked
+            if (strncmp(response, "ACK:SENTENCE_LOCKED", 19) == 0) {
+                printf("%s", response);
+                
+                // Interactive loop
+                char edit_line[1024];
+                while (1) {
+                    printf("edit> ");
+                    fflush(stdout);
+                    
+                    if (!fgets(edit_line, sizeof(edit_line), stdin)) {
+                        break;
+                    }
+                    
+                    // Send to server
+                    write(ss_socket, edit_line, strlen(edit_line));
+                    
+                    // Check if it's ECALPER
+                    if (strncmp(edit_line, "ECALPER", 7) == 0) {
+                        // Read final response
+                        n = read(ss_socket, response, sizeof(response) - 1);
+                        if (n > 0) {
+                            response[n] = '\0';
+                            printf("%s", response);
+                            if (n > 0 && response[n-1] != '\n') {
+                                printf("\n");
+                            }
+                        }
+                        break;
+                    }
+                    
+                    // Read response
+                    n = read(ss_socket, response, sizeof(response) - 1);
+                    if (n <= 0) {
+                        printf("Connection lost\n");
+                        break;
+                    }
+                    response[n] = '\0';
+                    
+                    // Print response and ensure newline
+                    printf("%s", response);
+                    if (n > 0 && response[n-1] != '\n') {
+                        printf("\n");
+                    }
+                }
+            } else {
+                printf("%s", response);
+            }
+            
+            close(ss_socket);
+        }
+    } else {
+        printf("%s", response);
+    }
 }
 
 // ============= CHECKPOINT HANDLERS =============
@@ -706,6 +809,8 @@ int main() {
             handle_stream(args);
         } else if (strcasecmp(cmd, "WRITE") == 0) {
             handle_write(args);
+        } else if (strcasecmp(cmd, "REPLACE") == 0) {
+            handle_replace(args);
         } else if (strcasecmp(cmd, "CHECKPOINT") == 0) {
             handle_checkpoint(args);
         } else if (strcasecmp(cmd, "VIEWCHECKPOINT") == 0) {

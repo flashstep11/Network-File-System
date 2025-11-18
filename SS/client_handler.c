@@ -1059,6 +1059,253 @@ void handle_diff_command(int client_socket, char* buffer) {
     free(diff);
 }
 
+// ============= REPLACE COMMAND (BONUS) =============
+
+void handle_replace_command(int client_socket, char* buffer) {
+    char filename[256];
+    int sentence_num;
+    
+    // Parse: REPLACE <filename> <sentence_num>
+    if (sscanf(buffer, "REPLACE %255s %d", filename, &sentence_num) != 2) {
+        write(client_socket, "ERR:400:BAD_REQUEST (Usage: REPLACE <filename> <sentence_num>)\n", 63);
+        return;
+    }
+    
+    logger("[SS-Thread] REPLACE request: %s sentence %d\n", filename, sentence_num);
+
+    // Check WRITE permissions (replacing requires write access)
+    if (!check_permissions(client_socket, filename, "WRITE")) {
+        write(client_socket, "ERR:403:ACCESS_DENIED\n", 22);
+        logger("[SS-Thread] REPLACE denied - no permission\n");
+        return;
+    }
+
+    // Load file and validate sentence exists
+    char full_path[512];
+    get_full_path(full_path, sizeof(full_path), filename);
+    
+    long fsize = 0;
+    char* file_data = read_file_to_string(full_path, &fsize);
+    
+    if (!file_data) {
+        write(client_socket, "ERR:404:FILE_NOT_FOUND\n", 23);
+        return;
+    }
+    
+    // Check if sentence exists
+    int s_start = 0, s_end = 0;
+    if (!find_sentence(file_data, sentence_num, &s_start, &s_end)) {
+        write(client_socket, "ERROR: Sentence index out of range.\n", 37);
+        logger("[SS-Thread] Sentence %d not found in %s\n", sentence_num, filename);
+        free(file_data);
+        return;
+    }
+    
+    free(file_data); // We'll reload it after acquiring lock
+    
+    // Acquire sentence lock
+    if (!acquire_sentence_lock(filename, sentence_num)) {
+        write(client_socket, "ERR:423:SENTENCE_LOCKED_BY_ANOTHER_USER\n", 40);
+        logger("[SS-Thread] REPLACE denied - sentence locked\n");
+        return;
+    }
+    
+    logger("[SS-Thread] Sentence lock acquired for %s sentence %d\n", filename, sentence_num);
+    
+    // Send ACK to client to start interactive editing
+    const char* ack_msg = "ACK:SENTENCE_LOCKED Enter word updates (word_index content) or ECALPER to finish\n\n"
+                          "=== INTERACTIVE REPLACE MODE ===\n"
+                          "Format: <word_index> <content>\n"
+                          "Example: 3 replacement\n"
+                          "Type 'ECALPER' to save and exit\n"
+                          "Use \"\" to delete a word\n"
+                          "==============================\n\n";
+    write(client_socket, ack_msg, strlen(ack_msg));
+
+    // Get file mutex and load file
+    pthread_mutex_t* f_mutex = get_file_mutex(filename);
+    if (!f_mutex) {
+        write(client_socket, "ERR:500:INTERNAL_ERROR\n", 23);
+        release_sentence_lock(filename, sentence_num);
+        return;
+    }
+    pthread_mutex_lock(f_mutex);
+
+    file_data = read_file_to_string(full_path, &fsize);
+    if (!file_data) {
+        write(client_socket, "ERR:500:FILE_READ_ERROR\n", 24);
+        pthread_mutex_unlock(f_mutex);
+        release_sentence_lock(filename, sentence_num);
+        return;
+    }
+    
+    // Create backup for UNDO
+    char bak_name[512];
+    snprintf(bak_name, sizeof(bak_name), "%s%s.bak", STORAGE_ROOT, filename);
+    FILE *bak = fopen(bak_name, "w");
+    if (bak) { 
+        fprintf(bak, "%s", file_data); 
+        fclose(bak); 
+        logger("[SS-Thread] Backup created: %s\n", bak_name);
+    }
+    
+    // Make a working copy
+    char* working_data = strdup(file_data);
+    free(file_data);
+    
+    if (!working_data) {
+        write(client_socket, "ERR:500:MEMORY_ERROR\n", 21);
+        pthread_mutex_unlock(f_mutex);
+        release_sentence_lock(filename, sentence_num);
+        return;
+    }
+    
+    // Interactive editing loop
+    char edit_buffer[1024];
+    int changes_made = 0;
+    
+    while (1) {
+        memset(edit_buffer, 0, sizeof(edit_buffer));
+        ssize_t n = read(client_socket, edit_buffer, sizeof(edit_buffer) - 1);
+        
+        if (n <= 0) {
+            logger("[SS-Thread] Client disconnected during REPLACE\n");
+            break;
+        }
+        
+        edit_buffer[n] = '\0';
+        char* nl = strchr(edit_buffer, '\n');
+        if (nl) *nl = '\0';
+        
+        // Check for ECALPER (end editing)
+        if (strncmp(edit_buffer, "ECALPER", 7) == 0) {
+            logger("[SS-Thread] ECALPER received, finalizing replace\n");
+            
+            // Write working data to file
+            FILE *fp = fopen(full_path, "w");
+            if (fp) {
+                fprintf(fp, "%s", working_data);
+                fclose(fp);
+                write(client_socket, "ACK:REPLACE_COMPLETE All changes saved.\n", 41);
+                logger("[SS-Thread] File %s updated successfully (%d changes)\n", filename, changes_made);
+            } else {
+                write(client_socket, "ERR:500:WRITE_FAILED Could not save file\n", 42);
+                logger("[SS-Thread] Failed to write file %s\n", filename);
+            }
+            break;
+        }
+        
+        // Parse word replacement: <word_index> <content>
+        // word_index is 1-indexed
+        int word_index;
+        char content[900];
+        content[0] = '\0';
+        
+        int scan_result = sscanf(edit_buffer, "%d %899[^\n]", &word_index, content);
+        if (scan_result < 1) {
+            write(client_socket, "ERR:400:INVALID_FORMAT (Use: <word_index> <content> or ECALPER)\n", 65);
+            continue;
+        }
+        
+        logger("[SS-Thread] Replace word %d with '%s'\n", word_index, content);
+        
+        // Find the sentence again (it may have changed)
+        find_sentence(working_data, sentence_num, &s_start, &s_end);
+        
+        // Extract sentence
+        int sent_len = s_end - s_start + 1;
+        char* sentence = (char*)malloc(sent_len + 1);
+        strncpy(sentence, working_data + s_start, sent_len);
+        sentence[sent_len] = '\0';
+        
+        // Split sentence into words (1-indexed)
+        char* words[200];
+        int word_count = 0;
+        char* sent_copy = strdup(sentence);
+        char* token = strtok(sent_copy, " ");
+        
+        while (token && word_count < 200) {
+            words[word_count++] = strdup(token);
+            token = strtok(NULL, " ");
+        }
+        free(sent_copy);
+        
+        logger("[SS-Thread] Sentence has %d words\n", word_count);
+        
+        // Validate word_index
+        if (word_index < 1 || word_index > word_count) {
+            write(client_socket, "ERR:400:WORD_INDEX_OUT_OF_RANGE\n", 32);
+            logger("[SS-Thread] Word index %d out of range (1-%d)\n", word_index, word_count);
+            for (int i = 0; i < word_count; i++) free(words[i]);
+            free(sentence);
+            continue;
+        }
+        
+        // Check if content is "" (delete word)
+        int is_delete = (scan_result == 1 || strcmp(content, "\"\"") == 0 || strlen(content) == 0);
+        
+        if (is_delete) {
+            // Delete the word
+            logger("[SS-Thread] Deleting word %d\n", word_index);
+            free(words[word_index - 1]);
+            // Shift words left
+            for (int i = word_index - 1; i < word_count - 1; i++) {
+                words[i] = words[i + 1];
+            }
+            word_count--;
+            write(client_socket, "✓ ACK:WORD_DELETED\n", 20);
+        } else {
+            // Replace the word
+            logger("[SS-Thread] Replacing word %d with '%s'\n", word_index, content);
+            free(words[word_index - 1]);
+            words[word_index - 1] = strdup(content);
+            write(client_socket, "✓ ACK:WORD_UPDATED\n", 20);
+        }
+        
+        changes_made++;
+        
+        // Rebuild sentence
+        char new_sentence[4096];
+        new_sentence[0] = '\0';
+        for (int i = 0; i < word_count; i++) {
+            if (i > 0) strcat(new_sentence, " ");
+            strcat(new_sentence, words[i]);
+        }
+        
+        // Rebuild working_data
+        int before_len = s_start;
+        int after_start = s_end + 1;
+        int after_len = strlen(working_data) - after_start;
+        
+        char* new_data = (char*)malloc(before_len + strlen(new_sentence) + after_len + 10);
+        new_data[0] = '\0';
+        
+        // Copy before sentence
+        strncat(new_data, working_data, before_len);
+        // Add new sentence
+        strcat(new_data, new_sentence);
+        // Copy after sentence
+        if (after_len > 0) {
+            strcat(new_data, working_data + after_start);
+        }
+        
+        free(working_data);
+        working_data = new_data;
+        
+        logger("[SS-Thread] Sentence rebuilt: %s\n", new_sentence);
+        
+        // Cleanup
+        for (int i = 0; i < word_count; i++) free(words[i]);
+        free(sentence);
+    }
+    
+    // Cleanup
+    free(working_data);
+    pthread_mutex_unlock(f_mutex);
+    release_sentence_lock(filename, sentence_num);
+    logger("[SS-Thread] REPLACE complete, lock released\n");
+}
+
 // ============= END CHECKPOINT HANDLERS =============
 
 void *handle_client_request(void *arg) {
@@ -1091,6 +1338,9 @@ void *handle_client_request(void *arg) {
         else if (strncmp(buffer, "WRITE", 5) == 0) {
           handle_write_command(client_socket, buffer, "");
         } 
+        else if (strncmp(buffer, "REPLACE", 7) == 0) {
+            handle_replace_command(client_socket, buffer);
+        }
         else if (strncmp(buffer, "STREAM", 6) == 0) {
             handle_stream_command(client_socket, buffer, "");
         }
