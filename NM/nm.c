@@ -620,6 +620,19 @@ Client* client_get_by_socket(NameServer* nm, int socket_fd) {
     return NULL;
 }
 
+Client* client_get_by_ip(NameServer* nm, const char* ip) {
+    if (!nm || !ip) return NULL;
+    pthread_rwlock_rdlock(&nm->client_lock);
+    for (int i = 0; i < nm->client_count; i++) {
+        if (nm->clients[i].is_active && strcmp(nm->clients[i].ip, ip) == 0) {
+            pthread_rwlock_unlock(&nm->client_lock);
+            return &nm->clients[i];
+        }
+    }
+    pthread_rwlock_unlock(&nm->client_lock);
+    return NULL;
+}
+
 void client_disconnect(NameServer* nm, int socket_fd) {
     if (!nm) return;
     pthread_rwlock_wrlock(&nm->client_lock);
@@ -1988,10 +2001,24 @@ int main(int argc, char* argv[]) {
             if (n > 0) {
                 buffer[n] = '\0';
                 
-                // Parse: CHECK_ACCESS <username> <filename> <mode>
-                char check_username[MAX_USERNAME_LEN], filename[MAX_FILENAME_LEN], mode[16];
-                if (sscanf(buffer, "CHECK_ACCESS %63s %255s %15s", check_username, filename, mode) == 3) {
-                    nm_log("[CHECK_ACCESS] User=%s File=%s Mode=%s\n", check_username, filename, mode);
+                // Parse: CHECK_ACCESS <client_ip> <filename> <mode>
+                char client_ip_query[MAX_IP_LEN], filename[MAX_FILENAME_LEN], mode[16];
+                if (sscanf(buffer, "CHECK_ACCESS %15s %255s %15s", client_ip_query, filename, mode) == 3) {
+                    nm_log("[CHECK_ACCESS] IP=%s File=%s Mode=%s\n", client_ip_query, filename, mode);
+                    
+                    // Look up client by IP to get username
+                    Client* client = client_get_by_ip(&g_nm, client_ip_query);
+                    if (!client) {
+                        write(new_socket, "ACK:NO Client not found\n", 24);
+                        nm_log("[CHECK_ACCESS] Client with IP %s not found\n", client_ip_query);
+                        close(new_socket);
+                        free(socket_ptr);
+                        continue;
+                    }
+                    
+                    char check_username[MAX_USERNAME_LEN];
+                    strncpy(check_username, client->username, MAX_USERNAME_LEN - 1);
+                    check_username[MAX_USERNAME_LEN - 1] = '\0';
                     
                     // Find file
                     FileMetadata* file_info = file_lookup(&g_nm, filename);
@@ -1999,7 +2026,7 @@ int main(int argc, char* argv[]) {
                         write(new_socket, "ACK:NO File not found\n", 23);
                         nm_log("[CHECK_ACCESS] File not found: %s\n", filename);
                     } else {
-                        // Check permissions directly by username
+                        // Check permissions by username
                         int allowed = 0;
                         if (strcmp(mode, "READ") == 0) {
                             allowed = acl_check_read(file_info, check_username);
@@ -2009,10 +2036,10 @@ int main(int argc, char* argv[]) {
                         
                         if (allowed) {
                             write(new_socket, "ACK:YES\n", 8);
-                            nm_log("[CHECK_ACCESS] Granted %s access to %s for %s\n", mode, filename, check_username);
+                            nm_log("[CHECK_ACCESS] Granted %s access to %s for %s (IP: %s)\n", mode, filename, check_username, client_ip_query);
                         } else {
                             write(new_socket, "ACK:NO No permission\n", 21);
-                            nm_log("[CHECK_ACCESS] Denied %s access to %s for %s\n", mode, filename, check_username);
+                            nm_log("[CHECK_ACCESS] Denied %s access to %s for %s (IP: %s)\n", mode, filename, check_username, client_ip_query);
                         }
                     }
                 } else {
