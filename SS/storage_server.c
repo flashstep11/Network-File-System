@@ -139,7 +139,7 @@ int find_word(const char *content, int sent_start, int sent_end, int word_index,
     const char *delims = " \t\n\r";
     const char *ptr = content + sent_start; // Start searching from the beginning of the sentence
     const char *end_of_sentence = content + sent_end;
-    int current_word = 0;  // Changed to 0-indexed
+    int current_word = 1;  // Changed to 1-indexed (words start from 1)
 
     // Skip any leading whitespace in the sentence
     while (ptr <= end_of_sentence && *ptr != '\0' && strchr(delims, *ptr)) {

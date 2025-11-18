@@ -59,7 +59,7 @@ This file implements the two-level locking system to allow concurrent editing.
     Helper_functions:
         read_file_to_string(): A utility that opens a file, finds its size (fseek, ftell), allocates memory, reads the entire file into that memory, and returns it as a string.
 
-        find_sentence() / find_word(): These are the parsers for the WRITE command. They are complex string-scanning functions that find the exact start and end byte offsets for a given sentence or word number.
+        find_sentence() / find_word(): These are the parsers for the WRITE command. They are complex string-scanning functions that find the exact start and end byte offsets for a given sentence or word number. Note: sentences are 0-indexed, words are 1-indexed.
 nm_handler.c:
 This file handles your trusted commands. It's the "body" obeying the "brain."
 
@@ -203,7 +203,7 @@ This is the most complex function in this file.
 
     Code Flow:
 
-        Parse: sscanf() extracts filename, sentence_num, and word_index.
+        Parse: sscanf() extracts filename, sentence_num (0-indexed), and word_index (1-indexed).
 
         Find Content: A while loop (skipping 4 spaces) and strrchr (trimming \n) are used to find the start of the actual content string.
 

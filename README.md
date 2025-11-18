@@ -143,7 +143,8 @@ Command: QUIT
 
 ### Sentence-Level Locking
 - Multiple users can edit different sentences simultaneously
-- Word-based editing (zero-indexed)
+- Sentence indexing: 0-indexed (sentence 0, sentence 1, ...)
+- Word indexing: 1-indexed (word 1, word 2, ...)
 - Period (.) delimiter creates sentence boundaries
 - Interactive mode: WRITE → multiple edits → ETIRW
 
