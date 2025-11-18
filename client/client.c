@@ -366,7 +366,14 @@ void print_help() {
     printf("  VIEWREQUESTS                 - View pending requests (owner)\n");
     printf("  APPROVEREQUEST <user> <file> - Approve access request\n");
     printf("  DENYREQUEST <user> <file>    - Deny access request\n");
-    printf("\n[BONUS] Real-time notifications enabled for editing activity!\n");
+    printf("\n  ↑/↓ Arrow Keys              - Navigate command history\n");
+    printf("  Ctrl+R                      - Reverse history search\n");
+    printf("\n[BONUS] Checkpoint Commands:\n");
+    printf("  CHECKPOINT <file> <tag>     - Create checkpoint with tag\n");
+    printf("  VIEWCHECKPOINT <file> <tag> - View checkpoint content\n");
+    printf("  REVERT <file> <tag>         - Revert to checkpoint\n");
+    printf("  LISTCHECKPOINTS <file>      - List all checkpoints\n");
+    printf("\n");
     printf("  HELP                        - Show this help\n");
     printf("  QUIT / EXIT                 - Disconnect\n\n");
 }
