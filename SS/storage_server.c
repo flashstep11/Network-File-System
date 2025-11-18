@@ -11,6 +11,10 @@
 // Global Instances
 SentenceLockManager* g_sentence_lock_manager;
 
+// Checkpoint global variables
+FileCheckpoints* g_checkpoints_head = NULL;
+pthread_mutex_t g_checkpoints_lock = PTHREAD_MUTEX_INITIALIZER;
+
 // A simple list to hold physical file mutexes
 typedef struct FileMutexNode {
     char filename[256];
@@ -139,7 +143,7 @@ int find_word(const char *content, int sent_start, int sent_end, int word_index,
     const char *delims = " \t\n\r";
     const char *ptr = content + sent_start; // Start searching from the beginning of the sentence
     const char *end_of_sentence = content + sent_end;
-    int current_word = 0;  // Changed to 0-indexed
+    int current_word = 1;  // Changed to 1-indexed (words start from 1)
 
     // Skip any leading whitespace in the sentence
     while (ptr <= end_of_sentence && *ptr != '\0' && strchr(delims, *ptr)) {
@@ -189,7 +193,10 @@ void init_lock_systems() {
     g_file_mutexes = NULL; // Initialize the list as empty
     // g_file_mutex_list_lock is already initialized with PTHREAD_MUTEX_INITIALIZER
     
-    logger("Lock systems initialized.\n");
+    // 3. Init Checkpoint System
+    init_checkpoints();
+    
+    logger("Lock systems and checkpoints initialized.\n");
 }
 
 int acquire_sentence_lock(const char* filename, int sentence_id) {
@@ -255,6 +262,181 @@ pthread_mutex_t* get_file_mutex(const char* filename) {
     pthread_mutex_unlock(&g_file_mutex_list_lock);
     return &node->mutex;
 }
+
+// ============= CHECKPOINT IMPLEMENTATION =============
+
+void init_checkpoints() {
+    pthread_mutex_lock(&g_checkpoints_lock);
+    g_checkpoints_head = NULL;
+    pthread_mutex_unlock(&g_checkpoints_lock);
+    logger("Checkpoint system initialized.\n");
+}
+
+// Helper to find or create FileCheckpoints for a file
+static FileCheckpoints* get_file_checkpoints(const char* filename) {
+    FileCheckpoints* curr = g_checkpoints_head;
+    while (curr) {
+        if (strcmp(curr->filename, filename) == 0) {
+            return curr;
+        }
+        curr = curr->next;
+    }
+    
+    // Create new FileCheckpoints
+    FileCheckpoints* fc = malloc(sizeof(FileCheckpoints));
+    strncpy(fc->filename, filename, 255);
+    fc->filename[255] = '\0';
+    fc->checkpoints = NULL;
+    pthread_mutex_init(&fc->lock, NULL);
+    fc->next = g_checkpoints_head;
+    g_checkpoints_head = fc;
+    return fc;
+}
+
+int create_checkpoint(const char* filename, const char* tag) {
+    char full_path[512];
+    get_full_path(full_path, sizeof(full_path), filename);
+    
+    // Read current file content
+    long file_size = 0;
+    char* content = read_file_to_string(full_path, &file_size);
+    if (!content) {
+        logger("[Checkpoint] Failed to read file %s\n", filename);
+        return 0;
+    }
+    
+    pthread_mutex_lock(&g_checkpoints_lock);
+    FileCheckpoints* fc = get_file_checkpoints(filename);
+    pthread_mutex_lock(&fc->lock);
+    pthread_mutex_unlock(&g_checkpoints_lock);
+    
+    // Check if tag already exists
+    CheckpointNode* curr = fc->checkpoints;
+    while (curr) {
+        if (strcmp(curr->tag, tag) == 0) {
+            // Update existing checkpoint
+            free(curr->content);
+            curr->content = content;
+            curr->timestamp = time(NULL);
+            pthread_mutex_unlock(&fc->lock);
+            logger("[Checkpoint] Updated checkpoint '%s' for %s\n", tag, filename);
+            return 1;
+        }
+        curr = curr->next;
+    }
+    
+    // Create new checkpoint
+    CheckpointNode* cp = malloc(sizeof(CheckpointNode));
+    strncpy(cp->tag, tag, 63);
+    cp->tag[63] = '\0';
+    cp->content = content;
+    cp->timestamp = time(NULL);
+    cp->next = fc->checkpoints;
+    fc->checkpoints = cp;
+    
+    pthread_mutex_unlock(&fc->lock);
+    logger("[Checkpoint] Created checkpoint '%s' for %s\n", tag, filename);
+    return 1;
+}
+
+char* get_checkpoint_content(const char* filename, const char* tag) {
+    pthread_mutex_lock(&g_checkpoints_lock);
+    
+    FileCheckpoints* curr = g_checkpoints_head;
+    while (curr) {
+        if (strcmp(curr->filename, filename) == 0) {
+            pthread_mutex_lock(&curr->lock);
+            pthread_mutex_unlock(&g_checkpoints_lock);
+            
+            CheckpointNode* cp = curr->checkpoints;
+            while (cp) {
+                if (strcmp(cp->tag, tag) == 0) {
+                    char* content_copy = strdup(cp->content);
+                    pthread_mutex_unlock(&curr->lock);
+                    return content_copy;
+                }
+                cp = cp->next;
+            }
+            pthread_mutex_unlock(&curr->lock);
+            return NULL;
+        }
+        curr = curr->next;
+    }
+    
+    pthread_mutex_unlock(&g_checkpoints_lock);
+    return NULL;
+}
+
+int revert_to_checkpoint(const char* filename, const char* tag) {
+    char* content = get_checkpoint_content(filename, tag);
+    if (!content) {
+        logger("[Checkpoint] Checkpoint '%s' not found for %s\n", tag, filename);
+        return 0;
+    }
+    
+    // Write checkpoint content to file
+    char full_path[512];
+    get_full_path(full_path, sizeof(full_path), filename);
+    
+    FILE* fp = fopen(full_path, "w");
+    if (!fp) {
+        logger("[Checkpoint] Failed to open %s for writing\n", filename);
+        free(content);
+        return 0;
+    }
+    
+    fprintf(fp, "%s", content);
+    fclose(fp);
+    free(content);
+    
+    logger("[Checkpoint] Reverted %s to checkpoint '%s'\n", filename, tag);
+    return 1;
+}
+
+char* list_checkpoints(const char* filename) {
+    pthread_mutex_lock(&g_checkpoints_lock);
+    
+    FileCheckpoints* curr = g_checkpoints_head;
+    while (curr) {
+        if (strcmp(curr->filename, filename) == 0) {
+            pthread_mutex_lock(&curr->lock);
+            pthread_mutex_unlock(&g_checkpoints_lock);
+            
+            if (!curr->checkpoints) {
+                pthread_mutex_unlock(&curr->lock);
+                return strdup("No checkpoints found.\n");
+            }
+            
+            // Build list string
+            char* result = malloc(4096);
+            result[0] = '\0';
+            strcat(result, "Checkpoints:\n");
+            
+            CheckpointNode* cp = curr->checkpoints;
+            while (cp) {
+                char time_str[64];
+                struct tm* tm_info = localtime(&cp->timestamp);
+                strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", tm_info);
+                
+                char line[256];
+                snprintf(line, sizeof(line), "  - %s (created: %s)\n", cp->tag, time_str);
+                strcat(result, line);
+                
+                cp = cp->next;
+            }
+            
+            pthread_mutex_unlock(&curr->lock);
+            return result;
+        }
+        curr = curr->next;
+    }
+    
+    pthread_mutex_unlock(&g_checkpoints_lock);
+    return strdup("No checkpoints found.\n");
+}
+
+// ============= END CHECKPOINT IMPLEMENTATION =============
+
 int main(int argc, char *argv[]) {
     if (argc < 2) {
         printf("Usage: ./storage_server <port>\n");

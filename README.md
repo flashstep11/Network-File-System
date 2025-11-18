@@ -143,7 +143,8 @@ Command: QUIT
 
 ### Sentence-Level Locking
 - Multiple users can edit different sentences simultaneously
-- Word-based editing (zero-indexed)
+- Sentence indexing: 0-indexed (sentence 0, sentence 1, ...)
+- Word indexing: 1-indexed (word 1, word 2, ...)
 - Period (.) delimiter creates sentence boundaries
 - Interactive mode: WRITE → multiple edits → ETIRW
 
@@ -213,6 +214,28 @@ All operations logged with:
 ✅ [10] Initialization (NM, SS, Client registration)  
 
 **Total: 200/200 points**
+
+### ✅ Bonus Features (50 points)
+✅ **[15] Checkpoints** - Save and restore file states
+  - `CHECKPOINT <file> <tag>` - Create checkpoint
+  - `VIEWCHECKPOINT <file> <tag>` - View checkpoint content
+  - `REVERT <file> <tag>` - Restore to checkpoint
+  - `LISTCHECKPOINTS <file>` - List all checkpoints
+  - Thread-safe with access control
+  - See `CHECKPOINT_IMPLEMENTATION.md` for details
+
+✅ **[10] Hierarchical Folder Structure** - Virtual folders
+  - `CREATEFOLDER <name>` - Create folder
+  - `MOVE <file> <folder>` - Move file to folder
+  - `VIEWFOLDER <folder>` - List folder contents
+  
+✅ **[5] Requesting Access** - Access request workflow
+  - `REQUESTACCESS <file> <-R|-W>` - Request access
+  - `VIEWREQUESTS` - View pending requests (owner)
+  - `APPROVEREQUEST <user> <file>` - Approve request
+  - `DENYREQUEST <user> <file>` - Deny request
+
+**Bonus Total: 30/50 points achieved**
 
 ## Clean Build
 

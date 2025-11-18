@@ -44,6 +44,25 @@ typedef struct {
 // Global pointers
 extern SentenceLockManager* g_sentence_lock_manager; 
 
+// --- CHECKPOINT STRUCTURES ---
+typedef struct CheckpointNode {
+    char tag[64];                  // Checkpoint tag/name
+    char* content;                 // Saved file content
+    time_t timestamp;              // When checkpoint was created
+    struct CheckpointNode* next;
+} CheckpointNode;
+
+typedef struct FileCheckpoints {
+    char filename[256];
+    CheckpointNode* checkpoints;   // Linked list of checkpoints
+    pthread_mutex_t lock;          // Protect checkpoint list
+    struct FileCheckpoints* next;
+} FileCheckpoints;
+
+// Global checkpoint manager
+extern FileCheckpoints* g_checkpoints_head;
+extern pthread_mutex_t g_checkpoints_lock;
+
 // Function Prototypes
 void logger(const char* format, ...); // Assuming log.h exists
 char* read_file_to_string(const char *filename, long *out_size);
@@ -54,6 +73,13 @@ int find_word(const char *content, int sent_start, int sent_end, int word_index,
 void init_sentence_locks();
 int acquire_sentence_lock(const char* filename, int sentence_id);
 void release_sentence_lock(const char* filename, int sentence_id);
+
+// Checkpoint Functions
+void init_checkpoints();
+int create_checkpoint(const char* filename, const char* tag);
+char* get_checkpoint_content(const char* filename, const char* tag);
+int revert_to_checkpoint(const char* filename, const char* tag);
+char* list_checkpoints(const char* filename);
 
 // We still need a way to get a physical mutex for the file to prevent data corruption
 pthread_mutex_t* get_file_mutex(const char* filename);

@@ -135,6 +135,7 @@ void handle_write_command(int client_socket, char* buffer, const char* username)
     
     // 1. Parse - Interactive mode: WRITE <filename> <sentence_num>
     // Client will then send multiple "<word_index> <content>" lines
+    // Note: sentence_num is 0-indexed, word_index is 1-indexed
     if (sscanf(buffer, "WRITE %255s %d", filename, &sentence_num) != 2) {
         write(client_socket, "ERR:400:BAD_REQUEST (Usage: WRITE <filename> <sentence_num>)\n", 61);
         return;
@@ -304,6 +305,7 @@ void handle_write_command(int client_socket, char* buffer, const char* username)
         }
         
         // Parse word update: <word_index> <content>
+        // word_index is 1-indexed (word 1, word 2, etc.)
         int word_index;
         char content[900];
         if (sscanf(edit_buffer, "%d %899[^\n]", &word_index, content) == 2) {
@@ -474,10 +476,11 @@ void handle_write_command(int client_socket, char* buffer, const char* username)
                     }
                 }
               printf("[SS-Thread] Sentence %d has %d existing words\n", sentence_num, existing_word_count);  
-                // Validate word_index
-                if (word_index < 0 || word_index > existing_word_count) {
+                // Validate word_index (1-indexed: valid range is 1 to existing_word_count+1)
+                if (word_index < 1 || word_index > existing_word_count + 1) {
                     write(client_socket, "ERROR: Word index out of range.\n", 33);
-                    logger("[SS-Thread] Invalid word_index %d (sentence has %d words)\n", word_index, existing_word_count);
+                    logger("[SS-Thread] Invalid word_index %d (sentence has %d words, valid range: 1-%d)\n", 
+                           word_index, existing_word_count, existing_word_count + 1);
                     
                     // Free word tokens
                     for (int i = 0; i < word_count; i++) {
@@ -488,9 +491,9 @@ void handle_write_command(int client_socket, char* buffer, const char* username)
                     continue;
                 }
                 
-                // Find insertion position in the string
+                // Find insertion position in the string (word_index is 1-indexed)
                 int insert_pos;
-                if (word_index == existing_word_count) {
+                if (word_index == existing_word_count + 1) {
                     // Append to end of sentence - but check if sentence ends with period
                     if (working_data[s_end] == '.' || working_data[s_end] == '!' || working_data[s_end] == '?') {
                         // Insert before the period
@@ -499,12 +502,12 @@ void handle_write_command(int client_socket, char* buffer, const char* username)
                         // No period, insert after sentence end
                         insert_pos = s_end + 1;
                     }
-                } else if (word_index == 0) {
-                    // At beginning of sentence
+                } else if (word_index == 1) {
+                    // At beginning of sentence (word 1)
                     insert_pos = s_start;
                 } else {
-                    // At word_index position
-                    int curr_word = 0;
+                    // At word_index position (convert 1-indexed to position)
+                    int curr_word = 1; // Start from word 1
                     pos = s_start;
                     while (curr_word < word_index && pos <= s_end) {
                         // Skip spaces
@@ -924,6 +927,108 @@ void handle_stream_command(int client_socket, char* buffer, const char* username
     // 5. --- Clean up ---
     free(file_content);
 }
+
+// ============= CHECKPOINT HANDLERS =============
+
+void handle_checkpoint_command(int client_socket, char* buffer) {
+    char filename[256], tag[64];
+    
+    if (sscanf(buffer, "CHECKPOINT %255s %63s", filename, tag) != 2) {
+        write(client_socket, "ERR:400:BAD_REQUEST (Usage: CHECKPOINT <filename> <tag>)\n", 58);
+        return;
+    }
+    
+    logger("[SS-Thread] CHECKPOINT request: %s tag=%s\n", filename, tag);
+    
+    // Check permissions
+    if (!check_permissions(client_socket, filename, "WRITE")) {
+        write(client_socket, "ERR:403:ACCESS_DENIED\n", 22);
+        return;
+    }
+    
+    if (create_checkpoint(filename, tag)) {
+        char response[128];
+        snprintf(response, sizeof(response), "ACK:CHECKPOINT_CREATED Checkpoint '%s' created successfully\n", tag);
+        write(client_socket, response, strlen(response));
+    } else {
+        write(client_socket, "ERR:500:CHECKPOINT_FAILED\n", 26);
+    }
+}
+
+void handle_viewcheckpoint_command(int client_socket, char* buffer) {
+    char filename[256], tag[64];
+    
+    if (sscanf(buffer, "VIEWCHECKPOINT %255s %63s", filename, tag) != 2) {
+        write(client_socket, "ERR:400:BAD_REQUEST (Usage: VIEWCHECKPOINT <filename> <tag>)\n", 62);
+        return;
+    }
+    
+    logger("[SS-Thread] VIEWCHECKPOINT request: %s tag=%s\n", filename, tag);
+    
+    // Check permissions
+    if (!check_permissions(client_socket, filename, "READ")) {
+        write(client_socket, "ERR:403:ACCESS_DENIED\n", 22);
+        return;
+    }
+    
+    char* content = get_checkpoint_content(filename, tag);
+    if (content) {
+        write(client_socket, content, strlen(content));
+        write(client_socket, "\nEOF\n", 5);
+        free(content);
+    } else {
+        write(client_socket, "ERR:404:CHECKPOINT_NOT_FOUND\n", 29);
+    }
+}
+
+void handle_revert_command(int client_socket, char* buffer) {
+    char filename[256], tag[64];
+    
+    if (sscanf(buffer, "REVERT %255s %63s", filename, tag) != 2) {
+        write(client_socket, "ERR:400:BAD_REQUEST (Usage: REVERT <filename> <tag>)\n", 54);
+        return;
+    }
+    
+    logger("[SS-Thread] REVERT request: %s tag=%s\n", filename, tag);
+    
+    // Check permissions
+    if (!check_permissions(client_socket, filename, "WRITE")) {
+        write(client_socket, "ERR:403:ACCESS_DENIED\n", 22);
+        return;
+    }
+    
+    if (revert_to_checkpoint(filename, tag)) {
+        char response[128];
+        snprintf(response, sizeof(response), "ACK:REVERT_SUCCESS File reverted to checkpoint '%s'\n", tag);
+        write(client_socket, response, strlen(response));
+    } else {
+        write(client_socket, "ERR:404:CHECKPOINT_NOT_FOUND\n", 29);
+    }
+}
+
+void handle_listcheckpoints_command(int client_socket, char* buffer) {
+    char filename[256];
+    
+    if (sscanf(buffer, "LISTCHECKPOINTS %255s", filename) != 1) {
+        write(client_socket, "ERR:400:BAD_REQUEST (Usage: LISTCHECKPOINTS <filename>)\n", 57);
+        return;
+    }
+    
+    logger("[SS-Thread] LISTCHECKPOINTS request: %s\n", filename);
+    
+    // Check permissions
+    if (!check_permissions(client_socket, filename, "READ")) {
+        write(client_socket, "ERR:403:ACCESS_DENIED\n", 22);
+        return;
+    }
+    
+    char* list = list_checkpoints(filename);
+    write(client_socket, list, strlen(list));
+    free(list);
+}
+
+// ============= END CHECKPOINT HANDLERS =============
+
 void *handle_client_request(void *arg) {
     // 1. Get the client socket from the argument
     int client_socket = *(int *)arg;
@@ -981,6 +1086,18 @@ void *handle_client_request(void *arg) {
         } 
         else if (strncmp(buffer, "STREAM", 6) == 0) {
             handle_stream_command(client_socket, buffer, client_username);
+        }
+        else if (strncmp(buffer, "CHECKPOINT", 10) == 0) {
+            handle_checkpoint_command(client_socket, buffer);
+        }
+        else if (strncmp(buffer, "VIEWCHECKPOINT", 14) == 0) {
+            handle_viewcheckpoint_command(client_socket, buffer);
+        }
+        else if (strncmp(buffer, "REVERT", 6) == 0) {
+            handle_revert_command(client_socket, buffer);
+        }
+        else if (strncmp(buffer, "LISTCHECKPOINTS", 15) == 0) {
+            handle_listcheckpoints_command(client_socket, buffer);
         }
         else {
             // Unknown command
