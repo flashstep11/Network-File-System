@@ -359,6 +359,7 @@ void print_help() {
     printf("  VIEWCHECKPOINT <file> <tag> - View checkpoint content\n");
     printf("  REVERT <file> <tag>         - Revert to checkpoint\n");
     printf("  LISTCHECKPOINTS <file>      - List all checkpoints\n");
+    printf("  DIFF <file> <tag1> <tag2>   - Compare two checkpoints\n");
     printf("\n");
     printf("  HELP                        - Show this help\n");
     printf("  QUIT / EXIT                 - Disconnect\n\n");
@@ -569,6 +570,60 @@ void handle_listcheckpoints(const char* args) {
     }
 }
 
+void handle_diff(const char* args) {
+    // DIFF <filename> <tag1> <tag2>
+    char filename[256], tag1[64], tag2[64];
+    if (sscanf(args, "%255s %63s %63s", filename, tag1, tag2) != 3) {
+        printf("Usage: DIFF <filename> <tag1> <tag2>\n");
+        return;
+    }
+    
+    // Ask NM for SS location
+    char command[512];
+    snprintf(command, sizeof(command), "DIFF %s %s %s\n", filename, tag1, tag2);
+    write(nm_socket, command, strlen(command));
+    
+    char response[102400]; // Large buffer for diff output
+    ssize_t n = read(nm_socket, response, sizeof(response) - 1);
+    if (n <= 0) {
+        printf("Error communicating with Name Server\n");
+        return;
+    }
+    response[n] = '\0';
+    
+    if (strncmp(response, "ACK:", 4) == 0) {
+        char ss_ip[32];
+        int ss_port;
+        if (sscanf(response, "ACK:SS_INFO %31s %d", ss_ip, &ss_port) == 2) {
+            int ss_socket = socket(AF_INET, SOCK_STREAM, 0);
+            struct sockaddr_in ss_addr;
+            ss_addr.sin_family = AF_INET;
+            ss_addr.sin_port = htons(ss_port);
+            inet_pton(AF_INET, ss_ip, &ss_addr.sin_addr);
+            
+            if (connect(ss_socket, (struct sockaddr*)&ss_addr, sizeof(ss_addr)) == 0) {
+                snprintf(command, sizeof(command), "DIFF %s %s %s\n", filename, tag1, tag2);
+                write(ss_socket, command, strlen(command));
+                
+                // Read potentially large diff output
+                char buffer[4096];
+                while ((n = read(ss_socket, buffer, sizeof(buffer) - 1)) > 0) {
+                    buffer[n] = '\0';
+                    printf("%s", buffer);
+                    if (n < sizeof(buffer) - 1) break; // Last chunk
+                }
+                printf("\n");
+                
+                close(ss_socket);
+            } else {
+                printf("Error: Could not connect to Storage Server\n");
+            }
+        }
+    } else {
+        printf("%s", response);
+    }
+}
+
 // ============= END CHECKPOINT HANDLERS =============
 
 int main() {
@@ -659,6 +714,8 @@ int main() {
             handle_revert(args);
         } else if (strcasecmp(cmd, "LISTCHECKPOINTS") == 0) {
             handle_listcheckpoints(args);
+        } else if (strcasecmp(cmd, "DIFF") == 0) {
+            handle_diff(args);
         } else {
             // All other commands go directly to NM
             send_simple_command(line);
