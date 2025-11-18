@@ -215,6 +215,28 @@ All operations logged with:
 
 **Total: 200/200 points**
 
+### ✅ Bonus Features (50 points)
+✅ **[15] Checkpoints** - Save and restore file states
+  - `CHECKPOINT <file> <tag>` - Create checkpoint
+  - `VIEWCHECKPOINT <file> <tag>` - View checkpoint content
+  - `REVERT <file> <tag>` - Restore to checkpoint
+  - `LISTCHECKPOINTS <file>` - List all checkpoints
+  - Thread-safe with access control
+  - See `CHECKPOINT_IMPLEMENTATION.md` for details
+
+✅ **[10] Hierarchical Folder Structure** - Virtual folders
+  - `CREATEFOLDER <name>` - Create folder
+  - `MOVE <file> <folder>` - Move file to folder
+  - `VIEWFOLDER <folder>` - List folder contents
+  
+✅ **[5] Requesting Access** - Access request workflow
+  - `REQUESTACCESS <file> <-R|-W>` - Request access
+  - `VIEWREQUESTS` - View pending requests (owner)
+  - `APPROVEREQUEST <user> <file>` - Approve request
+  - `DENYREQUEST <user> <file>` - Deny request
+
+**Bonus Total: 30/50 points achieved**
+
 ## Clean Build
 
 ```bash

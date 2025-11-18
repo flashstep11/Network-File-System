@@ -738,6 +738,91 @@ static void handle_write_command(Client* client, char* filename) {
     nm_log_operation(client->ip, client->nm_port, client->username, "WRITE", filename, ERR_NONE);
 }
 
+// Checkpoint command handlers - route to SS like READ/WRITE
+static void handle_checkpoint_command(Client* client, char* filename) {
+    FileMetadata* file_info = file_lookup(&g_nm, filename);
+    if (!file_info) {
+        send_error(client->socket_fd, ERR_FILE_NOT_FOUND, "File not found");
+        return;
+    }
+    if (!acl_check_write(file_info, client->username)) {
+        send_error(client->socket_fd, ERR_ACCESS_DENIED, "No write permission");
+        return;
+    }
+    StorageServer* ss = ss_get_by_id(&g_nm, file_info->ss_id);
+    if (!ss || !ss->is_active) {
+        send_error(client->socket_fd, ERR_SS_OFFLINE, "SS unavailable");
+        return;
+    }
+    char response[BUFFER_SIZE];
+    snprintf(response, sizeof(response), "ACK:SS_INFO %s %d\n", ss->ip, ss->client_port);
+    write(client->socket_fd, response, strlen(response));
+    nm_log_operation(client->ip, client->nm_port, client->username, "CHECKPOINT", filename, ERR_NONE);
+}
+
+static void handle_viewcheckpoint_command(Client* client, char* filename) {
+    FileMetadata* file_info = file_lookup(&g_nm, filename);
+    if (!file_info) {
+        send_error(client->socket_fd, ERR_FILE_NOT_FOUND, "File not found");
+        return;
+    }
+    if (!acl_check_read(file_info, client->username)) {
+        send_error(client->socket_fd, ERR_ACCESS_DENIED, "No read permission");
+        return;
+    }
+    StorageServer* ss = ss_get_by_id(&g_nm, file_info->ss_id);
+    if (!ss || !ss->is_active) {
+        send_error(client->socket_fd, ERR_SS_OFFLINE, "SS unavailable");
+        return;
+    }
+    char response[BUFFER_SIZE];
+    snprintf(response, sizeof(response), "ACK:SS_INFO %s %d\n", ss->ip, ss->client_port);
+    write(client->socket_fd, response, strlen(response));
+    nm_log_operation(client->ip, client->nm_port, client->username, "VIEWCHECKPOINT", filename, ERR_NONE);
+}
+
+static void handle_revert_command(Client* client, char* filename) {
+    FileMetadata* file_info = file_lookup(&g_nm, filename);
+    if (!file_info) {
+        send_error(client->socket_fd, ERR_FILE_NOT_FOUND, "File not found");
+        return;
+    }
+    if (!acl_check_write(file_info, client->username)) {
+        send_error(client->socket_fd, ERR_ACCESS_DENIED, "No write permission");
+        return;
+    }
+    StorageServer* ss = ss_get_by_id(&g_nm, file_info->ss_id);
+    if (!ss || !ss->is_active) {
+        send_error(client->socket_fd, ERR_SS_OFFLINE, "SS unavailable");
+        return;
+    }
+    char response[BUFFER_SIZE];
+    snprintf(response, sizeof(response), "ACK:SS_INFO %s %d\n", ss->ip, ss->client_port);
+    write(client->socket_fd, response, strlen(response));
+    nm_log_operation(client->ip, client->nm_port, client->username, "REVERT", filename, ERR_NONE);
+}
+
+static void handle_listcheckpoints_command(Client* client, char* filename) {
+    FileMetadata* file_info = file_lookup(&g_nm, filename);
+    if (!file_info) {
+        send_error(client->socket_fd, ERR_FILE_NOT_FOUND, "File not found");
+        return;
+    }
+    if (!acl_check_read(file_info, client->username)) {
+        send_error(client->socket_fd, ERR_ACCESS_DENIED, "No read permission");
+        return;
+    }
+    StorageServer* ss = ss_get_by_id(&g_nm, file_info->ss_id);
+    if (!ss || !ss->is_active) {
+        send_error(client->socket_fd, ERR_SS_OFFLINE, "SS unavailable");
+        return;
+    }
+    char response[BUFFER_SIZE];
+    snprintf(response, sizeof(response), "ACK:SS_INFO %s %d\n", ss->ip, ss->client_port);
+    write(client->socket_fd, response, strlen(response));
+    nm_log_operation(client->ip, client->nm_port, client->username, "LISTCHECKPOINTS", filename, ERR_NONE);
+}
+
 static void handle_delete_command(Client* client, char* filename) {
     FileMetadata* file_info = file_lookup(&g_nm, filename);
     if (!file_info) {
@@ -1756,6 +1841,11 @@ void* handle_client_connection(void* arg) {
         else if (strcmp(command, "CREATEFOLDER") == 0) handle_createfolder_command(client, args);
         else if (strcmp(command, "MOVE") == 0) handle_move_command(client, args);
         else if (strcmp(command, "VIEWFOLDER") == 0) handle_viewfolder_command(client, args);
+        // Bonus feature: Checkpoints [15]
+        else if (strcmp(command, "CHECKPOINT") == 0) handle_checkpoint_command(client, args);
+        else if (strcmp(command, "VIEWCHECKPOINT") == 0) handle_viewcheckpoint_command(client, args);
+        else if (strcmp(command, "REVERT") == 0) handle_revert_command(client, args);
+        else if (strcmp(command, "LISTCHECKPOINTS") == 0) handle_listcheckpoints_command(client, args);
         // Bonus feature: Request Access [5]
         else if (strcmp(command, "REQUESTACCESS") == 0) handle_requestaccess_command(client, args);
         else if (strcmp(command, "VIEWREQUESTS") == 0) handle_viewrequests_command(client);

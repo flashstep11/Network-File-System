@@ -957,6 +957,108 @@ void handle_stream_command(int client_socket, char* buffer) {
     // 5. --- Clean up ---
     free(file_content);
 }
+
+// ============= CHECKPOINT HANDLERS =============
+
+void handle_checkpoint_command(int client_socket, char* buffer) {
+    char filename[256], tag[64];
+    
+    if (sscanf(buffer, "CHECKPOINT %255s %63s", filename, tag) != 2) {
+        write(client_socket, "ERR:400:BAD_REQUEST (Usage: CHECKPOINT <filename> <tag>)\n", 58);
+        return;
+    }
+    
+    logger("[SS-Thread] CHECKPOINT request: %s tag=%s\n", filename, tag);
+    
+    // Check permissions
+    if (!check_permissions(client_socket, filename, "WRITE")) {
+        write(client_socket, "ERR:403:ACCESS_DENIED\n", 22);
+        return;
+    }
+    
+    if (create_checkpoint(filename, tag)) {
+        char response[128];
+        snprintf(response, sizeof(response), "ACK:CHECKPOINT_CREATED Checkpoint '%s' created successfully\n", tag);
+        write(client_socket, response, strlen(response));
+    } else {
+        write(client_socket, "ERR:500:CHECKPOINT_FAILED\n", 26);
+    }
+}
+
+void handle_viewcheckpoint_command(int client_socket, char* buffer) {
+    char filename[256], tag[64];
+    
+    if (sscanf(buffer, "VIEWCHECKPOINT %255s %63s", filename, tag) != 2) {
+        write(client_socket, "ERR:400:BAD_REQUEST (Usage: VIEWCHECKPOINT <filename> <tag>)\n", 62);
+        return;
+    }
+    
+    logger("[SS-Thread] VIEWCHECKPOINT request: %s tag=%s\n", filename, tag);
+    
+    // Check permissions
+    if (!check_permissions(client_socket, filename, "READ")) {
+        write(client_socket, "ERR:403:ACCESS_DENIED\n", 22);
+        return;
+    }
+    
+    char* content = get_checkpoint_content(filename, tag);
+    if (content) {
+        write(client_socket, content, strlen(content));
+        write(client_socket, "\nEOF\n", 5);
+        free(content);
+    } else {
+        write(client_socket, "ERR:404:CHECKPOINT_NOT_FOUND\n", 29);
+    }
+}
+
+void handle_revert_command(int client_socket, char* buffer) {
+    char filename[256], tag[64];
+    
+    if (sscanf(buffer, "REVERT %255s %63s", filename, tag) != 2) {
+        write(client_socket, "ERR:400:BAD_REQUEST (Usage: REVERT <filename> <tag>)\n", 54);
+        return;
+    }
+    
+    logger("[SS-Thread] REVERT request: %s tag=%s\n", filename, tag);
+    
+    // Check permissions
+    if (!check_permissions(client_socket, filename, "WRITE")) {
+        write(client_socket, "ERR:403:ACCESS_DENIED\n", 22);
+        return;
+    }
+    
+    if (revert_to_checkpoint(filename, tag)) {
+        char response[128];
+        snprintf(response, sizeof(response), "ACK:REVERT_SUCCESS File reverted to checkpoint '%s'\n", tag);
+        write(client_socket, response, strlen(response));
+    } else {
+        write(client_socket, "ERR:404:CHECKPOINT_NOT_FOUND\n", 29);
+    }
+}
+
+void handle_listcheckpoints_command(int client_socket, char* buffer) {
+    char filename[256];
+    
+    if (sscanf(buffer, "LISTCHECKPOINTS %255s", filename) != 1) {
+        write(client_socket, "ERR:400:BAD_REQUEST (Usage: LISTCHECKPOINTS <filename>)\n", 57);
+        return;
+    }
+    
+    logger("[SS-Thread] LISTCHECKPOINTS request: %s\n", filename);
+    
+    // Check permissions
+    if (!check_permissions(client_socket, filename, "READ")) {
+        write(client_socket, "ERR:403:ACCESS_DENIED\n", 22);
+        return;
+    }
+    
+    char* list = list_checkpoints(filename);
+    write(client_socket, list, strlen(list));
+    free(list);
+}
+
+// ============= END CHECKPOINT HANDLERS =============
+
 void *handle_client_request(void *arg) {
     // 1. Get the client socket from the argument
     int client_socket = *(int *)arg;
@@ -992,7 +1094,18 @@ void *handle_client_request(void *arg) {
             // Just call your new function
             handle_stream_command(client_socket, buffer);
         }
-
+        else if (strncmp(buffer, "CHECKPOINT", 10) == 0) {
+            handle_checkpoint_command(client_socket, buffer);
+        }
+        else if (strncmp(buffer, "VIEWCHECKPOINT", 14) == 0) {
+            handle_viewcheckpoint_command(client_socket, buffer);
+        }
+        else if (strncmp(buffer, "REVERT", 6) == 0) {
+            handle_revert_command(client_socket, buffer);
+        }
+        else if (strncmp(buffer, "LISTCHECKPOINTS", 15) == 0) {
+            handle_listcheckpoints_command(client_socket, buffer);
+        }
         else {
             // Unknown command
             char *err = "ERR:400:UNKNOWN_COMMAND\n";

@@ -413,9 +413,222 @@ void print_help() {
     printf("  APPROVEREQUEST <user> <file> - Approve access request\n");
     printf("  DENYREQUEST <user> <file>    - Deny access request\n");
     printf("\n[BONUS] Real-time notifications enabled for editing activity!\n");
+    printf("\n[BONUS] Checkpoint Commands:\n");
+    printf("  CHECKPOINT <file> <tag>     - Create checkpoint with tag\n");
+    printf("  VIEWCHECKPOINT <file> <tag> - View checkpoint content\n");
+    printf("  REVERT <file> <tag>         - Revert to checkpoint\n");
+    printf("  LISTCHECKPOINTS <file>      - List all checkpoints\n");
+    printf("\n");
     printf("  HELP                        - Show this help\n");
     printf("  QUIT / EXIT                 - Disconnect\n\n");
 }
+
+// ============= CHECKPOINT HANDLERS =============
+
+void handle_checkpoint(const char* args) {
+    // CHECKPOINT <filename> <tag>
+    char filename[256], tag[64];
+    if (sscanf(args, "%255s %63s", filename, tag) != 2) {
+        printf("Usage: CHECKPOINT <filename> <tag>\n");
+        return;
+    }
+    
+    // Ask NM for SS location
+    char command[512];
+    snprintf(command, sizeof(command), "CHECKPOINT %s\n", filename);
+    write(nm_socket, command, strlen(command));
+    
+    char response[4096];
+    ssize_t n = read(nm_socket, response, sizeof(response) - 1);
+    if (n <= 0) {
+        printf("Error communicating with Name Server\n");
+        return;
+    }
+    response[n] = '\0';
+    
+    if (strncmp(response, "ACK:", 4) == 0) {
+        // Parse SS info: ACK:SS_INFO <ip> <port>
+        char ss_ip[32];
+        int ss_port;
+        if (sscanf(response, "ACK:SS_INFO %31s %d", ss_ip, &ss_port) == 2) {
+            // Connect to SS
+            int ss_socket = socket(AF_INET, SOCK_STREAM, 0);
+            struct sockaddr_in ss_addr;
+            ss_addr.sin_family = AF_INET;
+            ss_addr.sin_port = htons(ss_port);
+            inet_pton(AF_INET, ss_ip, &ss_addr.sin_addr);
+            
+            if (connect(ss_socket, (struct sockaddr*)&ss_addr, sizeof(ss_addr)) == 0) {
+                // Send CHECKPOINT command to SS
+                snprintf(command, sizeof(command), "CHECKPOINT %s %s\n", filename, tag);
+                write(ss_socket, command, strlen(command));
+                
+                // Read response from SS
+                n = read(ss_socket, response, sizeof(response) - 1);
+                response[n] = '\0';
+                printf("%s", response);
+                
+                close(ss_socket);
+            } else {
+                printf("Error: Could not connect to Storage Server\n");
+            }
+        }
+    } else {
+        printf("%s", response);
+    }
+}
+
+void handle_viewcheckpoint(const char* args) {
+    // VIEWCHECKPOINT <filename> <tag>
+    char filename[256], tag[64];
+    if (sscanf(args, "%255s %63s", filename, tag) != 2) {
+        printf("Usage: VIEWCHECKPOINT <filename> <tag>\n");
+        return;
+    }
+    
+    // Ask NM for SS location
+    char command[512];
+    snprintf(command, sizeof(command), "VIEWCHECKPOINT %s\n", filename);
+    write(nm_socket, command, strlen(command));
+    
+    char response[4096];
+    ssize_t n = read(nm_socket, response, sizeof(response) - 1);
+    if (n <= 0) {
+        printf("Error communicating with Name Server\n");
+        return;
+    }
+    response[n] = '\0';
+    
+    if (strncmp(response, "ACK:", 4) == 0) {
+        char ss_ip[32];
+        int ss_port;
+        if (sscanf(response, "ACK:SS_INFO %31s %d", ss_ip, &ss_port) == 2) {
+            int ss_socket = socket(AF_INET, SOCK_STREAM, 0);
+            struct sockaddr_in ss_addr;
+            ss_addr.sin_family = AF_INET;
+            ss_addr.sin_port = htons(ss_port);
+            inet_pton(AF_INET, ss_ip, &ss_addr.sin_addr);
+            
+            if (connect(ss_socket, (struct sockaddr*)&ss_addr, sizeof(ss_addr)) == 0) {
+                snprintf(command, sizeof(command), "VIEWCHECKPOINT %s %s\n", filename, tag);
+                write(ss_socket, command, strlen(command));
+                
+                // Read content from SS
+                while ((n = read(ss_socket, response, sizeof(response) - 1)) > 0) {
+                    response[n] = '\0';
+                    printf("%s", response);
+                    if (strstr(response, "EOF")) break;
+                }
+                
+                close(ss_socket);
+            } else {
+                printf("Error: Could not connect to Storage Server\n");
+            }
+        }
+    } else {
+        printf("%s", response);
+    }
+}
+
+void handle_revert(const char* args) {
+    // REVERT <filename> <tag>
+    char filename[256], tag[64];
+    if (sscanf(args, "%255s %63s", filename, tag) != 2) {
+        printf("Usage: REVERT <filename> <tag>\n");
+        return;
+    }
+    
+    // Ask NM for SS location
+    char command[512];
+    snprintf(command, sizeof(command), "REVERT %s\n", filename);
+    write(nm_socket, command, strlen(command));
+    
+    char response[4096];
+    ssize_t n = read(nm_socket, response, sizeof(response) - 1);
+    if (n <= 0) {
+        printf("Error communicating with Name Server\n");
+        return;
+    }
+    response[n] = '\0';
+    
+    if (strncmp(response, "ACK:", 4) == 0) {
+        char ss_ip[32];
+        int ss_port;
+        if (sscanf(response, "ACK:SS_INFO %31s %d", ss_ip, &ss_port) == 2) {
+            int ss_socket = socket(AF_INET, SOCK_STREAM, 0);
+            struct sockaddr_in ss_addr;
+            ss_addr.sin_family = AF_INET;
+            ss_addr.sin_port = htons(ss_port);
+            inet_pton(AF_INET, ss_ip, &ss_addr.sin_addr);
+            
+            if (connect(ss_socket, (struct sockaddr*)&ss_addr, sizeof(ss_addr)) == 0) {
+                snprintf(command, sizeof(command), "REVERT %s %s\n", filename, tag);
+                write(ss_socket, command, strlen(command));
+                
+                n = read(ss_socket, response, sizeof(response) - 1);
+                response[n] = '\0';
+                printf("%s", response);
+                
+                close(ss_socket);
+            } else {
+                printf("Error: Could not connect to Storage Server\n");
+            }
+        }
+    } else {
+        printf("%s", response);
+    }
+}
+
+void handle_listcheckpoints(const char* args) {
+    // LISTCHECKPOINTS <filename>
+    char filename[256];
+    if (sscanf(args, "%255s", filename) != 1) {
+        printf("Usage: LISTCHECKPOINTS <filename>\n");
+        return;
+    }
+    
+    // Ask NM for SS location
+    char command[512];
+    snprintf(command, sizeof(command), "LISTCHECKPOINTS %s\n", filename);
+    write(nm_socket, command, strlen(command));
+    
+    char response[4096];
+    ssize_t n = read(nm_socket, response, sizeof(response) - 1);
+    if (n <= 0) {
+        printf("Error communicating with Name Server\n");
+        return;
+    }
+    response[n] = '\0';
+    
+    if (strncmp(response, "ACK:", 4) == 0) {
+        char ss_ip[32];
+        int ss_port;
+        if (sscanf(response, "ACK:SS_INFO %31s %d", ss_ip, &ss_port) == 2) {
+            int ss_socket = socket(AF_INET, SOCK_STREAM, 0);
+            struct sockaddr_in ss_addr;
+            ss_addr.sin_family = AF_INET;
+            ss_addr.sin_port = htons(ss_port);
+            inet_pton(AF_INET, ss_ip, &ss_addr.sin_addr);
+            
+            if (connect(ss_socket, (struct sockaddr*)&ss_addr, sizeof(ss_addr)) == 0) {
+                snprintf(command, sizeof(command), "LISTCHECKPOINTS %s\n", filename);
+                write(ss_socket, command, strlen(command));
+                
+                n = read(ss_socket, response, sizeof(response) - 1);
+                response[n] = '\0';
+                printf("%s\n", response);
+                
+                close(ss_socket);
+            } else {
+                printf("Error: Could not connect to Storage Server\n");
+            }
+        }
+    } else {
+        printf("%s", response);
+    }
+}
+
+// ============= END CHECKPOINT HANDLERS =============
 
 int main() {
     printf("=========================================\n");
@@ -490,6 +703,14 @@ int main() {
             handle_stream(args);
         } else if (strcasecmp(cmd, "WRITE") == 0) {
             handle_write(args);
+        } else if (strcasecmp(cmd, "CHECKPOINT") == 0) {
+            handle_checkpoint(args);
+        } else if (strcasecmp(cmd, "VIEWCHECKPOINT") == 0) {
+            handle_viewcheckpoint(args);
+        } else if (strcasecmp(cmd, "REVERT") == 0) {
+            handle_revert(args);
+        } else if (strcasecmp(cmd, "LISTCHECKPOINTS") == 0) {
+            handle_listcheckpoints(args);
         } else {
             // All other commands go directly to NM
             send_simple_command(line);
