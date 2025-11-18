@@ -1,48 +1,32 @@
-[2025-11-18 14:03:40] 
-========== NAME SERVER STARTED: Tue Nov 18 14:03:40 2025 ==========
-[2025-11-18 14:03:40] Name Server initialized successfully
-[2025-11-18 14:03:40] [PERSIST] No metadata file found (first run or empty system)
-[2025-11-18 14:03:40] Name Server listening on port 8080
-[2025-11-18 14:03:43] [CONNECT] New connection from 127.0.0.1:38836
-[2025-11-18 14:03:43] [SS0] Registered 127.0.0.1 (NM=9001, Client=9001)
-[2025-11-18 14:03:56] [CONNECT] New connection from 127.0.0.1:55004
-[2025-11-18 14:03:56] [CLIENT] vik @ 127.0.0.1:5733 registered
-[2025-11-18 14:03:59] [CONNECT] New connection from 127.0.0.1:55016
-[2025-11-18 14:03:59] [CLIENT] hav @ 127.0.0.1:5734 registered
-[2025-11-18 14:04:02] [OP] User=vik IP=127.0.0.1:5733 Op=VIEW Details= Status=SUCCESS
-[2025-11-18 14:04:06] [LoadBalance] Created file 8.txt on SS0 (now has 1 files)
-[2025-11-18 14:04:06] [OP] User=vik IP=127.0.0.1:5733 Op=CREATE Details=8.txt Status=SUCCESS
-[2025-11-18 14:04:06] [PERSIST] Saved 1 files and 0 access requests to nm_metadata.dat
-[2025-11-18 14:04:14] [REQUEST] hav requested -W access to 8.txt (owner: vik)
-[2025-11-18 14:04:14] [OP] User=hav IP=127.0.0.1:5734 Op=REQUESTACCESS Details=8.txt -W Status=SUCCESS
-[2025-11-18 14:04:17] [OP] User=vik IP=127.0.0.1:5733 Op=VIEWREQUESTS Details= Status=SUCCESS
-[2025-11-18 14:04:26] [NOTIFY-SEND] Sending to hav (socket 7): NOTIFICATION:[ACCESS] Your request for 8.txt has been APPROVED
-[2025-11-18 14:04:26] [NOTIFY-SUCCESS] Sent 63 bytes to hav
-[2025-11-18 14:04:26] [NOTIFY] ACCESS_GRANTED: NOTIFICATION:[ACCESS] Your request for 8.txt has been APPROVED
-
-[2025-11-18 14:04:26] [APPROVE] vik granted -W access to 8.txt for hav
-[2025-11-18 14:04:26] [OP] User=vik IP=127.0.0.1:5733 Op=APPROVEREQUEST Details=hav 8.txt Status=SUCCESS
-[2025-11-18 14:04:26] [PERSIST] Saved 1 files and 0 access requests to nm_metadata.dat
-[2025-11-18 14:04:33] [OP] User=hav IP=127.0.0.1:5734 Op=VIEW Details= Status=SUCCESS
-[2025-11-18 14:04:40] [OP] User=hav IP=127.0.0.1:5734 Op=WRITE Details=8.txt Status=SUCCESS
-[2025-11-18 14:04:40] [CONNECT] New connection from 127.0.0.1:48916
-[2025-11-18 14:04:40] [CHECK_ACCESS] IP=127.0.0.1 Port=38814 File=8.txt Mode=WRITE
-[2025-11-18 14:04:40] [CHECK_ACCESS] User not found for 127.0.0.1:38814
-[2025-11-18 17:21:13] 
-========== NAME SERVER STARTED: Tue Nov 18 17:21:13 2025 ==========
-[2025-11-18 17:21:13] Name Server initialized successfully
-[2025-11-18 17:21:13] [PERSIST] Loading 1 files from metadata...
-[2025-11-18 17:21:13] [PERSIST] Loaded: 8.txt (owner=vik, ss_id=0)
-[2025-11-18 17:21:13] [PERSIST] Loading 0 access requests...
-[2025-11-18 17:21:13] [PERSIST] Loaded 0 access requests
-[2025-11-18 17:21:13] [PERSIST] Successfully loaded 1/1 files and 0 requests
-[2025-11-18 17:21:13] Name Server listening on port 8080
-[2025-11-18 17:21:17] [CONNECT] New connection from 127.0.0.1:38684
-[2025-11-18 17:21:17] [SS0] Registered 127.0.0.1 (NM=9001, Client=9001)
-[2025-11-18 17:21:27] [CONNECT] New connection from 127.0.0.1:41918
-[2025-11-18 17:21:27] [CLIENT] vik @ 127.0.0.1:5900 registered
-[2025-11-18 17:23:19] [OP] User=vik IP=127.0.0.1:5900 Op=VIEW Details= Status=SUCCESS
-[2025-11-18 17:23:30] [LoadBalance] Created file 10.txt on SS0 (now has 1 files)
-[2025-11-18 17:23:30] [OP] User=vik IP=127.0.0.1:5900 Op=CREATE Details=10.txt Status=SUCCESS
-[2025-11-18 17:23:30] [PERSIST] Saved 2 files and 0 access requests to nm_metadata.dat
-[2025-11-18 17:29:07] [CLIENT] vik disconnected
+[2025-11-18 18:12:03] 
+========== NAME SERVER STARTED: Tue Nov 18 18:12:03 2025 ==========
+[2025-11-18 18:12:03] Name Server initialized successfully
+[2025-11-18 18:12:03] [PERSIST] No metadata file found (first run or empty system)
+[2025-11-18 18:12:03] Name Server listening on port 8080
+[2025-11-18 18:12:07] [CONNECT] New connection from 127.0.0.1:38896
+[2025-11-18 18:12:07] [SS0] Registered 127.0.0.1 (NM=9001, Client=9001)
+[2025-11-18 18:12:11] [CONNECT] New connection from 127.0.0.1:38900
+[2025-11-18 18:12:11] [CLIENT] vik @ 127.0.0.1:5554 registered
+[2025-11-18 18:12:16] [LoadBalance] Created file has1.txt on SS0 (now has 1 files)
+[2025-11-18 18:12:16] [OP] User=vik IP=127.0.0.1:5554 Op=CREATE Details=has1.txt Status=SUCCESS
+[2025-11-18 18:12:16] [PERSIST] Saved 1 files and 0 access requests to nm_metadata.dat
+[2025-11-18 18:12:17] [OP] User=vik IP=127.0.0.1:5554 Op=VIEW Details= Status=SUCCESS
+[2025-11-18 18:12:26] [OP] User=vik IP=127.0.0.1:5554 Op=WRITE Details=has1.txt Status=SUCCESS
+[2025-11-18 18:12:26] [CONNECT] New connection from 127.0.0.1:34502
+[2025-11-18 18:13:03] [CLIENT] vik disconnected
+[2025-11-18 18:13:15] 
+========== NAME SERVER STARTED: Tue Nov 18 18:13:15 2025 ==========
+[2025-11-18 18:13:15] Name Server initialized successfully
+[2025-11-18 18:13:15] [PERSIST] Loading 1 files from metadata...
+[2025-11-18 18:13:15] [PERSIST] Loaded: has1.txt (owner=vik, ss_id=0)
+[2025-11-18 18:13:15] [PERSIST] Loading 0 access requests...
+[2025-11-18 18:13:15] [PERSIST] Loaded 0 access requests
+[2025-11-18 18:13:15] [PERSIST] Successfully loaded 1/1 files and 0 requests
+[2025-11-18 18:13:15] Name Server listening on port 8080
+[2025-11-18 18:13:17] [CONNECT] New connection from 127.0.0.1:35576
+[2025-11-18 18:13:17] [SS0] Registered 127.0.0.1 (NM=9001, Client=9001)
+[2025-11-18 18:13:25] [CONNECT] New connection from 127.0.0.1:38530
+[2025-11-18 18:13:25] [CLIENT] vik @ 127.0.0.1:5618 registered
+[2025-11-18 18:13:40] [OP] User=vik IP=127.0.0.1:5618 Op=VIEW Details= Status=SUCCESS
+[2025-11-18 18:13:46] [OP] User=vik IP=127.0.0.1:5618 Op=WRITE Details=has1.txt Status=SUCCESS
+[2025-11-18 18:13:46] [CONNECT] New connection from 127.0.0.1:48120

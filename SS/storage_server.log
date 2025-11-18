@@ -1,45 +1,57 @@
-[2025-11-18 14:03:43] 
---- LOGGING STARTED: Tue Nov 18 14:03:43 2025 ---
-[2025-11-18 14:03:43] Lock systems initialized.
-[2025-11-18 14:03:43] Storage Server (SS) starting up...
-[2025-11-18 14:03:43] Successfully connected to NM!
-[2025-11-18 14:03:43] Sending registration: REGISTER_SS 9001 9001
-[2025-11-18 14:03:43] Received from NM: ACK:SS_REGISTRATION_OK
+[2025-11-18 18:12:07] 
+--- LOGGING STARTED: Tue Nov 18 18:12:07 2025 ---
+[2025-11-18 18:12:07] Checkpoint system initialized.
+[2025-11-18 18:12:07] Lock systems and checkpoints initialized.
+[2025-11-18 18:12:07] Storage Server (SS) starting up...
+[2025-11-18 18:12:07] Successfully connected to NM!
+[2025-11-18 18:12:07] Sending registration: REGISTER_SS 9001 9001
+[2025-11-18 18:12:07] Received from NM: ACK:SS_REGISTRATION_OK
 
-[2025-11-18 14:03:43] Registration complete. Private command line is active.
-[2025-11-18 14:03:43] [Main Thread] Starting public client server on port 9001...
-[2025-11-18 14:03:43] [NM-Thread] Command listener is running, waiting for NS commands.
-[2025-11-18 14:03:43] 
+[2025-11-18 18:12:07] Registration complete. Private command line is active.
+[2025-11-18 18:12:07] [Main Thread] Starting public client server on port 9001...
+[2025-11-18 18:12:07] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-18 18:12:07] 
 --- Storage Server is now ONLINE. Listening on port 9001 ---
 
-[2025-11-18 14:04:06] [NM-Thread] Received trusted command: CREATE 8.txt
-[2025-11-18 14:04:06] [NM-Thread] Successfully created file: 8.txt
-[2025-11-18 14:04:40] [SS-Main] New connection accepted! Spawning thread...
-[2025-11-18 14:04:40] [SS-Thread] New client connected. Waiting for commands...
-[2025-11-18 14:04:40] [SS-Thread] Received command: WRITE 8.txt 0
-[2025-11-18 14:04:40] [SS-Thread] WRITE request: 8.txt sentence 0
-[2025-11-18 14:04:40] [AccessControl] Checking WRITE permission for file 8.txt
-[2025-11-18 14:04:40] [AccessControl] Client IP: 127.0.0.1 Port: 38814
-[2025-11-18 14:04:40] [AccessControl] Connected to NM
-[2025-11-18 14:04:40] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 38814 8.txt WRITE
-[2025-11-18 14:04:40] [AccessControl] Received response (28 bytes): ACK:NO User not registered
+[2025-11-18 18:12:16] [NM-Thread] Received trusted command: CREATE has1.txt
+[2025-11-18 18:12:16] [NM-Thread] Successfully created file: has1.txt
+[2025-11-18 18:12:26] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-18 18:12:26] [SS-Thread] New client connected.
+[2025-11-18 18:12:26] [SS-Thread] Received command: WRITE has1.txt 0
+[2025-11-18 18:12:26] [SS-Thread] WRITE request: has1.txt sentence 0
+[2025-11-18 18:12:26] [AccessControl] Checking WRITE permission for user  on file has1.txt
+[2025-11-18 18:12:26] [AccessControl] Connected to NM
+[2025-11-18 18:12:26] [AccessControl] Sent query: CHECK_ACCESS  has1.txt WRITE
+[2025-11-18 18:12:26] [AccessControl] Received response (19 bytes): ACK:NO Bad request
 
-[2025-11-18 14:04:40] [AccessControl] Denied access to 127.0.0.1 for WRITE on file 8.txt
-[2025-11-18 14:04:40] [SS-Thread] WRITE denied - no permission
-[2025-11-18 14:04:40] [SS-Thread] Client disconnected.
-[2025-11-18 17:21:17] 
---- LOGGING STARTED: Tue Nov 18 17:21:17 2025 ---
-[2025-11-18 17:21:17] Lock systems initialized.
-[2025-11-18 17:21:17] Storage Server (SS) starting up...
-[2025-11-18 17:21:17] Successfully connected to NM!
-[2025-11-18 17:21:17] Sending registration: REGISTER_SS 9001 9001
-[2025-11-18 17:21:17] Received from NM: ACK:SS_REGISTRATION_OK
+[2025-11-18 18:12:26] [AccessControl] Denied access to  for WRITE on file has1.txt
+[2025-11-18 18:12:26] [SS-Thread] WRITE denied - no permission
+[2025-11-18 18:12:26] [SS-Thread] Client disconnected.
+[2025-11-18 18:13:17] 
+--- LOGGING STARTED: Tue Nov 18 18:13:17 2025 ---
+[2025-11-18 18:13:17] Checkpoint system initialized.
+[2025-11-18 18:13:17] Lock systems and checkpoints initialized.
+[2025-11-18 18:13:17] Storage Server (SS) starting up...
+[2025-11-18 18:13:17] Successfully connected to NM!
+[2025-11-18 18:13:17] Sending registration: REGISTER_SS 9001 9001
+[2025-11-18 18:13:17] Received from NM: ACK:SS_REGISTRATION_OK
 
-[2025-11-18 17:21:17] Registration complete. Private command line is active.
-[2025-11-18 17:21:17] [Main Thread] Starting public client server on port 9001...
-[2025-11-18 17:21:17] [NM-Thread] Command listener is running, waiting for NS commands.
-[2025-11-18 17:21:17] 
+[2025-11-18 18:13:17] Registration complete. Private command line is active.
+[2025-11-18 18:13:17] [Main Thread] Starting public client server on port 9001...
+[2025-11-18 18:13:17] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-18 18:13:17] 
 --- Storage Server is now ONLINE. Listening on port 9001 ---
 
-[2025-11-18 17:23:30] [NM-Thread] Received trusted command: CREATE 10.txt
-[2025-11-18 17:23:30] [NM-Thread] Successfully created file: 10.txt
+[2025-11-18 18:13:46] [SS-Main] New connection accepted! Spawning thread...
+[2025-11-18 18:13:46] [SS-Thread] New client connected.
+[2025-11-18 18:13:46] [SS-Thread] Received command: WRITE has1.txt 0
+[2025-11-18 18:13:46] [SS-Thread] WRITE request: has1.txt sentence 0
+[2025-11-18 18:13:46] [AccessControl] Checking WRITE permission for user  on file has1.txt
+[2025-11-18 18:13:46] [AccessControl] Connected to NM
+[2025-11-18 18:13:46] [AccessControl] Sent query: CHECK_ACCESS  has1.txt WRITE
+[2025-11-18 18:13:46] [AccessControl] Received response (19 bytes): ACK:NO Bad request
+
+[2025-11-18 18:13:46] [AccessControl] Denied access to  for WRITE on file has1.txt
+[2025-11-18 18:13:46] [SS-Thread] WRITE denied - no permission
+[2025-11-18 18:13:46] [SS-Thread] Client disconnected.
+[2025-11-18 18:16:14] [NM-Thread] Name Server disconnected! Command thread shutting down.

@@ -103,20 +103,6 @@ int connect_to_ss(const char* ss_ip, int ss_port) {
         return -1;
     }
 
-    // Authenticate with SS by sending username
-    char auth_msg[128];
-    snprintf(auth_msg, sizeof(auth_msg), "AUTH %s\n", username);
-    write(ss_socket, auth_msg, strlen(auth_msg));
-    
-    // Wait for acknowledgment (optional, but good practice)
-    char ack[64] = {0};
-    read(ss_socket, ack, 63);
-    if (strncmp(ack, "ACK:AUTH_OK", 11) != 0) {
-        fprintf(stderr, "SS authentication failed\n");
-        close(ss_socket);
-        return -1;
-    }
-
     return ss_socket;
 }
 
