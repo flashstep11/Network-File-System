@@ -470,6 +470,17 @@ int ss_register(NameServer* nm, const char* ip, int nm_port, int client_port,
     ss->socket_fd = socket_fd;
     ss->last_heartbeat = time(NULL);
     ss->file_count = 0;  // Initialize file count
+    
+    // Assign backup buddy (round-robin: pair SS0↔SS1, SS2↔SS3, etc.)
+    // If this is an odd SS and previous SS exists, pair with previous
+    if (ss_id > 0 && ss_id % 2 == 1) {
+        ss->backup_ss_id = ss_id - 1;
+        nm->storage_servers[ss_id - 1].backup_ss_id = ss_id;
+        nm_log("[SS%d] Paired with backup buddy SS%d\n", ss_id, ss_id - 1);
+    } else {
+        ss->backup_ss_id = -1;  // Will be paired when next SS registers
+    }
+    
     pthread_mutex_init(&ss->lock, NULL);
     nm->ss_count++;
     pthread_rwlock_unlock(&nm->ss_lock);
@@ -580,6 +591,102 @@ int ss_send_command(StorageServer* ss, const char* command, char* response, int 
     ss->last_heartbeat = time(NULL);
     pthread_mutex_unlock(&ss->lock);
     return 0;
+}
+
+// Replicate a file from primary SS to its backup buddy (async, no wait for ACK)
+void replicate_file_to_backup(int primary_ss_id, const char* filename) {
+    pthread_rwlock_rdlock(&g_nm.ss_lock);
+    
+    if (primary_ss_id < 0 || primary_ss_id >= g_nm.ss_count) {
+        pthread_rwlock_unlock(&g_nm.ss_lock);
+        return;
+    }
+    
+    StorageServer* primary = &g_nm.storage_servers[primary_ss_id];
+    int backup_id = primary->backup_ss_id;
+    
+    if (backup_id < 0 || backup_id >= g_nm.ss_count) {
+        pthread_rwlock_unlock(&g_nm.ss_lock);
+        nm_log("[REPLICATE] SS%d has no backup buddy, skipping replication of %s\n", 
+               primary_ss_id, filename);
+        return;
+    }
+    
+    StorageServer* backup = &g_nm.storage_servers[backup_id];
+    
+    if (!backup->is_active) {
+        pthread_rwlock_unlock(&g_nm.ss_lock);
+        nm_log("[REPLICATE] Backup SS%d is offline, skipping replication of %s\n", 
+               backup_id, filename);
+        return;
+    }
+    
+    pthread_rwlock_unlock(&g_nm.ss_lock);
+    
+    // First, get the file content from primary SS
+    char get_cmd[BUFFER_SIZE];
+    snprintf(get_cmd, sizeof(get_cmd), "GET_CONTENT %s\n", filename);
+    
+    char response[BUFFER_SIZE * 2];
+    if (ss_send_command(primary, get_cmd, response, sizeof(response)) < 0) {
+        nm_log("[REPLICATE] Failed to get content from SS%d for %s\n", primary_ss_id, filename);
+        return;
+    }
+    
+    // Parse response: "ACK:CONTENT\n<file_content>\nEOF\n"
+    if (strncmp(response, "ACK:CONTENT\n", 12) != 0) {
+        nm_log("[REPLICATE] Invalid response from SS%d for %s\n", primary_ss_id, filename);
+        return;
+    }
+    
+    char* content_start = response + 12;
+    char* eof_marker = strstr(content_start, "\nEOF\n");
+    if (!eof_marker) {
+        nm_log("[REPLICATE] No EOF marker in response from SS%d\n", primary_ss_id);
+        return;
+    }
+    
+    int content_length = eof_marker - content_start;
+    
+    // Now send REPLICATE command to backup SS
+    char replicate_cmd[BUFFER_SIZE];
+    snprintf(replicate_cmd, sizeof(replicate_cmd), "REPLICATE %s %d\n", filename, content_length);
+    
+    int backup_sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (backup_sock < 0) {
+        nm_log("[REPLICATE] Failed to create socket for backup SS%d\n", backup_id);
+        return;
+    }
+    
+    struct sockaddr_in backup_addr;
+    backup_addr.sin_family = AF_INET;
+    backup_addr.sin_port = htons(backup->nm_port);
+    inet_pton(AF_INET, backup->ip, &backup_addr.sin_addr);
+    
+    if (connect(backup_sock, (struct sockaddr*)&backup_addr, sizeof(backup_addr)) < 0) {
+        nm_log("[REPLICATE] Failed to connect to backup SS%d\n", backup_id);
+        close(backup_sock);
+        return;
+    }
+    
+    // Send REPLICATE command
+    write(backup_sock, replicate_cmd, strlen(replicate_cmd));
+    
+    // Wait for "ACK:READY"
+    char ack[64];
+    int n = read(backup_sock, ack, sizeof(ack) - 1);
+    if (n <= 0 || strncmp(ack, "ACK:READY", 9) != 0) {
+        nm_log("[REPLICATE] Backup SS%d not ready\n", backup_id);
+        close(backup_sock);
+        return;
+    }
+    
+    // Send file content (async - no wait for final ACK)
+    write(backup_sock, content_start, content_length);
+    close(backup_sock);
+    
+    nm_log("[REPLICATE] Replicated %s from SS%d to SS%d (%d bytes)\n", 
+           filename, primary_ss_id, backup_id, content_length);
 }
 
 int client_register(NameServer* nm, const char* username, const char* ip, 
@@ -696,6 +803,9 @@ static void handle_create_command(Client* client, char* filename) {
             nm_log("[LoadBalance] Created file %s on SS%d (now has %d files)\n", 
                    filename, ss->id, ss->file_count);
             nm_log_operation(client->ip, client->nm_port, client->username, "CREATE", filename, ERR_NONE);
+            
+            // Replicate to backup SS (async)
+            replicate_file_to_backup(ss->id, filename);
             // Save metadata after creating file
             persist_save_metadata(&g_nm);
         } else {
@@ -1874,7 +1984,12 @@ void* handle_ss_connection(void* arg) {
         close(ss_socket);
         return NULL;
     }
-    send_success(ss_socket, "SS_REGISTRATION_OK");
+    
+    // Send SS_ID in registration response so SS knows its ID for replication
+    char response[64];
+    snprintf(response, sizeof(response), "ACK:SS_REGISTRATION_OK %d\n", ss_id);
+    write(ss_socket, response, strlen(response));
+    
     char heartbeat[16];
     while (1) {
         struct timeval tv;
@@ -2022,6 +2137,23 @@ int main(int argc, char* argv[]) {
                 close(new_socket);
                 continue;
             }
+        } else if (strncmp(peek_buf, "NOTIFY_WRITE", 12) == 0) {
+            // Handle NOTIFY_WRITE from SS (async - no response expected)
+            char buffer[256];
+            int n = read(new_socket, buffer, sizeof(buffer) - 1);
+            if (n > 0) {
+                buffer[n] = '\0';
+                // Parse: NOTIFY_WRITE <ss_id> <filename>
+                int ss_id;
+                char filename[256];
+                if (sscanf(buffer, "NOTIFY_WRITE %d %255s", &ss_id, filename) == 2) {
+                    nm_log("[NOTIFY_WRITE] SS%d wrote to %s, triggering replication\n", ss_id, filename);
+                    replicate_file_to_backup(ss_id, filename);
+                }
+            }
+            close(new_socket);
+            free(socket_ptr);
+            continue;
         } else if (strncmp(peek_buf, "CHECK_ACCESS", 12) == 0) {
             // Handle CHECK_ACCESS synchronously (quick query from SS)
             char buffer[512];

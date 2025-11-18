@@ -2,6 +2,38 @@
 #include "log.h"  // For the logger
 #include "client_handler.h" // For its own declaration
 
+// Notify NM about a file write for replication (async - fire and forget)
+void notify_nm_write(const char* filename) {
+    if (g_ss_id < 0) {
+        logger("[REPLICATE] SS_ID not set, skipping replication notification\n");
+        return;
+    }
+    
+    int nm_sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (nm_sock < 0) {
+        logger("[REPLICATE] Failed to create socket to NM for replication\n");
+        return;
+    }
+    
+    struct sockaddr_in nm_addr;
+    nm_addr.sin_family = AF_INET;
+    nm_addr.sin_port = htons(g_nm_port);
+    inet_pton(AF_INET, g_nm_ip, &nm_addr.sin_addr);
+    
+    if (connect(nm_sock, (struct sockaddr*)&nm_addr, sizeof(nm_addr)) < 0) {
+        logger("[REPLICATE] Failed to connect to NM for replication\n");
+        close(nm_sock);
+        return;
+    }
+    
+    char notify_msg[512];
+    snprintf(notify_msg, sizeof(notify_msg), "NOTIFY_WRITE %d %s\n", g_ss_id, filename);
+    write(nm_sock, notify_msg, strlen(notify_msg));
+    close(nm_sock);
+    
+    logger("[REPLICATE] Notified NM about write to %s\n", filename);
+}
+
 int check_permissions(int client_socket, const char *filename, const char *mode) {
     logger("[AccessControl] Checking %s permission for file %s\n", mode, filename);
 
@@ -274,6 +306,9 @@ void handle_write_command(int client_socket, char* buffer, const char* username)
                 fclose(fp);
                 write(client_socket, "ACK:WRITE_COMPLETE All changes saved\n", 38);
                 logger("[SS-Thread] File %s updated successfully\n", filename);
+                
+                // Notify NM for replication (async)
+                notify_nm_write(filename);
             } else {
                 write(client_socket, "ERR:500:WRITE_FAILED Could not save file\n", 42);
                 logger("[SS-Thread] Failed to write file %s\n", filename);

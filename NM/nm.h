@@ -67,6 +67,7 @@ typedef struct StorageServer {
     int is_active;
     int socket_fd;
     time_t last_heartbeat;
+    int backup_ss_id;  // ID of backup buddy for replication (-1 if none)
     int file_count;  // Track number of files on this SS
     pthread_mutex_t lock;
 } StorageServer;

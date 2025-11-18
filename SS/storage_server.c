@@ -11,6 +11,11 @@
 // Global Instances
 SentenceLockManager* g_sentence_lock_manager;
 
+// SS identity for replication notifications
+int g_ss_id = -1;
+char g_nm_ip[32] = NM_IP;
+int g_nm_port = NM_PORT;
+
 // Checkpoint global variables
 FileCheckpoints* g_checkpoints_head = NULL;
 pthread_mutex_t g_checkpoints_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -611,6 +616,16 @@ int main(int argc, char *argv[]) {
     }
     buffer[valread] = '\0';
     logger("Received from NM: %s\n", buffer);
+    
+    // Parse SS_ID from response: "ACK:SS_REGISTRATION_OK <ss_id>\n"
+    int my_ss_id = -1;
+    if (sscanf(buffer, "ACK:SS_REGISTRATION_OK %d", &my_ss_id) == 1) {
+        g_ss_id = my_ss_id;
+        logger("Assigned SS_ID: %d\n", g_ss_id);
+    } else {
+        logger("Warning: Could not parse SS_ID from registration response\n");
+    }
+    
     logger("Registration complete. Private command line is active.\n");
     // Instead of closing the socket, we pass it to a new thread.
     pthread_t nm_thread_id;

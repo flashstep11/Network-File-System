@@ -44,6 +44,11 @@ typedef struct {
 // Global pointers
 extern SentenceLockManager* g_sentence_lock_manager; 
 
+// Global SS info for replication notifications
+extern int g_ss_id;
+extern char g_nm_ip[32];
+extern int g_nm_port;
+
 // --- CHECKPOINT STRUCTURES ---
 typedef struct CheckpointNode {
     char tag[64];                  // Checkpoint tag/name

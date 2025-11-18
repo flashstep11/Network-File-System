@@ -3,6 +3,28 @@
 #include "defs.h"
 #include "log.h"
 #include "nm_handler.h"
+
+// Helper to create directories recursively
+void mkdir_recursive(const char *path) {
+    char tmp[512];
+    char *p = NULL;
+    size_t len;
+
+    snprintf(tmp, sizeof(tmp), "%s", path);
+    len = strlen(tmp);
+    if (tmp[len - 1] == '/')
+        tmp[len - 1] = 0;
+    
+    for (p = tmp + 1; *p; p++) {
+        if (*p == '/') {
+            *p = 0;
+            mkdir(tmp, 0755);
+            *p = '/';
+        }
+    }
+    mkdir(tmp, 0755);
+}
+
 void handle_undo_command(int client_socket, char* buffer) {
     char filename[256];
 
@@ -290,6 +312,74 @@ void handle_get_content_command(int nm_socket, char* buffer) {
     logger("[NM-Thread] Sent content of %s to NM (%d bytes)\n", filename, offset);
 }
 
+void handle_replicate_command(int nm_socket, char* buffer) {
+    char filename[256];
+    int content_length;
+    
+    // 1. Parse the command: "REPLICATE <filename> <content_length>\n"
+    if (sscanf(buffer, "REPLICATE %255s %d", filename, &content_length) != 2) {
+        char *err = "ERR:400:BAD_REPLICATE_COMMAND\n";
+        logger("[NM-Thread] Failed to parse REPLICATE command.\n");
+        write(nm_socket, err, strlen(err));
+        return;
+    }
+    
+    logger("[NM-Thread] REPLICATE: Receiving %s (%d bytes)\n", filename, content_length);
+    
+    // 2. Send acknowledgment to proceed
+    char *ack = "ACK:READY\n";
+    write(nm_socket, ack, strlen(ack));
+    
+    // 3. Receive file content
+    char *content = malloc(content_length + 1);
+    if (!content) {
+        char *err = "ERR:500:OUT_OF_MEMORY\n";
+        logger("[NM-Thread] Failed to allocate memory for replication.\n");
+        write(nm_socket, err, strlen(err));
+        return;
+    }
+    
+    int total_read = 0;
+    while (total_read < content_length) {
+        int bytes_read = read(nm_socket, content + total_read, content_length - total_read);
+        if (bytes_read <= 0) {
+            logger("[NM-Thread] Connection lost during REPLICATE.\n");
+            free(content);
+            return;
+        }
+        total_read += bytes_read;
+    }
+    content[content_length] = '\0';
+    
+    // 4. Write to file (async - no acknowledgment)
+    char full_path[512];
+    get_full_path(full_path, sizeof(full_path), filename);
+    
+    // Create parent directories if needed
+    char dir_path[512];
+    strncpy(dir_path, full_path, sizeof(dir_path) - 1);
+    char *last_slash = strrchr(dir_path, '/');
+    if (last_slash) {
+        *last_slash = '\0';
+        mkdir_recursive(dir_path);
+    }
+    
+    // Write the file
+    FILE *fp = fopen(full_path, "w");
+    if (!fp) {
+        logger("[NM-Thread] Failed to create replicated file %s: %s\n", filename, strerror(errno));
+        free(content);
+        return;
+    }
+    
+    fwrite(content, 1, content_length, fp);
+    fclose(fp);
+    free(content);
+    
+    logger("[NM-Thread] Successfully replicated %s (%d bytes) - NO ACK SENT\n", filename, content_length);
+    // No acknowledgment sent - fire and forget!
+}
+
 void *handle_nm_commands(void *arg) {
     int nm_socket = *(int *)arg;
     free(arg);
@@ -325,6 +415,9 @@ void *handle_nm_commands(void *arg) {
         }
         else if (strncmp(buffer, "UNDO", 4) == 0) {
             handle_undo_command(nm_socket, buffer);
+        }
+        else if (strncmp(buffer, "REPLICATE", 9) == 0) {
+            handle_replicate_command(nm_socket, buffer);
         }
         else {
             // Unknown command
