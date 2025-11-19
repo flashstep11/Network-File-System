@@ -39,6 +39,14 @@ void handle_undo_command(int client_socket, char* buffer) {
 
     // NOTE: NM already checked permissions, no need to check again here
     
+    // 1.5 --- Check if file is being edited (sentence locks) ---
+    if (is_file_being_edited(filename)) {
+        char *err = "ERR:423:CANNOT_UNDO_FILE_IS_BEING_EDITED\n";
+        logger("[SS-Thread] UNDO blocked - %s has active sentence locks\n", filename);
+        write(client_socket, err, strlen(err));
+        return;
+    }
+    
     // 2. --- Form the backup file name and real file paths ---
     char full_path[512], bak_full_path[512];
     get_full_path(full_path, sizeof(full_path), filename);
@@ -122,6 +130,14 @@ void handle_delete_command(int nm_socket, char* buffer) {
         return;
     }
 
+    // Check if file is being edited
+    if (is_file_being_edited(filename)) {
+        char *err = "ERR:423:CANNOT_DELETE_FILE_IS_BEING_EDITED\n";
+        logger("[NM-Thread] DELETE blocked - %s has active sentence locks\n", filename);
+        write(nm_socket, err, strlen(err));
+        return;
+    }
+
     // Build full path
     char full_path[512];
     get_full_path(full_path, sizeof(full_path), filename);
@@ -158,6 +174,14 @@ void handle_move_command(int nm_socket, char* buffer) {
     if (sscanf(buffer, "MOVE %255s %255s", source, dest) != 2) {
         char *err = "ERR:400:BAD_MOVE_COMMAND\n";
         logger("[NM-Thread] Failed to parse MOVE command.\n");
+        write(nm_socket, err, strlen(err));
+        return;
+    }
+
+    // Check if source file is being edited
+    if (is_file_being_edited(source)) {
+        char *err = "ERR:423:CANNOT_MOVE_FILE_IS_BEING_EDITED\n";
+        logger("[NM-Thread] MOVE blocked - %s has active sentence locks\n", source);
         write(nm_socket, err, strlen(err));
         return;
     }

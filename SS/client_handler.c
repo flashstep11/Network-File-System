@@ -961,6 +961,13 @@ void handle_checkpoint_command(int client_socket, char* buffer) {
         return;
     }
     
+    // Check if file is being edited
+    if (is_file_being_edited(filename)) {
+        write(client_socket, "ERR:423:CANNOT_CHECKPOINT_FILE_IS_BEING_EDITED\n", 48);
+        logger("[SS-Thread] CHECKPOINT blocked - %s has active sentence locks\n", filename);
+        return;
+    }
+    
     if (create_checkpoint(filename, tag)) {
         char response[128];
         snprintf(response, sizeof(response), "ACK:CHECKPOINT_CREATED Checkpoint '%s' created successfully\n", tag);
@@ -1009,6 +1016,13 @@ void handle_revert_command(int client_socket, char* buffer) {
     // Check permissions
     if (!check_permissions(client_socket, filename, "WRITE")) {
         write(client_socket, "ERR:403:ACCESS_DENIED\n", 22);
+        return;
+    }
+    
+    // Check if file is being edited
+    if (is_file_being_edited(filename)) {
+        write(client_socket, "ERR:423:CANNOT_REVERT_FILE_IS_BEING_EDITED\n", 44);
+        logger("[SS-Thread] REVERT blocked - %s has active sentence locks\n", filename);
         return;
     }
     
