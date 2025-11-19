@@ -80,6 +80,7 @@ int find_word(const char *content, int sent_start, int sent_end, int word_index,
 void init_sentence_locks();
 int acquire_sentence_lock(const char* filename, int sentence_id);
 void release_sentence_lock(const char* filename, int sentence_id);
+int is_file_being_edited(const char* filename);
 
 // Checkpoint Functions
 void init_checkpoints();

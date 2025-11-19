@@ -251,6 +251,23 @@ void release_sentence_lock(const char* filename, int sentence_id) {
     pthread_mutex_unlock(&g_sentence_lock_manager->manager_lock);
 }
 
+int is_file_being_edited(const char* filename) {
+    pthread_mutex_lock(&g_sentence_lock_manager->manager_lock);
+    
+    SentenceLockNode* curr = g_sentence_lock_manager->head;
+    while (curr) {
+        if (strcmp(curr->filename, filename) == 0) {
+            // Found at least one locked sentence for this file
+            pthread_mutex_unlock(&g_sentence_lock_manager->manager_lock);
+            return 1; // File is being edited
+        }
+        curr = curr->next;
+    }
+    
+    pthread_mutex_unlock(&g_sentence_lock_manager->manager_lock);
+    return 0; // No sentences locked for this file
+}
+
 pthread_mutex_t* get_file_mutex(const char* filename) {
     pthread_mutex_lock(&g_file_mutex_list_lock);
     FileMutexNode* curr = g_file_mutexes;
