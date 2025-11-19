@@ -199,16 +199,19 @@ void handle_write_command(int client_socket, char* buffer, const char* username)
             return;
         }
         
-        // If creating a new sentence (not sentence 0), check that last sentence ends with period
+        // If creating a new sentence (not sentence 0), check that last sentence ends with delimiter
         if (sentence_num > 0) {
             // Find the last sentence
             int last_s_start = 0, last_s_end = 0;
             find_sentence(temp_data, sentence_count - 1, &last_s_start, &last_s_end);
             
-            // Check if last sentence ends with a period
-            if (last_s_end >= 0 && temp_data[last_s_end] != '.') {
-                write(client_socket, "ERROR: Cannot create new sentence. Previous sentence must end with a period.\n", 78);
-                logger("[SS-Thread] Cannot create sentence %d - sentence %d doesn't end with period\n", 
+            // Check if last sentence ends with a delimiter (., !, ?)
+            if (last_s_end >= 0 && 
+                temp_data[last_s_end] != '.' && 
+                temp_data[last_s_end] != '!' && 
+                temp_data[last_s_end] != '?') {
+                write(client_socket, "ERROR: Cannot create new sentence. Previous sentence must end with a delimiter (., !, ?).\n", 90);
+                logger("[SS-Thread] Cannot create sentence %d - sentence %d doesn't end with delimiter\n", 
                        sentence_num, sentence_count - 1);
                 free(temp_data);
                 return;
@@ -367,31 +370,51 @@ void handle_write_command(int client_socket, char* buffer, const char* username)
             
             logger("[SS-Thread] Split into %d words\n", word_count);
             
-            // Check if any word contains a period - this creates sentence boundaries
-            int period_found = -1; // Index of word containing period
-            char* before_period = NULL; // Part before period (including period)
-            char* after_period = NULL; // Part after period
+            // Check if any word contains a delimiter (., !, ?) - this creates sentence boundaries
+            int delimiter_found = -1; // Index of word containing delimiter
+            char* before_delimiter = NULL; // Part before delimiter (including delimiter)
+            char* after_delimiter = NULL; // Part after delimiter
             
             for (int i = 0; i < word_count; i++) {
+                // Check for all three sentence delimiters
+                char* delim_pos = NULL;
                 char* period_pos = strchr(words[i], '.');
-                if (period_pos) {
-                    period_found = i;
-                    // Split the word at the period
-                    int before_len = (period_pos - words[i]) + 1; // Include the period
-                    before_period = (char*)malloc(before_len + 1);
-                    strncpy(before_period, words[i], before_len);
-                    before_period[before_len] = '\0';
+                char* exclaim_pos = strchr(words[i], '!');
+                char* question_pos = strchr(words[i], '?');
+                
+                // Find the first delimiter (if any)
+                delim_pos = period_pos;
+                if (exclaim_pos && (!delim_pos || exclaim_pos < delim_pos)) delim_pos = exclaim_pos;
+                if (question_pos && (!delim_pos || question_pos < delim_pos)) delim_pos = question_pos;
+                
+                if (delim_pos) {
+                    delimiter_found = i;
+                    // Split the word at the delimiter
+                    int before_len = (delim_pos - words[i]) + 1; // Include the delimiter
+                    before_delimiter = (char*)malloc(before_len + 1);
+                    strncpy(before_delimiter, words[i], before_len);
+                    before_delimiter[before_len] = '\0';
                     
-                    // Check if there's content after the period in the same word
-                    if (*(period_pos + 1) != '\0') {
-                        after_period = strdup(period_pos + 1);
+                    // Check if there's content after the delimiter in the same word
+                    if (*(delim_pos + 1) != '\0') {
+                        after_delimiter = strdup(delim_pos + 1);
                     }
                     break;
                 }
             }
             
-            logger("[SS-Thread] Period analysis: period_found=%d, before='%s', after='%s'\n",
-                   period_found, before_period ? before_period : "NULL", after_period ? after_period : "NULL");
+            // Special case: If inserting ONLY a standalone delimiter at beginning of sentence
+            // This creates an edge case where the sentence gets malformed
+            // Solution: Treat it as a regular word insertion, let the delimiter naturally end the sentence
+            int is_standalone_delimiter_at_start = (word_count == 1 && delimiter_found == 0 && 
+                                                     (strcmp(words[0], ".") == 0 || 
+                                                      strcmp(words[0], "!") == 0 || 
+                                                      strcmp(words[0], "?") == 0) && 
+                                                     word_index == 0);
+            
+            logger("[SS-Thread] Delimiter analysis: delimiter_found=%d, before='%s', after='%s', standalone_at_start=%d\n",
+                   delimiter_found, before_delimiter ? before_delimiter : "NULL", after_delimiter ? after_delimiter : "NULL",
+                   is_standalone_delimiter_at_start);
             
             // Handle empty file or append operation
             size_t current_len = strlen(working_data);
@@ -417,14 +440,14 @@ void handle_write_command(int client_socket, char* buffer, const char* username)
                     for (int i = 0; i < word_count; i++) {
                         free(words[i]);
                     }
-                    if (before_period) free(before_period);
-                    if (after_period) free(after_period);
+                    if (before_delimiter) free(before_delimiter);
+                    if (after_delimiter) free(after_delimiter);
                     continue;
                 }
                 
                 char* new_data;
                 if (current_len == 0) {
-                    // Empty file - join all words with spaces
+                    // Empty file - just the words
                     int total_len = 0;
                     for (int i = 0; i < word_count; i++) {
                         total_len += strlen(words[i]) + 1; // +1 for space
@@ -438,24 +461,17 @@ void handle_write_command(int client_socket, char* buffer, const char* username)
                         }
                     }
                 } else {
-                    // File has content - append as new sentence with period delimiter
-                    // Add ". " before the new sentence if last char isn't a period
-                    int needs_period = (current_len > 0 && working_data[current_len - 1] != '.');
-                    
-                    int total_len = current_len;
+                    // File has content - append new sentence with space separator
+                    // (Previous sentence already ends with delimiter, validated earlier)
+                    int total_len = current_len + 1; // +1 for space
                     for (int i = 0; i < word_count; i++) {
                         total_len += strlen(words[i]) + 1; // +1 for space
                     }
-                    if (needs_period) total_len += 2; // for ". "
                     
                     new_data = (char*)malloc(total_len + 1);
                     if (new_data) {
                         strcpy(new_data, working_data);
-                        if (needs_period) {
-                            strcat(new_data, ". ");
-                        } else {
-                            strcat(new_data, " ");
-                        }
+                        strcat(new_data, " ");
                         for (int i = 0; i < word_count; i++) {
                             if (i > 0) strcat(new_data, " ");
                             strcat(new_data, words[i]);
@@ -476,8 +492,8 @@ void handle_write_command(int client_socket, char* buffer, const char* username)
                 for (int i = 0; i < word_count; i++) {
                     free(words[i]);
                 }
-                if (before_period) free(before_period);
-                if (after_period) free(after_period);
+                if (before_delimiter) free(before_delimiter);
+                if (after_delimiter) free(after_delimiter);
                 continue;
             }
             
@@ -521,8 +537,8 @@ void handle_write_command(int client_socket, char* buffer, const char* username)
                     for (int i = 0; i < word_count; i++) {
                         free(words[i]);
                     }
-                    if (before_period) free(before_period);
-                    if (after_period) free(after_period);
+                    if (before_delimiter) free(before_delimiter);
+                    if (after_delimiter) free(after_delimiter);
                     continue;
                 }
                 
@@ -559,13 +575,13 @@ void handle_write_command(int client_socket, char* buffer, const char* username)
                 char* new_data = NULL;
                 
                 // Check if we need to handle period delimiter (sentence splitting)
-                if (period_found >= 0) {
+                if (delimiter_found >= 0) {
                     // We're creating a sentence boundary by INSERTING words with period
                     // Build new content in parts:
                     // 1. Everything before insertion point (before insert_pos)
-                    // 2. Words 0 to period_found (with before_period as the last word before period)
+                    // 2. Words 0 to delimiter_found (with before_delimiter as the last word before period)
                     // 3. " " (single space after period to start new sentence)
-                    // 4. after_period (if any) and remaining words (period_found+1 onwards) - new sentence
+                    // 4. after_delimiter (if any) and remaining words (delimiter_found+1 onwards) - new sentence
                     // 5. Rest of original sentence content (from insert_pos to s_end) - continues in new sentence
                     // 6. Rest of file (after s_end)
                     
@@ -574,38 +590,44 @@ void handle_write_command(int client_socket, char* buffer, const char* username)
                     for (int i = 0; i < word_count; i++) {
                         size_needed += strlen(words[i]) + 1;
                     }
-                    if (before_period) size_needed += strlen(before_period);
-                    if (after_period) size_needed += strlen(after_period);
+                    if (before_delimiter) size_needed += strlen(before_delimiter);
+                    if (after_delimiter) size_needed += strlen(after_delimiter);
                     
                     new_data = (char*)malloc(size_needed);
                     if (!new_data) {
                         write(client_socket, "ERR:500:MEMORY_ERROR\n", 21);
                         for (int i = 0; i < word_count; i++) free(words[i]);
-                        if (before_period) free(before_period);
-                        if (after_period) free(after_period);
+                        if (before_delimiter) free(before_delimiter);
+                        if (after_delimiter) free(after_delimiter);
                         continue;
                     }
                     
                     int write_pos = 0;
                     
-                    // 1. Copy everything before insertion point
+                    // 0. CRITICAL: Copy everything BEFORE the sentence being edited
+                    if (s_start > 0) {
+                        memcpy(new_data, working_data, s_start);
+                        write_pos = s_start;
+                    }
+                    
+                    // 1. Copy everything before insertion point (within the sentence)
                     if (insert_pos > s_start) {
-                        memcpy(new_data, working_data, insert_pos);
-                        write_pos = insert_pos;
+                        memcpy(new_data + write_pos, working_data + s_start, insert_pos - s_start);
+                        write_pos += (insert_pos - s_start);
                         // Remove trailing spaces
                         while (write_pos > 0 && new_data[write_pos - 1] == ' ') write_pos--;
                     }
                     
-                    // 2. Add words before and including period (0 to period_found)
-                    for (int i = 0; i <= period_found; i++) {
+                    // 2. Add words before and including period (0 to delimiter_found)
+                    for (int i = 0; i <= delimiter_found; i++) {
                         if (write_pos > 0) {
                             new_data[write_pos++] = ' ';
                         }
                         
-                        if (i == period_found) {
-                            // Use before_period (includes the period)
-                            int len = strlen(before_period);
-                            memcpy(new_data + write_pos, before_period, len);
+                        if (i == delimiter_found) {
+                            // Use before_delimiter (includes the period)
+                            int len = strlen(before_delimiter);
+                            memcpy(new_data + write_pos, before_delimiter, len);
                             write_pos += len;
                         } else {
                             int word_len = strlen(words[i]);
@@ -617,15 +639,15 @@ void handle_write_command(int client_socket, char* buffer, const char* username)
                     // 3. Add space to separate sentences
                     new_data[write_pos++] = ' ';
                     
-                    // 4. Start new sentence with after_period and remaining words
+                    // 4. Start new sentence with after_delimiter and remaining words
                     int new_sentence_start = write_pos;
-                    if (after_period) {
-                        int len = strlen(after_period);
-                        memcpy(new_data + write_pos, after_period, len);
+                    if (after_delimiter) {
+                        int len = strlen(after_delimiter);
+                        memcpy(new_data + write_pos, after_delimiter, len);
                         write_pos += len;
                     }
                     
-                    for (int i = period_found + 1; i < word_count; i++) {
+                    for (int i = delimiter_found + 1; i < word_count; i++) {
                         if (write_pos > new_sentence_start) {
                             new_data[write_pos++] = ' ';
                         }
@@ -718,8 +740,8 @@ void handle_write_command(int client_socket, char* buffer, const char* username)
                 for (int i = 0; i < word_count; i++) {
                     free(words[i]);
                 }
-                if (before_period) free(before_period);
-                if (after_period) free(after_period);
+                if (before_delimiter) free(before_delimiter);
+                if (after_delimiter) free(after_delimiter);
             }
         } else {
             write(client_socket, "ERR:400:BAD_FORMAT Use: word_index content\n", 44);
@@ -734,155 +756,6 @@ void handle_write_command(int client_socket, char* buffer, const char* username)
     pthread_mutex_unlock(f_mutex);
     release_sentence_lock(filename, sentence_num);
     logger("[SS-Thread] Sentence lock released for %s sentence %d\n", filename, sentence_num);
-}
-void handle_write_command_old_single_shot(int client_socket, char* buffer, const char* username) {
-    // OLD IMPLEMENTATION - KEPT FOR REFERENCE
-    char filename[256];
-    int sentence_num, word_index;
-    // 1. Parse
-    // Command: WRITE <filename> <sentence_num> <word_index> <content...>
-    if (sscanf(buffer, "WRITE %255s %d %d", filename, &sentence_num, &word_index) != 3) {
-        write(client_socket, "ERR:400:BAD_REQUEST\n", 20);
-        return;
-    }
-
-    // Find start of content
-    char *content = buffer;
-    int spaces = 0;
-    while(*content && spaces < 4){ if(*content++ == ' ') spaces++; }
-    // Trim newline
-    char *nl = strrchr(content, '\n');
-    if(nl) *nl = '\0';
-
-    // 2. Check permissions
-    if (!check_permissions(client_socket, filename, "WRITE")) {
-        write(client_socket, "ERR:403:ACCESS_DENIED\n", 22);
-        return;
-    }
-
-    // 3. SENTENCE LOCK (The Critical Requirement)
-    // This check ensures no one else is editing THIS sentence right now.
-    if (!acquire_sentence_lock(filename, sentence_num)) {
-        // Fulfills "Attempting to write a locked sentence" error requirement
-        char *err = "ERR:503:SENTENCE_LOCKED_BY_ANOTHER_USER\n";
-        write(client_socket, err, strlen(err));
-        return;
-    }
-
-    // 4. Perform the Read-Modify-Write
-    // We grab the physical file mutex now.
-    // Even though this part is serialized, the "Sentence Lock" above allowed
-    // us to conceptually separate the locking domains.
-    pthread_mutex_t* f_mutex = get_file_mutex(filename);
-    pthread_mutex_lock(f_mutex); 
-
-    long fsize;
-    char* file_data = read_file_to_string(filename, &fsize);
-    
-    if (!file_data) {
-        if (sentence_num == 0) { // Creating/Appending to empty file allowed?
-             file_data = strdup("");
-        } else {
-            pthread_mutex_unlock(f_mutex);
-            release_sentence_lock(filename, sentence_num);
-            write(client_socket, "ERR:404:FILE_NOT_FOUND\n", 23);
-            return;
-        }
-    }
-
-    // --- LOGIC TO REPLACE WORD/SENTENCE ---
-    int s_start, s_end;
-    char *new_file_data = NULL;
-
-    if (find_sentence(file_data, sentence_num, &s_start, &s_end)) {
-        // Sentence found. Now find word? 
-        // Note: Requirement 30 says "update content at a word level".
-        // If word_index is valid, replace word. 
-        // Implementation of string manipulation is standard C (malloc, strncpy, strcat)...
-        // [Omitted for brevity, but assume new_file_data is created here]
-        
-        // Placeholder logic: Append content for testing
-        // Ideally: new_file_data = replace_word_in_str(file_data, s_start, ... content);
-        int w_start, w_end;
-    
-    // Attempt to find the specific word within the found sentence
-    if (find_word(file_data, s_start, s_end, word_index, &w_start, &w_end)) {
-        
-        // --- 1. Calculate new size ---
-        int len_before = w_start;                      // Data before the word
-        int len_new_content = strlen(content);         // The new text
-        int len_after = strlen(file_data + w_end + 1); // Data after the word (including null term)
-        
-        // --- 2. Allocate Memory ---
-        new_file_data = (char *)malloc(len_before + len_new_content + len_after + 1);
-        if (new_file_data == NULL) {
-            write(client_socket, "ERR:500:MEMORY_ALLOC_FAILED\n", 28);
-            pthread_mutex_unlock(f_mutex);
-            release_sentence_lock(filename, sentence_num);
-            free(file_data);
-            return;
-        }
-
-        // --- 3. Construct New String ---
-        // Copy the part before the word
-        memcpy(new_file_data, file_data, len_before);
-        
-        // Copy the new word/content
-        memcpy(new_file_data + len_before, content, len_new_content);
-        
-        // Copy the part after the word (strcpy handles the null terminator)
-        strcpy(new_file_data + len_before + len_new_content, file_data + w_end + 1);
-
-    } else {
-        // --- Word Index Not Found ---
-        // As per specifications, this is an error (unless you implement specific append logic)
-        write(client_socket, "ERR:404:WORD_INDEX_OUT_OF_BOUNDS\n", 33);
-        pthread_mutex_unlock(f_mutex);
-        release_sentence_lock(filename, sentence_num);
-        free(file_data);
-        return;
-    }
-    } 
-    else {
-        // Error handling for invalid sentence index
-        pthread_mutex_unlock(f_mutex);
-        release_sentence_lock(filename, sentence_num);
-        free(file_data);
-        write(client_socket, "ERR:404:SENTENCE_NOT_FOUND\n", 27);
-        return;
-    }
-
-    // 5. Create Backup (For UNDO)
-    char bak_name[300];
-    sprintf(bak_name, "%s.bak", filename);
-    FILE *bak = fopen(bak_name, "w");
-    if (bak) { fprintf(bak, "%s", file_data); fclose(bak); }
-
-    // 6. Write New Data
-    // 6. Write New Data to Disk
-    FILE *fp = fopen(filename, "w");
-    if (fp) {
-        // Use the new constructed string
-        if (new_file_data) {
-            fprintf(fp, "%s", new_file_data);
-        } else {
-            // Fallback for empty file creation cases if necessary
-            fprintf(fp, "%s", file_data); 
-        }
-        fclose(fp);
-        write(client_socket, "ACK:WRITE_SUCCESS\n", 18);
-    } else {
-        write(client_socket, "ERR:500:WRITE_FAILED\n", 21);
-    }
-
-    // Clean up
-    if (file_data) free(file_data);
-    if (new_file_data) free(new_file_data);
-    // if(new_file_data) free(new_file_data);
-
-    // 7. RELEASE LOCKS
-    pthread_mutex_unlock(f_mutex);
-    release_sentence_lock(filename, sentence_num);
 }
 
 void handle_stream_command(int client_socket, char* buffer, const char* username) {
@@ -1243,6 +1116,22 @@ void handle_replace_command(int client_socket, char* buffer) {
         if (scan_result < 1) {
             write(client_socket, "ERR:400:INVALID_FORMAT (Use: <word_index> <content> or ECALPER)\n", 65);
             continue;
+        }
+        
+        // Process \n escape sequences in content (same as WRITE)
+        if (scan_result >= 2) {
+            char processed_content[900];
+            int src = 0, dst = 0;
+            while (content[src] != '\0' && dst < 899) {
+                if (content[src] == '\\' && content[src + 1] == 'n') {
+                    processed_content[dst++] = '\n';
+                    src += 2;
+                } else {
+                    processed_content[dst++] = content[src++];
+                }
+            }
+            processed_content[dst] = '\0';
+            strcpy(content, processed_content);
         }
         
         logger("[SS-Thread] Replace word %d with '%s'\n", word_index, content);
