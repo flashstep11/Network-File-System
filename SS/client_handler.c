@@ -245,8 +245,9 @@ void handle_write_command(int client_socket, char* buffer, const char* username)
         release_sentence_lock(filename, sentence_num);
         return;
     }
+    
+    // Lock file mutex ONLY for reading
     pthread_mutex_lock(f_mutex);
-
     char* file_data = read_file_to_string(full_path, &fsize);
     
     logger("[SS-Thread] Loaded file %s, size=%ld, data=%p\n", filename, fsize, (void*)file_data);
@@ -282,6 +283,10 @@ void handle_write_command(int client_socket, char* buffer, const char* username)
         return;
     }
     
+    // UNLOCK file mutex - we're done reading, now edit in memory
+    pthread_mutex_unlock(f_mutex);
+    free(file_data); // Don't need original anymore
+    
     // 5. Interactive editing loop
     char edit_buffer[1024];
     while (1) {
@@ -302,17 +307,23 @@ void handle_write_command(int client_socket, char* buffer, const char* username)
         if (strncmp(edit_buffer, "ETIRW", 5) == 0) {
             logger("[SS-Thread] ETIRW received, finalizing write\n");
             
+            // Lock file mutex ONLY for writing
+            pthread_mutex_lock(f_mutex);
+            
             // Write working data to file
             FILE *fp = fopen(full_path, "w");
             if (fp) {
                 fprintf(fp, "%s", working_data);
                 fclose(fp);
+                pthread_mutex_unlock(f_mutex);
+                
                 write(client_socket, "ACK:WRITE_COMPLETE All changes saved\n", 38);
                 logger("[SS-Thread] File %s updated successfully\n", filename);
                 
                 // Notify NM for replication (async)
                 notify_nm_write(filename);
             } else {
+                pthread_mutex_unlock(f_mutex);
                 write(client_socket, "ERR:500:WRITE_FAILED Could not save file\n", 42);
                 logger("[SS-Thread] Failed to write file %s\n", filename);
             }
@@ -749,11 +760,9 @@ void handle_write_command(int client_socket, char* buffer, const char* username)
     }
     
     // Cleanup
-    if (file_data) free(file_data);
     if (working_data) free(working_data);
     
-    // Release locks
-    pthread_mutex_unlock(f_mutex);
+    // Release sentence lock
     release_sentence_lock(filename, sentence_num);
     logger("[SS-Thread] Sentence lock released for %s sentence %d\n", filename, sentence_num);
 }
@@ -1040,8 +1049,9 @@ void handle_replace_command(int client_socket, char* buffer) {
         release_sentence_lock(filename, sentence_num);
         return;
     }
+    
+    // Lock ONLY for reading
     pthread_mutex_lock(f_mutex);
-
     file_data = read_file_to_string(full_path, &fsize);
     if (!file_data) {
         write(client_socket, "ERR:500:FILE_READ_ERROR\n", 24);
@@ -1064,9 +1074,11 @@ void handle_replace_command(int client_socket, char* buffer) {
     char* working_data = strdup(file_data);
     free(file_data);
     
+    // Unlock - we're done reading
+    pthread_mutex_unlock(f_mutex);
+    
     if (!working_data) {
         write(client_socket, "ERR:500:MEMORY_ERROR\n", 21);
-        pthread_mutex_unlock(f_mutex);
         release_sentence_lock(filename, sentence_num);
         return;
     }
@@ -1092,14 +1104,20 @@ void handle_replace_command(int client_socket, char* buffer) {
         if (strncmp(edit_buffer, "ECALPER", 7) == 0) {
             logger("[SS-Thread] ECALPER received, finalizing replace\n");
             
+            // Lock ONLY for writing
+            pthread_mutex_lock(f_mutex);
+            
             // Write working data to file
             FILE *fp = fopen(full_path, "w");
             if (fp) {
                 fprintf(fp, "%s", working_data);
                 fclose(fp);
+                pthread_mutex_unlock(f_mutex);
+                
                 write(client_socket, "ACK:REPLACE_COMPLETE All changes saved.\n", 41);
                 logger("[SS-Thread] File %s updated successfully (%d changes)\n", filename, changes_made);
             } else {
+                pthread_mutex_unlock(f_mutex);
                 write(client_socket, "ERR:500:WRITE_FAILED Could not save file\n", 42);
                 logger("[SS-Thread] Failed to write file %s\n", filename);
             }
@@ -1228,7 +1246,6 @@ void handle_replace_command(int client_socket, char* buffer) {
     
     // Cleanup
     free(working_data);
-    pthread_mutex_unlock(f_mutex);
     release_sentence_lock(filename, sentence_num);
     logger("[SS-Thread] REPLACE complete, lock released\n");
 }
