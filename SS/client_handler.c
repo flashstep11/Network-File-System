@@ -317,7 +317,7 @@ void handle_write_command(int client_socket, char* buffer, const char* username)
         }
         
         // Parse word update: <word_index> <content>
-        // word_index is 1-indexed (word 1, word 2, etc.)
+        // word_index is 0-indexed (word 0, word 1, etc.)
         int word_index;
         char content[900];
         if (sscanf(edit_buffer, "%d %899[^\n]", &word_index, content) == 2) {
@@ -407,6 +407,21 @@ void handle_write_command(int client_socket, char* buffer, const char* username)
                 // Sentence doesn't exist yet - we're creating a new sentence
                 logger("[SS-Thread] Creating new sentence %d\n", sentence_num);
                 
+                // Validate word_index for new sentence creation
+                // For a new/empty sentence, only word_index 0 is valid
+                if (word_index != 0) {
+                    write(client_socket, "ERROR: Word index out of range.\n", 33);
+                    logger("[SS-Thread] Invalid word_index %d for new sentence (only 0 allowed)\n", word_index);
+                    
+                    // Free word tokens
+                    for (int i = 0; i < word_count; i++) {
+                        free(words[i]);
+                    }
+                    if (before_period) free(before_period);
+                    if (after_period) free(after_period);
+                    continue;
+                }
+                
                 char* new_data;
                 if (current_len == 0) {
                     // Empty file - join all words with spaces
@@ -469,30 +484,38 @@ void handle_write_command(int client_socket, char* buffer, const char* username)
             // Sentence exists, now INSERT words at the specified position
             // Insert all words from the command at consecutive positions
             {
-                // Count existing words in the sentence (excluding standalone delimiters)
+                // Recalculate sentence boundaries after each insertion (working_data changes!)
+                if (!find_sentence(working_data, sentence_num, &s_start, &s_end)) {
+                    // If sentence doesn't exist in working_data, it means we're creating it
+                    s_start = strlen(working_data);
+                    s_end = s_start - 1; // Empty sentence
+                }
+                
+                // Count existing words in the sentence EACH iteration (critical for validation)
+                // We must recount because working_data changes after each insertion
                 int existing_word_count = 0;
                 int pos = s_start;
                 while (pos <= s_end) {
                     // Skip spaces
                     while (pos <= s_end && working_data[pos] == ' ') pos++;
-                    if (pos <= s_end) {
-                        // Check if this is a standalone delimiter (period, !, ?)
-                        if ((working_data[pos] == '.' || working_data[pos] == '!' || working_data[pos] == '?') &&
-                            (pos + 1 > s_end || working_data[pos + 1] == ' ')) {
-                            // This is a standalone delimiter at the end, don't count it as a word
-                            break;
-                        }
-                        existing_word_count++;
-                        // Skip to next space
-                        while (pos <= s_end && working_data[pos] != ' ') pos++;
+                    if (pos > s_end) break;
+                    // Check if this is a sentence-ending punctuation at the end
+                    if ((working_data[pos] == '.' || working_data[pos] == '!' || working_data[pos] == '?') &&
+                        (pos + 1 > s_end || working_data[pos + 1] == ' ')) {
+                        // This is a standalone delimiter at the end, don't count it as a word
+                        break;
                     }
+                    existing_word_count++;
+                    // Skip to next space
+                    while (pos <= s_end && working_data[pos] != ' ') pos++;
                 }
+                
               printf("[SS-Thread] Sentence %d has %d existing words\n", sentence_num, existing_word_count);  
-                // Validate word_index (1-indexed: valid range is 1 to existing_word_count+1)
-                if (word_index < 1 || word_index > existing_word_count + 1) {
+                // Validate word_index (0-indexed: valid range is 0 to existing_word_count)
+                if (word_index < 0 || word_index > existing_word_count) {
                     write(client_socket, "ERROR: Word index out of range.\n", 33);
-                    logger("[SS-Thread] Invalid word_index %d (sentence has %d words, valid range: 1-%d)\n", 
-                           word_index, existing_word_count, existing_word_count + 1);
+                    logger("[SS-Thread] Invalid word_index %d (sentence has %d words, valid range: 0-%d)\n", 
+                           word_index, existing_word_count, existing_word_count);
                     
                     // Free word tokens
                     for (int i = 0; i < word_count; i++) {
@@ -503,9 +526,9 @@ void handle_write_command(int client_socket, char* buffer, const char* username)
                     continue;
                 }
                 
-                // Find insertion position in the string (word_index is 1-indexed)
+                // Find insertion position in the string (word_index is 0-indexed)
                 int insert_pos;
-                if (word_index == existing_word_count + 1) {
+                if (word_index == existing_word_count) {
                     // Append to end of sentence - but check if sentence ends with period
                     if (working_data[s_end] == '.' || working_data[s_end] == '!' || working_data[s_end] == '?') {
                         // Insert before the period
@@ -514,12 +537,12 @@ void handle_write_command(int client_socket, char* buffer, const char* username)
                         // No period, insert after sentence end
                         insert_pos = s_end + 1;
                     }
-                } else if (word_index == 1) {
-                    // At beginning of sentence (word 1)
+                } else if (word_index == 0) {
+                    // At beginning of sentence (word 0)
                     insert_pos = s_start;
                 } else {
-                    // At word_index position (convert 1-indexed to position)
-                    int curr_word = 1; // Start from word 1
+                    // At word_index position (0-indexed)
+                    int curr_word = 0; // Start from word 0
                     pos = s_start;
                     while (curr_word < word_index && pos <= s_end) {
                         // Skip spaces
@@ -1130,9 +1153,10 @@ void handle_replace_command(int client_socket, char* buffer) {
     const char* ack_msg = "ACK:SENTENCE_LOCKED Enter word updates (word_index content) or ECALPER to finish\n\n"
                           "=== INTERACTIVE REPLACE MODE ===\n"
                           "Format: <word_index> <content>\n"
-                          "Example: 3 replacement\n"
+                          "Example: 0 replacement (replaces 1st word)\n"
+                          "         2 \"\" (deletes 3rd word)\n"
                           "Type 'ECALPER' to save and exit\n"
-                          "Use \"\" to delete a word\n"
+                          "Word indices are 0-based\n"
                           "==============================\n\n";
     write(client_socket, ack_msg, strlen(ack_msg));
 
@@ -1210,7 +1234,7 @@ void handle_replace_command(int client_socket, char* buffer) {
         }
         
         // Parse word replacement: <word_index> <content>
-        // word_index is 1-indexed
+        // word_index is 0-indexed
         int word_index;
         char content[900];
         content[0] = '\0';
@@ -1232,7 +1256,7 @@ void handle_replace_command(int client_socket, char* buffer) {
         strncpy(sentence, working_data + s_start, sent_len);
         sentence[sent_len] = '\0';
         
-        // Split sentence into words (1-indexed)
+        // Split sentence into words (0-indexed)
         char* words[200];
         int word_count = 0;
         char* sent_copy = strdup(sentence);
@@ -1246,10 +1270,10 @@ void handle_replace_command(int client_socket, char* buffer) {
         
         logger("[SS-Thread] Sentence has %d words\n", word_count);
         
-        // Validate word_index
-        if (word_index < 1 || word_index > word_count) {
+        // Validate word_index (0-indexed)
+        if (word_index < 0 || word_index >= word_count) {
             write(client_socket, "ERR:400:WORD_INDEX_OUT_OF_RANGE\n", 32);
-            logger("[SS-Thread] Word index %d out of range (1-%d)\n", word_index, word_count);
+            logger("[SS-Thread] Word index %d out of range (0-%d)\n", word_index, word_count - 1);
             for (int i = 0; i < word_count; i++) free(words[i]);
             free(sentence);
             continue;
@@ -1261,9 +1285,9 @@ void handle_replace_command(int client_socket, char* buffer) {
         if (is_delete) {
             // Delete the word
             logger("[SS-Thread] Deleting word %d\n", word_index);
-            free(words[word_index - 1]);
+            free(words[word_index]);
             // Shift words left
-            for (int i = word_index - 1; i < word_count - 1; i++) {
+            for (int i = word_index; i < word_count - 1; i++) {
                 words[i] = words[i + 1];
             }
             word_count--;
@@ -1271,8 +1295,8 @@ void handle_replace_command(int client_socket, char* buffer) {
         } else {
             // Replace the word
             logger("[SS-Thread] Replacing word %d with '%s'\n", word_index, content);
-            free(words[word_index - 1]);
-            words[word_index - 1] = strdup(content);
+            free(words[word_index]);
+            words[word_index] = strdup(content);
             write(client_socket, "✓ ACK:WORD_UPDATED\n", 20);
         }
         
