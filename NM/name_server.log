@@ -1,50 +1,152 @@
-[2025-11-18 22:14:22] 
-========== NAME SERVER STARTED: Tue Nov 18 22:14:22 2025 ==========
-[2025-11-18 22:14:22] Name Server initialized successfully
-[2025-11-18 22:14:22] [PERSIST] No metadata file found (first run or empty system)
-[2025-11-18 22:14:22] Name Server listening on port 8080
-[2025-11-18 22:14:22] [HEARTBEAT] Monitoring thread launched
-[2025-11-18 22:14:22] [HEARTBEAT] Monitoring thread started
-[2025-11-18 22:14:26] [CONNECT] New connection from 127.0.0.1:54818
-[2025-11-18 22:14:26] [SS0] Registered 127.0.0.1 (NM=9001, Client=9001)
-[2025-11-18 22:14:26] [SS0] Registration complete, connection maintained for heartbeat
-[2025-11-18 22:14:31] [CONNECT] New connection from 127.0.0.1:48696
-[2025-11-18 22:14:31] [SS1] Paired with backup buddy SS0
-[2025-11-18 22:14:31] [SS1] Registered 127.0.0.1 (NM=9002, Client=9002)
-[2025-11-18 22:14:31] [SS1] Registration complete, connection maintained for heartbeat
-[2025-11-18 22:14:38] [CONNECT] New connection from 127.0.0.1:48698
-[2025-11-18 22:14:38] [CLIENT] vik @ 127.0.0.1:5128 registered
-[2025-11-18 22:14:54] [CONNECT] New connection from 127.0.0.1:35922
-[2025-11-18 22:14:54] [CLIENT] hav @ 127.0.0.1:5139 registered
-[2025-11-18 22:15:05] [LoadBalance] Created file 2.txt on SS0 (now has 1 files)
-[2025-11-18 22:15:05] [OP] User=hav IP=127.0.0.1:5139 Op=CREATE Details=2.txt Status=SUCCESS
-[2025-11-18 22:15:05] [REPLICATE] Invalid response from SS0 for 2.txt
-[2025-11-18 22:15:05] [PERSIST] Saved 1 files and 0 access requests to nm_metadata.dat
-[2025-11-18 22:19:04] 
-========== NAME SERVER STARTED: Tue Nov 18 22:19:04 2025 ==========
-[2025-11-18 22:19:04] Name Server initialized successfully
-[2025-11-18 22:19:04] [PERSIST] Loading 1 files from metadata...
-[2025-11-18 22:19:04] [PERSIST] Loaded: 2.txt (owner=hav, ss_id=0)
-[2025-11-18 22:19:04] [PERSIST] Loading 0 access requests...
-[2025-11-18 22:19:04] [PERSIST] Loaded 0 access requests
-[2025-11-18 22:19:04] [PERSIST] Successfully loaded 1/1 files and 0 requests
-[2025-11-18 22:19:04] Name Server listening on port 8080
-[2025-11-18 22:19:04] [HEARTBEAT] Monitoring thread launched
-[2025-11-18 22:19:04] [HEARTBEAT] Monitoring thread started
-[2025-11-18 22:19:07] [CONNECT] New connection from 127.0.0.1:43848
-[2025-11-18 22:19:07] [SS0] Registered 127.0.0.1 (NM=9002, Client=9002)
-[2025-11-18 22:19:07] [SS0] Registration complete, connection maintained for heartbeat
-[2025-11-18 22:19:09] [CONNECT] New connection from 127.0.0.1:43258
-[2025-11-18 22:19:09] [SS1] Paired with backup buddy SS0
-[2025-11-18 22:19:09] [SS1] Registered 127.0.0.1 (NM=9001, Client=9001)
-[2025-11-18 22:19:09] [SS1] Registration complete, connection maintained for heartbeat
-[2025-11-18 22:19:16] [CONNECT] New connection from 127.0.0.1:43266
-[2025-11-18 22:19:16] [CLIENT] vik @ 127.0.0.1:5261 registered
-[2025-11-18 22:19:21] [SENT ERROR] Code=400 Msg=Unknown command
-[2025-11-18 22:19:39] [CONNECT] New connection from 127.0.0.1:49028
-[2025-11-18 22:19:39] [CLIENT] hav @ 127.0.0.1:5275 registered
-[2025-11-18 22:19:43] [LoadBalance] Created file 3.txt on SS0 (now has 1 files)
-[2025-11-18 22:19:43] [OP] User=hav IP=127.0.0.1:5275 Op=CREATE Details=3.txt Status=SUCCESS
-[2025-11-18 22:19:43] [REPLICATE] Invalid response from SS0 for 3.txt: ACK:CREATE_OK
-
-[2025-11-18 22:19:43] [PERSIST] Saved 2 files and 0 access requests to nm_metadata.dat
+[2025-11-19 10:40:25] 
+========== NAME SERVER STARTED: Wed Nov 19 10:40:25 2025 ==========
+[2025-11-19 10:40:25] Name Server initialized successfully
+[2025-11-19 10:40:25] [PERSIST] No metadata file found (first run or empty system)
+[2025-11-19 10:40:25] Name Server listening on port 8080
+[2025-11-19 10:40:25] [HEARTBEAT] Monitoring thread launched
+[2025-11-19 10:40:25] [HEARTBEAT] Monitoring thread started
+[2025-11-19 10:40:29] [CONNECT] New connection from 127.0.0.1:58686
+[2025-11-19 10:40:29] [SS0] Registered 127.0.0.1 (NM=9001, Client=9001)
+[2025-11-19 10:40:29] [SS0] Registration complete, connection maintained for heartbeat
+[2025-11-19 10:40:32] [CONNECT] New connection from 127.0.0.1:58694
+[2025-11-19 10:40:32] [SS1] Paired with backup buddy SS0
+[2025-11-19 10:40:32] [SS1] Registered 127.0.0.1 (NM=9002, Client=9002)
+[2025-11-19 10:40:32] [SS1] Registration complete, connection maintained for heartbeat
+[2025-11-19 10:40:36] [CONNECT] New connection from 127.0.0.1:50398
+[2025-11-19 10:40:36] [CLIENT] vik @ 127.0.0.1:5917 registered
+[2025-11-19 10:40:38] [OP] User=vik IP=127.0.0.1:5917 Op=VIEW Details= Status=SUCCESS
+[2025-11-19 10:40:42] [LoadBalance] Created file 2.txt on SS0 (now has 1 files)
+[2025-11-19 10:40:42] [OP] User=vik IP=127.0.0.1:5917 Op=CREATE Details=2.txt Status=SUCCESS
+[2025-11-19 10:40:42] [REPLICATE] File 2.txt content length: 0 bytes
+[2025-11-19 10:40:42] [REPLICATE] Replicated 2.txt from SS0 to SS1 (0 bytes)
+[2025-11-19 10:40:42] [PERSIST] Saved 1 files and 0 access requests to nm_metadata.dat
+[2025-11-19 10:40:46] [OP] User=vik IP=127.0.0.1:5917 Op=WRITE Details=2.txt Status=SUCCESS
+[2025-11-19 10:40:46] [CONNECT] New connection from 127.0.0.1:52682
+[2025-11-19 10:40:46] [CHECK_ACCESS] IP=127.0.0.1 File=2.txt Mode=WRITE
+[2025-11-19 10:40:46] [CHECK_ACCESS] Granted WRITE access to 2.txt for vik (IP: 127.0.0.1)
+[2025-11-19 10:40:50] [CONNECT] New connection from 127.0.0.1:52688
+[2025-11-19 10:40:50] [NOTIFY_WRITE] SS0 wrote to 2.txt, triggering replication
+[2025-11-19 10:40:50] [REPLICATE] File 2.txt content length: 11 bytes
+[2025-11-19 10:40:50] [REPLICATE] Replicated 2.txt from SS0 to SS1 (11 bytes)
+[2025-11-19 10:40:55] [OP] User=vik IP=127.0.0.1:5917 Op=INFO Details=2.txt Status=SUCCESS
+[2025-11-19 10:41:05] [HEARTBEAT] SS0 connection broken: Broken pipe
+[2025-11-19 10:41:07] [FAILOVER] SS0 is down, using backup SS1
+[2025-11-19 10:41:07] [OP] User=vik IP=127.0.0.1:5917 Op=READ Details=2.txt Status=SUCCESS
+[2025-11-19 10:41:07] [CONNECT] New connection from 127.0.0.1:54016
+[2025-11-19 10:41:07] [CHECK_ACCESS] IP=127.0.0.1 File=2.txt Mode=READ
+[2025-11-19 10:41:07] [CHECK_ACCESS] Granted READ access to 2.txt for vik (IP: 127.0.0.1)
+[2025-11-19 10:41:09] [SS0] Connection handler exiting
+[2025-11-19 10:41:11] [FAILOVER] SS0 is down, using backup SS1
+[2025-11-19 10:41:11] [OP] User=vik IP=127.0.0.1:5917 Op=WRITE Details=2.txt Status=SUCCESS
+[2025-11-19 10:41:11] [CONNECT] New connection from 127.0.0.1:54024
+[2025-11-19 10:41:11] [CHECK_ACCESS] IP=127.0.0.1 File=2.txt Mode=WRITE
+[2025-11-19 10:41:11] [CHECK_ACCESS] Granted WRITE access to 2.txt for vik (IP: 127.0.0.1)
+[2025-11-19 10:41:18] [CONNECT] New connection from 127.0.0.1:52296
+[2025-11-19 10:41:18] [NOTIFY_WRITE] SS1 wrote to 2.txt, triggering replication
+[2025-11-19 10:41:18] [REPLICATE] Backup SS0 is offline, skipping replication of 2.txt
+[2025-11-19 11:02:43] 
+========== NAME SERVER STARTED: Wed Nov 19 11:02:43 2025 ==========
+[2025-11-19 11:02:43] Name Server initialized successfully
+[2025-11-19 11:02:43] [PERSIST] Loading 1 files from metadata...
+[2025-11-19 11:02:43] [PERSIST] Loaded: 2.txt (owner=vik, ss_id=0)
+[2025-11-19 11:02:43] [PERSIST] Loading 0 access requests...
+[2025-11-19 11:02:43] [PERSIST] Loaded 0 access requests
+[2025-11-19 11:02:43] [PERSIST] Successfully loaded 1/1 files and 0 requests
+[2025-11-19 11:02:43] Name Server listening on port 8080
+[2025-11-19 11:02:43] [HEARTBEAT] Monitoring thread launched
+[2025-11-19 11:02:43] [HEARTBEAT] Monitoring thread started
+[2025-11-19 11:02:50] [CONNECT] New connection from 127.0.0.1:33870
+[2025-11-19 11:02:50] [SS0] Registered 127.0.0.1 (NM=9001, Client=9001)
+[2025-11-19 11:02:50] [SS0] Registration complete, connection maintained for heartbeat
+[2025-11-19 11:02:54] [CONNECT] New connection from 127.0.0.1:33886
+[2025-11-19 11:02:54] [SS1] Paired with backup buddy SS0
+[2025-11-19 11:02:54] [SS1] Registered 127.0.0.1 (NM=9002, Client=9002)
+[2025-11-19 11:02:54] [SS1] Registration complete, connection maintained for heartbeat
+[2025-11-19 11:03:00] [CONNECT] New connection from 127.0.0.1:47988
+[2025-11-19 11:03:00] [CLIENT] vik @ 127.0.0.1:5990 registered
+[2025-11-19 11:03:02] [OP] User=vik IP=127.0.0.1:5990 Op=VIEW Details= Status=SUCCESS
+[2025-11-19 11:03:07] [LoadBalance] Created file 3.txt on SS0 (now has 1 files)
+[2025-11-19 11:03:07] [OP] User=vik IP=127.0.0.1:5990 Op=CREATE Details=3.txt Status=SUCCESS
+[2025-11-19 11:03:07] [REPLICATE] File 3.txt content length: 0 bytes
+[2025-11-19 11:03:07] [REPLICATE] Replicated 3.txt from SS0 to SS1 (0 bytes)
+[2025-11-19 11:03:07] [PERSIST] Saved 2 files and 0 access requests to nm_metadata.dat
+[2025-11-19 11:03:12] [OP] User=vik IP=127.0.0.1:5990 Op=WRITE Details=3.txt Status=SUCCESS
+[2025-11-19 11:03:12] [CONNECT] New connection from 127.0.0.1:51270
+[2025-11-19 11:03:12] [CHECK_ACCESS] IP=127.0.0.1 File=3.txt Mode=WRITE
+[2025-11-19 11:03:12] [CHECK_ACCESS] Granted WRITE access to 3.txt for vik (IP: 127.0.0.1)
+[2025-11-19 11:03:48] [CONNECT] New connection from 127.0.0.1:50654
+[2025-11-19 11:03:48] [NOTIFY_WRITE] SS0 wrote to 3.txt, triggering replication
+[2025-11-19 11:03:48] [REPLICATE] File 3.txt content length: 13 bytes
+[2025-11-19 11:03:48] [REPLICATE] Replicated 3.txt from SS0 to SS1 (13 bytes)
+[2025-11-19 11:04:15] [OP] User=vik IP=127.0.0.1:5990 Op=READ Details=3.txt Status=SUCCESS
+[2025-11-19 11:04:15] [CONNECT] New connection from 127.0.0.1:33334
+[2025-11-19 11:04:15] [CHECK_ACCESS] IP=127.0.0.1 File=3.txt Mode=READ
+[2025-11-19 11:04:15] [CHECK_ACCESS] Granted READ access to 3.txt for vik (IP: 127.0.0.1)
+[2025-11-19 11:04:21] [OP] User=vik IP=127.0.0.1:5990 Op=INFO Details=3.txt Status=SUCCESS
+[2025-11-19 11:04:33] [HEARTBEAT] SS0 connection broken: Broken pipe
+[2025-11-19 11:04:37] [FAILOVER] SS0 is down, using backup SS1
+[2025-11-19 11:04:37] [OP] User=vik IP=127.0.0.1:5990 Op=WRITE Details=3.txt Status=SUCCESS
+[2025-11-19 11:04:37] [CONNECT] New connection from 127.0.0.1:34458
+[2025-11-19 11:04:37] [CHECK_ACCESS] IP=127.0.0.1 File=3.txt Mode=WRITE
+[2025-11-19 11:04:37] [CHECK_ACCESS] Granted WRITE access to 3.txt for vik (IP: 127.0.0.1)
+[2025-11-19 11:04:40] [SS0] Connection handler exiting
+[2025-11-19 11:04:47] [CONNECT] New connection from 127.0.0.1:51472
+[2025-11-19 11:04:47] [NOTIFY_WRITE] SS1 wrote to 3.txt, triggering replication
+[2025-11-19 11:04:47] [REPLICATE] Backup SS0 is offline, skipping replication of 3.txt
+[2025-11-19 11:04:50] [FAILOVER] SS0 is down, using backup SS1
+[2025-11-19 11:04:50] [OP] User=vik IP=127.0.0.1:5990 Op=READ Details=3.txt Status=SUCCESS
+[2025-11-19 11:04:50] [CONNECT] New connection from 127.0.0.1:53846
+[2025-11-19 11:04:50] [CHECK_ACCESS] IP=127.0.0.1 File=3.txt Mode=READ
+[2025-11-19 11:04:50] [CHECK_ACCESS] Granted READ access to 3.txt for vik (IP: 127.0.0.1)
+[2025-11-19 11:04:55] [CONNECT] New connection from 127.0.0.1:53850
+[2025-11-19 11:04:55] [SS0] RECOVERY detected - SS reconnected
+[2025-11-19 11:04:56] [SS0] Triggering SYNC from backup SS1
+[2025-11-19 11:04:56] [SYNC] Starting file-by-file sync from SS1 to SS0
+[2025-11-19 11:04:56] [SYNC] File 1.txt NOT found in metadata, skipping
+[2025-11-19 11:04:56] [SYNC] Skipping 1.txt (not for this SS)
+[2025-11-19 11:04:56] [SYNC] Skipping 1.txt.bak (not for this SS)
+[2025-11-19 11:04:56] [SYNC] Found 2.txt in metadata: ss_id=0 (recovered=0, backup=1)
+[2025-11-19 11:04:56] [SYNC] Syncing 2.txt...
+[2025-11-19 11:04:56] [SYNC] Requesting: GET_CONTENT 2.txt from SS1
+[2025-11-19 11:04:56] [SYNC] Got response (length=34): ACK:CONTENT
+hello world VIK. 
+EOF
+...
+[2025-11-19 11:04:56] [SYNC] Parsed content length: 17 bytes
+[2025-11-19 11:04:56] [SYNC] Sending to SS0: REPLICATE 2.txt 17
+[2025-11-19 11:04:56] [SYNC] Got ACK:READY, writing 17 bytes to SS0
+[2025-11-19 11:04:56] [SYNC] Synced 2.txt from SS1 to SS0 (17 bytes)
+[2025-11-19 11:04:56] [SYNC] Syncing 2.txt.bak...
+[2025-11-19 11:04:56] [SYNC] Requesting: GET_CONTENT 2.txt.bak from SS1
+[2025-11-19 11:04:56] [SYNC] Got response (length=28): ACK:CONTENT
+hello world
+EOF
+...
+[2025-11-19 11:04:56] [SYNC] Parsed content length: 11 bytes
+[2025-11-19 11:04:56] [SYNC] Sending to SS0: REPLICATE 2.txt.bak 11
+[2025-11-19 11:04:56] [SYNC] Got ACK:READY, writing 11 bytes to SS0
+[2025-11-19 11:04:56] [SYNC] Synced 2.txt.bak from SS1 to SS0 (11 bytes)
+[2025-11-19 11:04:56] [SYNC] Found 3.txt in metadata: ss_id=0 (recovered=0, backup=1)
+[2025-11-19 11:04:56] [SYNC] Syncing 3.txt...
+[2025-11-19 11:04:56] [SYNC] Requesting: GET_CONTENT 3.txt from SS1
+[2025-11-19 11:04:56] [SYNC] Got response (length=37): ACK:CONTENT
+PLEASE HELLO WORLD. 
+EOF
+...
+[2025-11-19 11:04:56] [SYNC] Parsed content length: 20 bytes
+[2025-11-19 11:04:56] [SYNC] Sending to SS0: REPLICATE 3.txt 20
+[2025-11-19 11:04:56] [SYNC] Got ACK:READY, writing 20 bytes to SS0
+[2025-11-19 11:04:56] [SYNC] Synced 3.txt from SS1 to SS0 (20 bytes)
+[2025-11-19 11:04:56] [SYNC] Syncing 3.txt.bak...
+[2025-11-19 11:04:56] [SYNC] Requesting: GET_CONTENT 3.txt.bak from SS1
+[2025-11-19 11:04:56] [SYNC] Got response (length=30): ACK:CONTENT
+HELLO WORLD. 
+EOF
+...
+[2025-11-19 11:04:56] [SYNC] Parsed content length: 13 bytes
+[2025-11-19 11:04:56] [SYNC] Sending to SS0: REPLICATE 3.txt.bak 13
+[2025-11-19 11:04:56] [SYNC] Got ACK:READY, writing 13 bytes to SS0
+[2025-11-19 11:04:56] [SYNC] Synced 3.txt.bak from SS1 to SS0 (13 bytes)
+[2025-11-19 11:04:56] [SS0] SYNC complete: 4 files synchronized
+[2025-11-19 11:04:56] [SS0] Registration complete, connection maintained for heartbeat
+[2025-11-19 11:05:31] [CLIENT] vik disconnected

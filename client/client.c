@@ -348,6 +348,7 @@ void print_help() {
     printf("  CREATEFOLDER <name>         - Create virtual folder\n");
     printf("  MOVE <file> <folder>        - Move file to folder\n");
     printf("  VIEWFOLDER <folder>         - List folder contents\n");
+    printf("  LISTFOLDERS                 - List all folders\n");
     printf("\n[BONUS] Access Request Commands:\n");
     printf("  REQUESTACCESS <file> <-R|-W> - Request access to file\n");
     printf("  VIEWREQUESTS                 - View pending requests (owner)\n");

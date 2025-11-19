@@ -451,122 +451,269 @@ int acl_remove_access(FileMetadata* file_info, const char* username) {
 
 // ======================== SS & CLIENT MANAGEMENT ========================
 
+// Return value: SS ID, or -(SS_ID+1) if recovery detected (caller must do SYNC)
 int ss_register(NameServer* nm, const char* ip, int nm_port, int client_port, 
                 const char* file_list, int socket_fd) {
     if (!nm || !ip) return -1;
     
     // Check if this SS is reconnecting (recovery scenario)
     pthread_rwlock_wrlock(&nm->ss_lock);
-    int recovered_ss_id = -1;
     for (int i = 0; i < nm->ss_count; i++) {
         if (strcmp(nm->storage_servers[i].ip, ip) == 0 && 
             nm->storage_servers[i].nm_port == nm_port &&
             !nm->storage_servers[i].is_active) {
             // This is a recovery - reactivate existing SS
-            recovered_ss_id = i;
             nm->storage_servers[i].is_active = 1;
             nm->storage_servers[i].socket_fd = socket_fd;
             nm->storage_servers[i].last_heartbeat = time(NULL);
             pthread_rwlock_unlock(&nm->ss_lock);
             nm_log("[SS%d] RECOVERY detected - SS reconnected\n", i);
             
-            // Trigger sync from backup
-            int backup_id = nm->storage_servers[i].backup_ss_id;
-            if (backup_id >= 0 && backup_id < nm->ss_count && nm->storage_servers[backup_id].is_active) {
-                nm_log("[SS%d] Triggering SYNC from backup SS%d\n", i, backup_id);
-                
-                // Send SYNC command to backup SS
-                StorageServer* backup = &nm->storage_servers[backup_id];
-                char sync_cmd[256];
-                snprintf(sync_cmd, sizeof(sync_cmd), "SYNC %s %d\n", ip, nm_port);
-                
-                char sync_response[256];
-                if (ss_send_command(backup, sync_cmd, sync_response, sizeof(sync_response)) >= 0) {
-                    nm_log("[SS%d] SYNC complete: %s\n", i, sync_response);
-                } else {
-                    nm_log("[SS%d] SYNC failed from backup SS%d\n", i, backup_id);
-                }
-            }
-            
-            return i;
+            // Return negative value to indicate recovery (caller must send ACK first, then SYNC)
+            return -(i + 1);  // Encode as negative to distinguish from new registration
         }
     }
     pthread_rwlock_unlock(&nm->ss_lock);
     
-    // Not a recovery - register as new SS
+    // Not a recovery, proceed with new registration
     pthread_rwlock_wrlock(&nm->ss_lock);
-    if (nm->ss_count >= MAX_STORAGE_SERVERS) {
+    int ss_id = nm->ss_count;
+    if (ss_id >= MAX_STORAGE_SERVERS) {
         pthread_rwlock_unlock(&nm->ss_lock);
+        nm_log("[ERROR] Maximum storage servers reached\n");
         return -1;
     }
-    int ss_id = nm->ss_count;
+    
+    // Add new SS
     StorageServer* ss = &nm->storage_servers[ss_id];
-    ss->id = ss_id;
-    strncpy(ss->ip, ip, MAX_IP_LEN - 1);
-    ss->ip[MAX_IP_LEN - 1] = '\0';
+    strncpy(ss->ip, ip, sizeof(ss->ip) - 1);
     ss->nm_port = nm_port;
     ss->client_port = client_port;
-    ss->is_active = 1;
     ss->socket_fd = socket_fd;
+    ss->is_active = 1;
     ss->last_heartbeat = time(NULL);
-    ss->file_count = 0;  // Initialize file count
+    pthread_mutex_init(&ss->lock, NULL);
     
-    // Assign backup buddy (round-robin: pair SS0↔SS1, SS2↔SS3, etc.)
-    // If this is an odd SS and previous SS exists, pair with previous
-    if (ss_id > 0 && ss_id % 2 == 1) {
-        ss->backup_ss_id = ss_id - 1;
-        nm->storage_servers[ss_id - 1].backup_ss_id = ss_id;
-        nm_log("[SS%d] Paired with backup buddy SS%d\n", ss_id, ss_id - 1);
+    // Assign backup buddy (simple pairing: 0↔1, 2↔3, etc.)
+    if (ss_id % 2 == 0) {
+        ss->backup_ss_id = ss_id + 1;  // Will be set when buddy registers
     } else {
-        ss->backup_ss_id = -1;  // Will be paired when next SS registers
+        ss->backup_ss_id = ss_id - 1;
+        // Update buddy's backup_ss_id
+        if (ss->backup_ss_id >= 0) {
+            nm->storage_servers[ss->backup_ss_id].backup_ss_id = ss_id;
+            nm_log("[SS%d] Paired with backup buddy SS%d\n", ss_id, ss->backup_ss_id);
+        }
     }
     
-    pthread_mutex_init(&ss->lock, NULL);
     nm->ss_count++;
     pthread_rwlock_unlock(&nm->ss_lock);
+    
     nm_log("[SS%d] Registered %s (NM=%d, Client=%d)\n", ss_id, ip, nm_port, client_port);
+    
+    // Parse and register files from file_list
     if (file_list && strlen(file_list) > 0) {
-        char* file_list_copy = strdup(file_list);
-        char* token = strtok(file_list_copy, " \t\n");
-        int file_count = 0;
-        int new_files = 0;
-        int existing_files = 0;
-        while (token != NULL) {
-            // Check if file already exists in metadata (from persistence)
-            FileMetadata* existing = file_lookup(nm, token);
-            if (existing) {
-                // File exists in metadata - just update the ss_id mapping
-                pthread_rwlock_wrlock(&existing->lock);
-                existing->ss_id = ss_id;
-                pthread_rwlock_unlock(&existing->lock);
-                existing_files++;
-                nm_log("[SS%d] Updated ss_id for existing file: %s (owner=%s)\n", 
-                       ss_id, token, existing->owner);
-            } else {
-                // New file not in metadata - create with owner="system"
+        char* file_copy = strdup(file_list);
+        char* token = strtok(file_copy, "\n");
+        while (token) {
+            if (strlen(token) > 0 && strcmp(token, ".") != 0 && strcmp(token, "..") != 0) {
+                // Register file with default ownership (system)
                 FileMetadata* file_info = file_create_metadata(token, "system", ss_id);
                 if (file_info) {
-                    file_add_to_registry(nm, file_info);
-                    new_files++;
-                    nm_log("[SS%d] Registered new file: %s (owner=system)\n", ss_id, token);
+                    trie_insert(nm->file_trie_root, token, file_info);
                 }
             }
-            file_count++;
-            token = strtok(NULL, " \t\n");
+            token = strtok(NULL, "\n");
         }
-        free(file_list_copy);
-        
-        // Update file count for this SS
-        pthread_rwlock_wrlock(&nm->ss_lock);
-        ss->file_count = file_count;
-        pthread_rwlock_unlock(&nm->ss_lock);
-        
-        nm_log("[SS%d] Registered %d files (%d new, %d existing with preserved metadata)\n", 
-               ss_id, file_count, new_files, existing_files);
+        free(file_copy);
     }
+    
     return ss_id;
 }
 
+// Perform SYNC for recovered SS (must be called AFTER sending ACK to SS)
+void ss_sync_from_backup(NameServer* nm, int recovered_ss_id) {
+    if (!nm || recovered_ss_id < 0 || recovered_ss_id >= nm->ss_count) return;
+    
+    // Trigger sync from backup - only sync files that belong to recovered SS
+    int backup_id = nm->storage_servers[recovered_ss_id].backup_ss_id;
+            if (backup_id >= 0 && backup_id < nm->ss_count && nm->storage_servers[backup_id].is_active) {
+                nm_log("[SS%d] Triggering SYNC from backup SS%d\n", recovered_ss_id, backup_id);
+                
+                StorageServer* backup = &nm->storage_servers[backup_id];
+                StorageServer* recovered = &nm->storage_servers[recovered_ss_id];
+                int synced_files = 0;
+                
+                // Traverse trie to find all files belonging to recovered SS (ss_id == recovered_ss_id)
+                pthread_rwlock_rdlock(&nm->trie_lock);
+                
+                // Helper function to collect files - we'll do it inline with a simple approach
+                // Get list from backup SS and filter by checking trie
+                char list_cmd[BUFFER_SIZE];
+                snprintf(list_cmd, sizeof(list_cmd), "LIST_FILES\n");
+                
+                char file_list_response[BUFFER_SIZE * 4];
+                
+                if (ss_send_command(backup, list_cmd, file_list_response, sizeof(file_list_response)) >= 0) {
+                    // Parse file list (format: "ACK:FILES\nfile1.txt\nfile2.txt\n...")
+                    char* line = strtok(file_list_response, "\n");
+                    
+                    nm_log("[SYNC] Starting file-by-file sync from SS%d to SS%d\n", backup_id, recovered_ss_id);
+                    
+                    while (line != NULL) {
+                        // Skip ACK line and empty lines
+                        if (strncmp(line, "ACK:", 4) == 0 || strlen(line) == 0) {
+                            line = strtok(NULL, "\n");
+                            continue;
+                        }
+                        
+                        // Check if this file should be synced to recovered SS
+                        // We sync files in these cases:
+                        // 1. File metadata says ss_id == recovered_ss_id (originally belonged here)
+                        // 2. File metadata says ss_id == backup_id (written to backup during failover)
+                        // 3. .bak files for any of the above
+                        int should_sync = 0;
+                        int was_on_backup = 0;
+                        
+                        // If it's a .bak file, check the base filename
+                        if (strstr(line, ".bak") != NULL) {
+                            // Extract base filename (remove .bak)
+                            char base_filename[MAX_FILENAME_LEN];
+                            strncpy(base_filename, line, sizeof(base_filename) - 1);
+                            char* bak_suffix = strstr(base_filename, ".bak");
+                            if (bak_suffix) {
+                                *bak_suffix = '\0';
+                                FileMetadata* file_info = trie_search(nm->file_trie_root, base_filename);
+                                if (file_info) {
+                                    if (file_info->ss_id == recovered_ss_id) {
+                                        should_sync = 1;  // .bak for recovered SS's file
+                                    } else if (file_info->ss_id == backup_id) {
+                                        should_sync = 1;  // .bak for file written during failover
+                                        was_on_backup = 1;
+                                    }
+                                }
+                            }
+                        } else {
+                            // Regular file - check if it belongs to recovered SS or backup
+                            FileMetadata* file_info = trie_search(nm->file_trie_root, line);
+                            if (file_info) {
+                                nm_log("[SYNC] Found %s in metadata: ss_id=%d (recovered=%d, backup=%d)\n", 
+                                       line, file_info->ss_id, recovered_ss_id, backup_id);
+                                if (file_info->ss_id == recovered_ss_id) {
+                                    should_sync = 1;  // Originally belonged to recovered SS
+                                } else if (file_info->ss_id == backup_id) {
+                                    should_sync = 1;  // Written to backup during failover
+                                    was_on_backup = 1;
+                                }
+                            } else {
+                                nm_log("[SYNC] File %s NOT found in metadata, skipping\n", line);
+                            }
+                        }
+                        
+                        if (!should_sync) {
+                            nm_log("[SYNC] Skipping %s (not for this SS)\n", line);
+                            line = strtok(NULL, "\n");
+                            continue;  // Skip files that don't belong to recovered SS
+                        }
+                        
+                        nm_log("[SYNC] Syncing %s...\n", line);
+                        
+                        // Get content from backup
+                        char get_cmd[BUFFER_SIZE];
+                        snprintf(get_cmd, sizeof(get_cmd), "GET_CONTENT %s\n", line);
+                        nm_log("[SYNC] Requesting: GET_CONTENT %s from SS%d\n", line, backup_id);
+                        
+                        char response[BUFFER_SIZE * 2];
+                        if (ss_send_command(backup, get_cmd, response, sizeof(response)) >= 0) {
+                            nm_log("[SYNC] Got response (length=%zu): %.50s...\n", strlen(response), response);
+                            // Parse response: "ACK:CONTENT\n<file_content>\nEOF\n"
+                            if (strncmp(response, "ACK:CONTENT\n", 12) == 0) {
+                                char* content_start = response + 12;
+                                char* eof_marker = strstr(content_start, "\nEOF\n");
+                                if (!eof_marker) {
+                                    eof_marker = strstr(content_start, "EOF\n");
+                                }
+                                
+                                if (eof_marker) {
+                                    int content_length = eof_marker - content_start;
+                                    if (content_length < 0) content_length = 0;
+                                    
+                                    nm_log("[SYNC] Parsed content length: %d bytes\n", content_length);
+                                    
+                                    // Send REPLICATE to recovered SS
+                                    char replicate_cmd[BUFFER_SIZE];
+                                    snprintf(replicate_cmd, sizeof(replicate_cmd), "REPLICATE %s %d\n", 
+                                            line, content_length);
+                                    
+                                    nm_log("[SYNC] Sending to SS%d: REPLICATE %s %d\n", recovered_ss_id, line, content_length);
+                                    
+                                    pthread_mutex_lock(&recovered->lock);
+                                    write(recovered->socket_fd, replicate_cmd, strlen(replicate_cmd));
+                                    
+                                    // Wait for ACK:READY (with PONG filter)
+                                    char ack[64];
+                                    int attempts = 0;
+                                    int got_ready = 0;
+                                    
+                                    while (attempts < 5) {
+                                        memset(ack, 0, sizeof(ack));
+                                        int n = read(recovered->socket_fd, ack, sizeof(ack) - 1);
+                                        if (n <= 0) break;
+                                        if (strncmp(ack, "PONG", 4) == 0) {
+                                            attempts++;
+                                            continue;
+                                        }
+                                        if (strncmp(ack, "ACK:READY", 9) == 0) {
+                                            got_ready = 1;
+                                            break;
+                                        }
+                                        break;
+                                    }
+                                    
+                                    if (got_ready) {
+                                        nm_log("[SYNC] Got ACK:READY, writing %d bytes to SS%d\n", content_length, recovered_ss_id);
+                                        write(recovered->socket_fd, content_start, content_length);
+                                        synced_files++;
+                                        
+                                        // If this file was on backup during failover, update metadata
+                                        if (was_on_backup && !strstr(line, ".bak")) {
+                                            FileMetadata* file_info = trie_search(nm->file_trie_root, line);
+                                            if (file_info && file_info->ss_id == backup_id) {
+                                                pthread_rwlock_wrlock(&file_info->lock);
+                                                file_info->ss_id = recovered_ss_id;
+                                                pthread_rwlock_unlock(&file_info->lock);
+                                                nm_log("[SYNC] Restored %s metadata: ss_id %d -> %d\n", 
+                                                       line, backup_id, recovered_ss_id);
+                                            }
+                                        }
+                                        
+                                        nm_log("[SYNC] Synced %s from SS%d to SS%d (%d bytes)\n", 
+                                               line, backup_id, recovered_ss_id, content_length);
+                                    } else {
+                                        nm_log("[SYNC] Failed to get ACK:READY from SS%d for %s\n", recovered_ss_id, line);
+                                    }
+                                    
+                                    pthread_mutex_unlock(&recovered->lock);
+                                } else {
+                                    nm_log("[SYNC] No EOF marker found in content for %s\n", line);
+                                }
+                            } else {
+                                nm_log("[SYNC] Invalid response for %s: %.50s\n", line, response);
+                            }
+                        } else {
+                            nm_log("[SYNC] Failed to send GET_CONTENT for %s to SS%d\n", line, backup_id);
+                        }
+                        
+                        line = strtok(NULL, "\n");
+                    }
+                }
+                
+                pthread_rwlock_unlock(&nm->trie_lock);
+                nm_log("[SS%d] SYNC complete: %d files synchronized\n", recovered_ss_id, synced_files);
+            }
+}
+
+// ======================== FILE OPERATIONS ========================
 StorageServer* ss_get_by_id(NameServer* nm, int ss_id) {
     if (!nm || ss_id < 0 || ss_id >= nm->ss_count) return NULL;
     
@@ -730,42 +877,69 @@ void replicate_file_to_backup(int primary_ss_id, const char* filename) {
     
     nm_log("[REPLICATE] File %s content length: %d bytes\n", filename, content_length);
     
-    // Now send REPLICATE command to backup SS
+    // Now send REPLICATE command to backup SS using persistent connection
     char replicate_cmd[BUFFER_SIZE];
     snprintf(replicate_cmd, sizeof(replicate_cmd), "REPLICATE %s %d\n", filename, content_length);
     
-    int backup_sock = socket(AF_INET, SOCK_STREAM, 0);
+    pthread_mutex_lock(&backup->lock);
+    int backup_sock = backup->socket_fd;
+    
     if (backup_sock < 0) {
-        nm_log("[REPLICATE] Failed to create socket for backup SS%d\n", backup_id);
-        return;
-    }
-    
-    struct sockaddr_in backup_addr;
-    backup_addr.sin_family = AF_INET;
-    backup_addr.sin_port = htons(backup->nm_port);
-    inet_pton(AF_INET, backup->ip, &backup_addr.sin_addr);
-    
-    if (connect(backup_sock, (struct sockaddr*)&backup_addr, sizeof(backup_addr)) < 0) {
-        nm_log("[REPLICATE] Failed to connect to backup SS%d\n", backup_id);
-        close(backup_sock);
+        pthread_mutex_unlock(&backup->lock);
+        nm_log("[REPLICATE] Backup SS%d socket not available\n", backup_id);
         return;
     }
     
     // Send REPLICATE command
-    write(backup_sock, replicate_cmd, strlen(replicate_cmd));
-    
-    // Wait for "ACK:READY"
-    char ack[64];
-    int n = read(backup_sock, ack, sizeof(ack) - 1);
-    if (n <= 0 || strncmp(ack, "ACK:READY", 9) != 0) {
-        nm_log("[REPLICATE] Backup SS%d not ready\n", backup_id);
-        close(backup_sock);
+    ssize_t sent = write(backup_sock, replicate_cmd, strlen(replicate_cmd));
+    if (sent <= 0) {
+        pthread_mutex_unlock(&backup->lock);
+        nm_log("[REPLICATE] Failed to send command to backup SS%d\n", backup_id);
         return;
     }
     
-    // Send file content (async - no wait for final ACK)
+    // Wait for "ACK:READY" (skip PONG responses from heartbeat)
+    char ack[64];
+    int attempts = 0;
+    int got_ready = 0;
+    
+    while (attempts < 5) {
+        memset(ack, 0, sizeof(ack));
+        int n = read(backup_sock, ack, sizeof(ack) - 1);
+        
+        if (n <= 0) {
+            pthread_mutex_unlock(&backup->lock);
+            nm_log("[REPLICATE] Backup SS%d connection lost\n", backup_id);
+            return;
+        }
+        
+        // Skip PONG responses from heartbeat
+        if (strncmp(ack, "PONG", 4) == 0) {
+            attempts++;
+            continue;
+        }
+        
+        // Check if we got ACK:READY
+        if (strncmp(ack, "ACK:READY", 9) == 0) {
+            got_ready = 1;
+            break;
+        }
+        
+        // Got unexpected response
+        pthread_mutex_unlock(&backup->lock);
+        nm_log("[REPLICATE] Backup SS%d unexpected response: %s\n", backup_id, ack);
+        return;
+    }
+    
+    if (!got_ready) {
+        pthread_mutex_unlock(&backup->lock);
+        nm_log("[REPLICATE] Backup SS%d not ready after %d attempts\n", backup_id, attempts);
+        return;
+    }
+    
+    // Send file content (fire-and-forget)
     write(backup_sock, content_start, content_length);
-    close(backup_sock);
+    pthread_mutex_unlock(&backup->lock);
     
     nm_log("[REPLICATE] Replicated %s from SS%d to SS%d (%d bytes)\n", 
            filename, primary_ss_id, backup_id, content_length);
@@ -1572,6 +1746,132 @@ static void handle_viewfolder_command(Client* client, char* foldername) {
     nm_log_operation(client->ip, client->nm_port, client->username, "VIEWFOLDER", foldername, ERR_NONE);
 }
 
+static void handle_listfolders_command(Client* client) {
+    char response[BUFFER_SIZE * 2];
+    int offset = snprintf(response, sizeof(response), "ACK:FOLDERS\n=== Virtual Folders ===\n");
+    
+    // Collect all files from trie
+    FileMetadata* all_files[1000];
+    int file_count = 0;
+    
+    pthread_rwlock_rdlock(&g_nm.trie_lock);
+    trie_collect_files(g_nm.file_trie_root, all_files, &file_count, 1000);
+    pthread_rwlock_unlock(&g_nm.trie_lock);
+    
+    // Track unique folders
+    char folders[100][MAX_FILENAME_LEN];
+    int folder_count = 0;
+    
+    for (int i = 0; i < file_count && folder_count < 100; i++) {
+        if (all_files[i]->is_folder) {
+            // Check if folder not already in list
+            int found = 0;
+            for (int j = 0; j < folder_count; j++) {
+                if (strcmp(folders[j], all_files[i]->filename) == 0) {
+                    found = 1;
+                    break;
+                }
+            }
+            if (!found) {
+                strncpy(folders[folder_count], all_files[i]->filename, MAX_FILENAME_LEN - 1);
+                folders[folder_count][MAX_FILENAME_LEN - 1] = '\0';
+                folder_count++;
+            }
+        }
+    }
+    
+    // Sort folders alphabetically (simple bubble sort)
+    for (int i = 0; i < folder_count - 1; i++) {
+        for (int j = 0; j < folder_count - i - 1; j++) {
+            if (strcmp(folders[j], folders[j + 1]) > 0) {
+                char temp[MAX_FILENAME_LEN];
+                strcpy(temp, folders[j]);
+                strcpy(folders[j], folders[j + 1]);
+                strcpy(folders[j + 1], temp);
+            }
+        }
+    }
+    
+    // Add folders to response with hierarchy
+    if (folder_count == 0) {
+        offset += snprintf(response + offset, sizeof(response) - offset, 
+                          "No folders created yet.\n");
+    } else {
+        for (int i = 0; i < folder_count && offset < sizeof(response) - 100; i++) {
+            // Calculate depth (number of slashes in path)
+            int depth = 0;
+            for (const char* p = folders[i]; *p; p++) {
+                if (*p == '/') depth++;
+            }
+            
+            // Count direct files in this folder (not in subfolders)
+            int direct_files = 0;
+            size_t folder_len = strlen(folders[i]);
+            
+            for (int j = 0; j < file_count; j++) {
+                if (!all_files[j]->is_folder && 
+                    strncmp(all_files[j]->filename, folders[i], folder_len) == 0 &&
+                    all_files[j]->filename[folder_len] == '/') {
+                    
+                    // Check if file is directly in this folder (no more slashes after folder/)
+                    const char* after_folder = all_files[j]->filename + folder_len + 1;
+                    if (strchr(after_folder, '/') == NULL) {
+                        direct_files++;
+                    }
+                }
+            }
+            
+            // Count subfolders
+            int subfolders = 0;
+            for (int j = 0; j < folder_count; j++) {
+                if (i != j && strncmp(folders[j], folders[i], folder_len) == 0 &&
+                    folders[j][folder_len] == '/') {
+                    // Check if it's a direct subfolder (no more slashes after parent/)
+                    const char* after_parent = folders[j] + folder_len + 1;
+                    if (strchr(after_parent, '/') == NULL) {
+                        subfolders++;
+                    }
+                }
+            }
+            
+            // Add indentation based on depth
+            for (int d = 0; d < depth; d++) {
+                offset += snprintf(response + offset, sizeof(response) - offset, "  ");
+            }
+            
+            // Extract folder name (last component)
+            const char* folder_name = strrchr(folders[i], '/');
+            folder_name = folder_name ? folder_name + 1 : folders[i];
+            
+            // Format: indented icon name (files) [subfolders]
+            offset += snprintf(response + offset, sizeof(response) - offset, "📁 %s", folder_name);
+            
+            if (direct_files > 0 || subfolders > 0) {
+                offset += snprintf(response + offset, sizeof(response) - offset, " (");
+                if (direct_files > 0) {
+                    offset += snprintf(response + offset, sizeof(response) - offset, "%d file%s", 
+                                      direct_files, direct_files > 1 ? "s" : "");
+                }
+                if (direct_files > 0 && subfolders > 0) {
+                    offset += snprintf(response + offset, sizeof(response) - offset, ", ");
+                }
+                if (subfolders > 0) {
+                    offset += snprintf(response + offset, sizeof(response) - offset, "%d subfolder%s", 
+                                      subfolders, subfolders > 1 ? "s" : "");
+                }
+                offset += snprintf(response + offset, sizeof(response) - offset, ")");
+            }
+            
+            offset += snprintf(response + offset, sizeof(response) - offset, "\n");
+        }
+        offset += snprintf(response + offset, sizeof(response) - offset, 
+                          "\nTotal: %d folder(s)\n", folder_count);
+    }
+    
+    write(client->socket_fd, response, offset);
+    nm_log("[Folder] Listed %d folders for user %s\n", folder_count, client->username);
+}
+
 // Helper to collect all files from trie (recursive)
 static void trie_collect_files(TrieNode* node, FileMetadata** files, int* count, int max_count) {
     if (!node || *count >= max_count) return;
@@ -2027,6 +2327,7 @@ void* handle_client_connection(void* arg) {
         else if (strcmp(command, "CREATEFOLDER") == 0) handle_createfolder_command(client, args);
         else if (strcmp(command, "MOVE") == 0) handle_move_command(client, args);
         else if (strcmp(command, "VIEWFOLDER") == 0) handle_viewfolder_command(client, args);
+        else if (strcmp(command, "LISTFOLDERS") == 0) handle_listfolders_command(client);
         // Bonus feature: Checkpoints [15]
         else if (strcmp(command, "CHECKPOINT") == 0) handle_checkpoint_command(client, args);
         else if (strcmp(command, "VIEWCHECKPOINT") == 0) handle_viewcheckpoint_command(client, args);
@@ -2083,16 +2384,30 @@ void* handle_ss_connection(void* arg) {
     }
     int ss_id = ss_register(&g_nm, ip, nm_port, client_port, 
                             file_list_start ? file_list_start : "", ss_socket);
+    
+    int is_recovery = 0;
     if (ss_id < 0) {
-        send_error(ss_socket, ERR_UNKNOWN, "Failed to register SS");
-        close(ss_socket);
-        return NULL;
+        // Negative value means recovery - decode the real SS ID
+        ss_id = -(ss_id + 1);
+        if (ss_id >= 0 && ss_id < g_nm.ss_count) {
+            is_recovery = 1;
+        } else {
+            send_error(ss_socket, ERR_UNKNOWN, "Failed to register SS");
+            close(ss_socket);
+            return NULL;
+        }
     }
     
     // Send SS_ID in registration response so SS knows its ID for replication
     char response[64];
     snprintf(response, sizeof(response), "ACK:SS_REGISTRATION_OK %d\n", ss_id);
     write(ss_socket, response, strlen(response));
+    
+    // If this was a recovery, trigger SYNC AFTER sending ACK
+    if (is_recovery) {
+        sleep(1);  // Give SS time to set up its NM handler thread
+        ss_sync_from_backup(&g_nm, ss_id);
+    }
     
     nm_log("[SS%d] Registration complete, connection maintained for heartbeat\n", ss_id);
     

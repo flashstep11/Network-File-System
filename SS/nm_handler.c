@@ -89,9 +89,13 @@ void handle_create_command(int nm_socket, char* buffer) {
         return;
     }
 
-    // Build full path in storage_root
+    // Extract base filename for virtual folder support
+    char base_filename[256];
+    get_base_filename(base_filename, sizeof(base_filename), filename);
+
+    // Build full path in storage_root (flat structure)
     char full_path[512];
-    get_full_path(full_path, sizeof(full_path), filename);
+    get_full_path(full_path, sizeof(full_path), base_filename);
 
     // 2. --- CHECK FOR EXISTENCE ---
     FILE *existing_file = fopen(full_path, "r");
@@ -187,21 +191,34 @@ void handle_move_command(int nm_socket, char* buffer) {
     }
 
     // 2. Build full paths
-    char source_full_path[512], dest_full_path[512];
-    get_full_path(source_full_path, sizeof(source_full_path), source);
-    get_full_path(dest_full_path, sizeof(dest_full_path), dest);
-
-    // 3. Create destination directory if needed
-    char dest_dir[512];
-    strncpy(dest_dir, dest_full_path, sizeof(dest_dir));
-    char* last_slash = strrchr(dest_dir, '/');
-    if (last_slash) {
-        *last_slash = '\0';
-        // Create directory recursively
-        char cmd[1024];
-        snprintf(cmd, sizeof(cmd), "mkdir -p \"%s\"", dest_dir);
-        system(cmd);
+    // For virtual folders: extract just the base filename from both source and dest
+    // Files are stored flat in storage_root with their base name only
+    char source_basename[256], dest_basename[256];
+    
+    // Extract base filename from source (everything after last '/')
+    char* source_slash = strrchr(source, '/');
+    if (source_slash) {
+        strncpy(source_basename, source_slash + 1, sizeof(source_basename) - 1);
+    } else {
+        strncpy(source_basename, source, sizeof(source_basename) - 1);
     }
+    source_basename[sizeof(source_basename) - 1] = '\0';
+    
+    // Extract base filename from dest (everything after last '/')
+    char* dest_slash = strrchr(dest, '/');
+    if (dest_slash) {
+        strncpy(dest_basename, dest_slash + 1, sizeof(dest_basename) - 1);
+    } else {
+        strncpy(dest_basename, dest, sizeof(dest_basename) - 1);
+    }
+    dest_basename[sizeof(dest_basename) - 1] = '\0';
+    
+    // Build full paths using only base filenames (no directory structure)
+    char source_full_path[512], dest_full_path[512];
+    get_full_path(source_full_path, sizeof(source_full_path), source_basename);
+    get_full_path(dest_full_path, sizeof(dest_full_path), dest_basename);
+
+    // No need to create directories - files are stored flat!
 
     // 4. Check if source exists
     if (access(source_full_path, F_OK) != 0) {
@@ -446,11 +463,12 @@ void handle_sync_command(int nm_socket, char* buffer) {
         // Read file content
         long fsize = 0;
         char* content = read_file_to_string(filepath, &fsize);
-        if (!content || fsize == 0) {
-            logger("[NM-Thread] Skipping empty/unreadable file: %s\n", dir->d_name);
-            free(content);
+        if (!content) {
+            logger("[NM-Thread] Skipping unreadable file: %s\n", dir->d_name);
             continue;
         }
+        
+        // Allow empty files (fsize can be 0)
         
         // Connect to target SS
         int target_sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -479,12 +497,15 @@ void handle_sync_command(int nm_socket, char* buffer) {
         
         // Wait for ACK:READY
         char ack[64];
+        memset(ack, 0, sizeof(ack));
         int n = read(target_sock, ack, sizeof(ack) - 1);
         if (n > 0 && strncmp(ack, "ACK:READY", 9) == 0) {
             // Send content
             write(target_sock, content, fsize);
             logger("[NM-Thread] SYNC sent file: %s (%ld bytes)\n", dir->d_name, fsize);
             file_count++;
+        } else {
+            logger("[NM-Thread] SYNC failed for %s: got '%s' (n=%d)\n", dir->d_name, n > 0 ? ack : "nothing", n);
         }
         
         close(target_sock);
@@ -538,6 +559,31 @@ void *handle_nm_commands(void *arg) {
         }
         else if (strncmp(buffer, "REPLICATE", 9) == 0) {
             handle_replicate_command(nm_socket, buffer);
+        }
+        else if (strncmp(buffer, "LIST_FILES", 10) == 0) {
+            // List all files in storage_root (including .bak files)
+            DIR *d = opendir(STORAGE_ROOT);
+            if (!d) {
+                char *err = "ERR:500:CANNOT_ACCESS_STORAGE\n";
+                write(nm_socket, err, strlen(err));
+            } else {
+                char response[BUFFER_SIZE * 2];
+                int offset = snprintf(response, sizeof(response), "ACK:FILES\n");
+                
+                struct dirent *dir;
+                while ((dir = readdir(d)) != NULL && offset < sizeof(response) - 100) {
+                    // Skip only directories and special files (include .bak files!)
+                    if (dir->d_type == DT_DIR || strcmp(dir->d_name, ".") == 0 || 
+                        strcmp(dir->d_name, "..") == 0) {
+                        continue;
+                    }
+                    offset += snprintf(response + offset, sizeof(response) - offset, "%s\n", dir->d_name);
+                }
+                
+                closedir(d);
+                write(nm_socket, response, offset);
+                logger("[NM-Thread] LIST_FILES: Sent list of files (including .bak)\n");
+            }
         }
         else if (strncmp(buffer, "PING", 4) == 0) {
             // Heartbeat - respond with PONG immediately

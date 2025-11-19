@@ -28,6 +28,18 @@ static inline void get_full_path(char *dest, size_t dest_size, const char *filen
     snprintf(dest, dest_size, "%s%s", STORAGE_ROOT, filename);
 }
 
+// Helper to extract base filename (for virtual folder support)
+// Extracts just the filename from a path like "folder/subfolder/file.txt" -> "file.txt"
+static inline void get_base_filename(char *dest, size_t dest_size, const char *path) {
+    const char* last_slash = strrchr(path, '/');
+    if (last_slash) {
+        strncpy(dest, last_slash + 1, dest_size - 1);
+    } else {
+        strncpy(dest, path, dest_size - 1);
+    }
+    dest[dest_size - 1] = '\0';
+}
+
 // --- NEW LOCKING STRUCTURES ---
 
 // A node representing ONE locked sentence
