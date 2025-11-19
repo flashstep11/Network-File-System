@@ -454,6 +454,46 @@ int acl_remove_access(FileMetadata* file_info, const char* username) {
 int ss_register(NameServer* nm, const char* ip, int nm_port, int client_port, 
                 const char* file_list, int socket_fd) {
     if (!nm || !ip) return -1;
+    
+    // Check if this SS is reconnecting (recovery scenario)
+    pthread_rwlock_wrlock(&nm->ss_lock);
+    int recovered_ss_id = -1;
+    for (int i = 0; i < nm->ss_count; i++) {
+        if (strcmp(nm->storage_servers[i].ip, ip) == 0 && 
+            nm->storage_servers[i].nm_port == nm_port &&
+            !nm->storage_servers[i].is_active) {
+            // This is a recovery - reactivate existing SS
+            recovered_ss_id = i;
+            nm->storage_servers[i].is_active = 1;
+            nm->storage_servers[i].socket_fd = socket_fd;
+            nm->storage_servers[i].last_heartbeat = time(NULL);
+            pthread_rwlock_unlock(&nm->ss_lock);
+            nm_log("[SS%d] RECOVERY detected - SS reconnected\n", i);
+            
+            // Trigger sync from backup
+            int backup_id = nm->storage_servers[i].backup_ss_id;
+            if (backup_id >= 0 && backup_id < nm->ss_count && nm->storage_servers[backup_id].is_active) {
+                nm_log("[SS%d] Triggering SYNC from backup SS%d\n", i, backup_id);
+                
+                // Send SYNC command to backup SS
+                StorageServer* backup = &nm->storage_servers[backup_id];
+                char sync_cmd[256];
+                snprintf(sync_cmd, sizeof(sync_cmd), "SYNC %s %d\n", ip, nm_port);
+                
+                char sync_response[256];
+                if (ss_send_command(backup, sync_cmd, sync_response, sizeof(sync_response)) >= 0) {
+                    nm_log("[SS%d] SYNC complete: %s\n", i, sync_response);
+                } else {
+                    nm_log("[SS%d] SYNC failed from backup SS%d\n", i, backup_id);
+                }
+            }
+            
+            return i;
+        }
+    }
+    pthread_rwlock_unlock(&nm->ss_lock);
+    
+    // Not a recovery - register as new SS
     pthread_rwlock_wrlock(&nm->ss_lock);
     if (nm->ss_count >= MAX_STORAGE_SERVERS) {
         pthread_rwlock_unlock(&nm->ss_lock);
@@ -529,10 +569,30 @@ int ss_register(NameServer* nm, const char* ip, int nm_port, int client_port,
 
 StorageServer* ss_get_by_id(NameServer* nm, int ss_id) {
     if (!nm || ss_id < 0 || ss_id >= nm->ss_count) return NULL;
+    
     pthread_rwlock_rdlock(&nm->ss_lock);
     StorageServer* ss = &nm->storage_servers[ss_id];
+    
+    // Check if primary SS is active
+    if (ss->is_active) {
+        pthread_rwlock_unlock(&nm->ss_lock);
+        return ss;
+    }
+    
+    // Primary SS is down - try failover to backup
+    int backup_id = ss->backup_ss_id;
+    if (backup_id >= 0 && backup_id < nm->ss_count) {
+        StorageServer* backup = &nm->storage_servers[backup_id];
+        if (backup->is_active) {
+            pthread_rwlock_unlock(&nm->ss_lock);
+            nm_log("[FAILOVER] SS%d is down, using backup SS%d\n", ss_id, backup_id);
+            return backup;
+        }
+    }
+    
     pthread_rwlock_unlock(&nm->ss_lock);
-    return ss->is_active ? ss : NULL;
+    nm_log("[FAILOVER] SS%d is down and no active backup available\n", ss_id);
+    return NULL;
 }
 
 StorageServer* ss_get_for_file(NameServer* nm, const char* filename) {
@@ -577,14 +637,29 @@ int ss_send_command(StorageServer* ss, const char* command, char* response, int 
     
     if (response && response_size > 0) {
         memset(response, 0, response_size);
-        ssize_t received = read(sock_fd, response, response_size - 1);
-        if (received <= 0) {
-            pthread_mutex_lock(&ss->lock);
-            ss->is_active = 0;
-            pthread_mutex_unlock(&ss->lock);
-            return -1;
+        
+        // Read response, skipping any PONG messages from heartbeat
+        int attempts = 0;
+        while (attempts < 5) {  // Max 5 attempts to skip PONGs
+            ssize_t received = read(sock_fd, response, response_size - 1);
+            if (received <= 0) {
+                pthread_mutex_lock(&ss->lock);
+                ss->is_active = 0;
+                pthread_mutex_unlock(&ss->lock);
+                return -1;
+            }
+            response[received] = '\0';
+            
+            // Skip PONG responses from heartbeat
+            if (strncmp(response, "PONG", 4) == 0) {
+                memset(response, 0, response_size);
+                attempts++;
+                continue;  // Read again
+            }
+            
+            // Got real response, break
+            break;
         }
-        response[received] = '\0';
     }
     
     pthread_mutex_lock(&ss->lock);
@@ -635,18 +710,25 @@ void replicate_file_to_backup(int primary_ss_id, const char* filename) {
     
     // Parse response: "ACK:CONTENT\n<file_content>\nEOF\n"
     if (strncmp(response, "ACK:CONTENT\n", 12) != 0) {
-        nm_log("[REPLICATE] Invalid response from SS%d for %s\n", primary_ss_id, filename);
+        nm_log("[REPLICATE] Invalid response from SS%d for %s: %s\n", primary_ss_id, filename, response);
         return;
     }
     
     char* content_start = response + 12;
     char* eof_marker = strstr(content_start, "\nEOF\n");
     if (!eof_marker) {
-        nm_log("[REPLICATE] No EOF marker in response from SS%d\n", primary_ss_id);
-        return;
+        // Try without leading newline for empty files
+        eof_marker = strstr(content_start, "EOF\n");
+        if (!eof_marker) {
+            nm_log("[REPLICATE] No EOF marker in response from SS%d\n", primary_ss_id);
+            return;
+        }
     }
     
     int content_length = eof_marker - content_start;
+    if (content_length < 0) content_length = 0;  // Handle empty files
+    
+    nm_log("[REPLICATE] File %s content length: %d bytes\n", filename, content_length);
     
     // Now send REPLICATE command to backup SS
     char replicate_cmd[BUFFER_SIZE];
@@ -2012,23 +2094,63 @@ void* handle_ss_connection(void* arg) {
     snprintf(response, sizeof(response), "ACK:SS_REGISTRATION_OK %d\n", ss_id);
     write(ss_socket, response, strlen(response));
     
-    char heartbeat[16];
-    while (1) {
-        struct timeval tv;
-        tv.tv_sec = 30;
-        tv.tv_usec = 0;
-        setsockopt(ss_socket, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-        ssize_t n = read(ss_socket, heartbeat, sizeof(heartbeat));
-        if (n <= 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                StorageServer* ss = ss_get_by_id(&g_nm, ss_id);
-                if (ss && ss->is_active) continue;
+    nm_log("[SS%d] Registration complete, connection maintained for heartbeat\n", ss_id);
+    
+    // This thread now just sleeps and keeps the connection alive
+    // The heartbeat_monitor thread will detect if SS becomes unresponsive
+    // The SS's handle_nm_commands thread reads from this socket on the SS side
+    while (g_nm.running && g_nm.storage_servers[ss_id].is_active) {
+        sleep(10);  // Just keep thread alive
+    }
+    
+    nm_log("[SS%d] Connection handler exiting\n", ss_id);
+    close(ss_socket);
+    return NULL;
+}
+
+// ======================== HEARTBEAT MONITORING ========================
+
+void* heartbeat_monitor(void* arg) {
+    NameServer* nm = (NameServer*)arg;
+    nm_log("[HEARTBEAT] Monitoring thread started\n");
+    
+    while (nm->running) {
+        sleep(5);  // Check every 5 seconds
+        
+        pthread_rwlock_rdlock(&nm->ss_lock);
+        int ss_count = nm->ss_count;
+        pthread_rwlock_unlock(&nm->ss_lock);
+        
+        for (int i = 0; i < ss_count; i++) {
+            pthread_rwlock_rdlock(&nm->ss_lock);
+            StorageServer* ss = &nm->storage_servers[i];
+            int is_active = ss->is_active;
+            int socket_fd = ss->socket_fd;
+            pthread_rwlock_unlock(&nm->ss_lock);
+            
+            if (!is_active) continue;
+            
+            // Send PING to keep connection alive and detect failures
+            // The SS will read and respond with PONG on its side
+            char ping_msg[] = "PING\n";
+            ssize_t sent = send(socket_fd, ping_msg, strlen(ping_msg), MSG_NOSIGNAL);
+            
+            if (sent < 0) {
+                // Connection failed - mark as inactive
+                if (errno == EPIPE || errno == ECONNRESET || errno == ENOTCONN) {
+                    pthread_mutex_lock(&ss->lock);
+                    ss->is_active = 0;
+                    pthread_mutex_unlock(&ss->lock);
+                    nm_log("[HEARTBEAT] SS%d connection broken: %s\n", i, strerror(errno));
+                } else {
+                    // Temporary error, log but don't mark as failed
+                    nm_log("[HEARTBEAT] SS%d send warning: %s\n", i, strerror(errno));
+                }
             }
-            break;
         }
     }
-    ss_mark_inactive(&g_nm, ss_id);
-    close(ss_socket);
+    
+    nm_log("[HEARTBEAT] Monitoring thread stopped\n");
     return NULL;
 }
 
@@ -2123,6 +2245,16 @@ int main(int argc, char* argv[]) {
     nm_log("Name Server listening on port %d\n", NM_PORT);
     printf("Name Server is ONLINE on port %d\n", NM_PORT);
     printf("Waiting for Storage Servers and Clients...\n\n");
+    
+    // Start heartbeat monitoring thread
+    pthread_t heartbeat_thread;
+    if (pthread_create(&heartbeat_thread, NULL, heartbeat_monitor, &g_nm) != 0) {
+        perror("Failed to create heartbeat thread");
+        exit(EXIT_FAILURE);
+    }
+    pthread_detach(heartbeat_thread);
+    nm_log("[HEARTBEAT] Monitoring thread launched\n");
+    
     while (g_nm.running) {
         struct sockaddr_in client_addr;
         socklen_t client_len = sizeof(client_addr);

@@ -11,6 +11,9 @@
 // Global Instances
 SentenceLockManager* g_sentence_lock_manager;
 
+// Dynamic storage root path (set based on port)
+char STORAGE_ROOT[64] = "storage_root/";
+
 // SS identity for replication notifications
 int g_ss_id = -1;
 char g_nm_ip[32] = NM_IP;
@@ -537,6 +540,13 @@ int main(int argc, char *argv[]) {
     int my_port = atoi(argv[1]);
     logger_init("storage_server.log");
     
+    // Set storage root based on port to maintain separate directories
+    snprintf(STORAGE_ROOT, sizeof(STORAGE_ROOT), "storage_root_%d/", my_port);
+    logger("Storage root set to: %s\n", STORAGE_ROOT);
+    
+    // Create the storage directory if it doesn't exist
+    mkdir(STORAGE_ROOT, 0755);
+    
     // CRITICAL: Initialize lock systems FIRST
     init_lock_systems();
     
@@ -574,7 +584,7 @@ int main(int argc, char *argv[]) {
     // Now, scan the storage_root directory for files
     DIR *d;
     struct dirent *dir;
-    d = opendir("storage_root"); // Look in storage_root folder
+    d = opendir(STORAGE_ROOT); // Look in our dedicated storage folder
     if (d) {
         while ((dir = readdir(d)) != NULL) {
             // Check if it's a regular file (not a directory)

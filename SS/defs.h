@@ -19,7 +19,9 @@
 #define NM_PORT 8080
 #define BUFFER_SIZE 4096 // Increased for larger files
 #define MAX_CLIENTS 10
-#define STORAGE_ROOT "storage_root/"
+
+// Dynamic storage root - set per SS instance
+extern char STORAGE_ROOT[64];
 
 // Helper to get full path
 static inline void get_full_path(char *dest, size_t dest_size, const char *filename) {

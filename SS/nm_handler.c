@@ -380,6 +380,102 @@ void handle_replicate_command(int nm_socket, char* buffer) {
     // No acknowledgment sent - fire and forget!
 }
 
+void handle_sync_command(int nm_socket, char* buffer) {
+    char target_ss_ip[32];
+    int target_ss_port;
+    
+    // Parse: "SYNC <target_ss_ip> <target_ss_port>\n"
+    if (sscanf(buffer, "SYNC %31s %d", target_ss_ip, &target_ss_port) != 2) {
+        char *err = "ERR:400:BAD_SYNC_COMMAND\n";
+        logger("[NM-Thread] Failed to parse SYNC command.\n");
+        write(nm_socket, err, strlen(err));
+        return;
+    }
+    
+    logger("[NM-Thread] SYNC: Sending all files to %s:%d\n", target_ss_ip, target_ss_port);
+    
+    // Scan storage_root directory and send all files
+    DIR *d = opendir(STORAGE_ROOT);
+    if (!d) {
+        char *err = "ERR:500:CANNOT_ACCESS_STORAGE\n";
+        write(nm_socket, err, strlen(err));
+        return;
+    }
+    
+    struct dirent *dir;
+    int file_count = 0;
+    
+    while ((dir = readdir(d)) != NULL) {
+        // Skip directories and special files
+        if (dir->d_type == DT_DIR || strcmp(dir->d_name, ".") == 0 || strcmp(dir->d_name, "..") == 0) {
+            continue;
+        }
+        
+        // Skip backup files
+        if (strstr(dir->d_name, ".bak") != NULL) {
+            continue;
+        }
+        
+        char filepath[512];
+        get_full_path(filepath, sizeof(filepath), dir->d_name);
+        
+        // Read file content
+        long fsize = 0;
+        char* content = read_file_to_string(filepath, &fsize);
+        if (!content || fsize == 0) {
+            logger("[NM-Thread] Skipping empty/unreadable file: %s\n", dir->d_name);
+            free(content);
+            continue;
+        }
+        
+        // Connect to target SS
+        int target_sock = socket(AF_INET, SOCK_STREAM, 0);
+        if (target_sock < 0) {
+            logger("[NM-Thread] Failed to create socket for SYNC\n");
+            free(content);
+            continue;
+        }
+        
+        struct sockaddr_in target_addr;
+        target_addr.sin_family = AF_INET;
+        target_addr.sin_port = htons(target_ss_port);
+        inet_pton(AF_INET, target_ss_ip, &target_addr.sin_addr);
+        
+        if (connect(target_sock, (struct sockaddr*)&target_addr, sizeof(target_addr)) < 0) {
+            logger("[NM-Thread] Failed to connect to target SS for SYNC\n");
+            close(target_sock);
+            free(content);
+            continue;
+        }
+        
+        // Send REPLICATE command
+        char replicate_cmd[BUFFER_SIZE];
+        snprintf(replicate_cmd, sizeof(replicate_cmd), "REPLICATE %s %ld\n", dir->d_name, fsize);
+        write(target_sock, replicate_cmd, strlen(replicate_cmd));
+        
+        // Wait for ACK:READY
+        char ack[64];
+        int n = read(target_sock, ack, sizeof(ack) - 1);
+        if (n > 0 && strncmp(ack, "ACK:READY", 9) == 0) {
+            // Send content
+            write(target_sock, content, fsize);
+            logger("[NM-Thread] SYNC sent file: %s (%ld bytes)\n", dir->d_name, fsize);
+            file_count++;
+        }
+        
+        close(target_sock);
+        free(content);
+    }
+    
+    closedir(d);
+    
+    // Send success response
+    char response[256];
+    snprintf(response, sizeof(response), "ACK:SYNC_COMPLETE %d files synchronized\n", file_count);
+    write(nm_socket, response, strlen(response));
+    logger("[NM-Thread] SYNC complete: %d files sent\n", file_count);
+}
+
 void *handle_nm_commands(void *arg) {
     int nm_socket = *(int *)arg;
     free(arg);
@@ -418,6 +514,14 @@ void *handle_nm_commands(void *arg) {
         }
         else if (strncmp(buffer, "REPLICATE", 9) == 0) {
             handle_replicate_command(nm_socket, buffer);
+        }
+        else if (strncmp(buffer, "PING", 4) == 0) {
+            // Heartbeat - respond with PONG immediately
+            char *pong = "PONG\n";
+            write(nm_socket, pong, strlen(pong));
+        }
+        else if (strncmp(buffer, "SYNC", 4) == 0) {
+            handle_sync_command(nm_socket, buffer);
         }
         else {
             // Unknown command

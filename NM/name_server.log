@@ -1,18 +1,50 @@
-[2025-11-18 19:44:21] 
-========== NAME SERVER STARTED: Tue Nov 18 19:44:21 2025 ==========
-[2025-11-18 19:44:21] Name Server initialized successfully
-[2025-11-18 19:44:21] [PERSIST] No metadata file found (first run or empty system)
-[2025-11-18 19:44:21] Name Server listening on port 8080
-[2025-11-18 19:44:23] [CONNECT] New connection from 127.0.0.1:55960
-[2025-11-18 19:44:23] [SS0] Registered 127.0.0.1 (NM=9001, Client=9001)
-[2025-11-18 19:44:33] [CONNECT] New connection from 127.0.0.1:37702
-[2025-11-18 19:44:33] [CLIENT] vik @ 127.0.0.1:5599 registered
-[2025-11-18 19:44:42] [OP] User=vik IP=127.0.0.1:5599 Op=VIEW Details= Status=SUCCESS
-[2025-11-18 19:44:54] [LoadBalance] Created file 1.txt on SS0 (now has 1 files)
-[2025-11-18 19:44:54] [OP] User=vik IP=127.0.0.1:5599 Op=CREATE Details=1.txt Status=SUCCESS
-[2025-11-18 19:44:54] [PERSIST] Saved 1 files and 0 access requests to nm_metadata.dat
-[2025-11-18 19:45:02] [OP] User=vik IP=127.0.0.1:5599 Op=WRITE Details=1.txt Status=SUCCESS
-[2025-11-18 19:45:02] [CONNECT] New connection from 127.0.0.1:55844
-[2025-11-18 19:45:02] [CHECK_ACCESS] IP=127.0.0.1 File=1.txt Mode=WRITE
-[2025-11-18 19:45:02] [CHECK_ACCESS] Granted WRITE access to 1.txt for vik (IP: 127.0.0.1)
-[2025-11-18 19:45:12] [CLIENT] vik disconnected
+[2025-11-18 22:14:22] 
+========== NAME SERVER STARTED: Tue Nov 18 22:14:22 2025 ==========
+[2025-11-18 22:14:22] Name Server initialized successfully
+[2025-11-18 22:14:22] [PERSIST] No metadata file found (first run or empty system)
+[2025-11-18 22:14:22] Name Server listening on port 8080
+[2025-11-18 22:14:22] [HEARTBEAT] Monitoring thread launched
+[2025-11-18 22:14:22] [HEARTBEAT] Monitoring thread started
+[2025-11-18 22:14:26] [CONNECT] New connection from 127.0.0.1:54818
+[2025-11-18 22:14:26] [SS0] Registered 127.0.0.1 (NM=9001, Client=9001)
+[2025-11-18 22:14:26] [SS0] Registration complete, connection maintained for heartbeat
+[2025-11-18 22:14:31] [CONNECT] New connection from 127.0.0.1:48696
+[2025-11-18 22:14:31] [SS1] Paired with backup buddy SS0
+[2025-11-18 22:14:31] [SS1] Registered 127.0.0.1 (NM=9002, Client=9002)
+[2025-11-18 22:14:31] [SS1] Registration complete, connection maintained for heartbeat
+[2025-11-18 22:14:38] [CONNECT] New connection from 127.0.0.1:48698
+[2025-11-18 22:14:38] [CLIENT] vik @ 127.0.0.1:5128 registered
+[2025-11-18 22:14:54] [CONNECT] New connection from 127.0.0.1:35922
+[2025-11-18 22:14:54] [CLIENT] hav @ 127.0.0.1:5139 registered
+[2025-11-18 22:15:05] [LoadBalance] Created file 2.txt on SS0 (now has 1 files)
+[2025-11-18 22:15:05] [OP] User=hav IP=127.0.0.1:5139 Op=CREATE Details=2.txt Status=SUCCESS
+[2025-11-18 22:15:05] [REPLICATE] Invalid response from SS0 for 2.txt
+[2025-11-18 22:15:05] [PERSIST] Saved 1 files and 0 access requests to nm_metadata.dat
+[2025-11-18 22:19:04] 
+========== NAME SERVER STARTED: Tue Nov 18 22:19:04 2025 ==========
+[2025-11-18 22:19:04] Name Server initialized successfully
+[2025-11-18 22:19:04] [PERSIST] Loading 1 files from metadata...
+[2025-11-18 22:19:04] [PERSIST] Loaded: 2.txt (owner=hav, ss_id=0)
+[2025-11-18 22:19:04] [PERSIST] Loading 0 access requests...
+[2025-11-18 22:19:04] [PERSIST] Loaded 0 access requests
+[2025-11-18 22:19:04] [PERSIST] Successfully loaded 1/1 files and 0 requests
+[2025-11-18 22:19:04] Name Server listening on port 8080
+[2025-11-18 22:19:04] [HEARTBEAT] Monitoring thread launched
+[2025-11-18 22:19:04] [HEARTBEAT] Monitoring thread started
+[2025-11-18 22:19:07] [CONNECT] New connection from 127.0.0.1:43848
+[2025-11-18 22:19:07] [SS0] Registered 127.0.0.1 (NM=9002, Client=9002)
+[2025-11-18 22:19:07] [SS0] Registration complete, connection maintained for heartbeat
+[2025-11-18 22:19:09] [CONNECT] New connection from 127.0.0.1:43258
+[2025-11-18 22:19:09] [SS1] Paired with backup buddy SS0
+[2025-11-18 22:19:09] [SS1] Registered 127.0.0.1 (NM=9001, Client=9001)
+[2025-11-18 22:19:09] [SS1] Registration complete, connection maintained for heartbeat
+[2025-11-18 22:19:16] [CONNECT] New connection from 127.0.0.1:43266
+[2025-11-18 22:19:16] [CLIENT] vik @ 127.0.0.1:5261 registered
+[2025-11-18 22:19:21] [SENT ERROR] Code=400 Msg=Unknown command
+[2025-11-18 22:19:39] [CONNECT] New connection from 127.0.0.1:49028
+[2025-11-18 22:19:39] [CLIENT] hav @ 127.0.0.1:5275 registered
+[2025-11-18 22:19:43] [LoadBalance] Created file 3.txt on SS0 (now has 1 files)
+[2025-11-18 22:19:43] [OP] User=hav IP=127.0.0.1:5275 Op=CREATE Details=3.txt Status=SUCCESS
+[2025-11-18 22:19:43] [REPLICATE] Invalid response from SS0 for 3.txt: ACK:CREATE_OK
+
+[2025-11-18 22:19:43] [PERSIST] Saved 2 files and 0 access requests to nm_metadata.dat

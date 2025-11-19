@@ -1,37 +1,313 @@
-[2025-11-18 19:44:23] 
---- LOGGING STARTED: Tue Nov 18 19:44:23 2025 ---
-[2025-11-18 19:44:23] Checkpoint system initialized.
-[2025-11-18 19:44:23] Lock systems and checkpoints initialized.
-[2025-11-18 19:44:23] Storage Server (SS) starting up...
-[2025-11-18 19:44:23] Successfully connected to NM!
-[2025-11-18 19:44:23] Sending registration: REGISTER_SS 9001 9001
-[2025-11-18 19:44:23] Received from NM: ACK:SS_REGISTRATION_OK
+[2025-11-18 22:14:26] 
+--- LOGGING STARTED: Tue Nov 18 22:14:26 2025 ---
+[2025-11-18 22:14:26] Storage root set to: storage_root_9001/
+[2025-11-18 22:14:26] Checkpoint system initialized.
+[2025-11-18 22:14:26] Lock systems and checkpoints initialized.
+[2025-11-18 22:14:26] Storage Server (SS) starting up...
+[2025-11-18 22:14:26] Successfully connected to NM!
+[2025-11-18 22:14:26] Sending registration: REGISTER_SS 9001 9001
+[2025-11-18 22:14:26] Received from NM: ACK:SS_REGISTRATION_OK 0
 
-[2025-11-18 19:44:23] Registration complete. Private command line is active.
-[2025-11-18 19:44:23] [Main Thread] Starting public client server on port 9001...
-[2025-11-18 19:44:23] [NM-Thread] Command listener is running, waiting for NS commands.
-[2025-11-18 19:44:23] 
+[2025-11-18 22:14:26] Assigned SS_ID: 0
+[2025-11-18 22:14:26] Registration complete. Private command line is active.
+[2025-11-18 22:14:26] [Main Thread] Starting public client server on port 9001...
+[2025-11-18 22:14:26] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-18 22:14:26] 
 --- Storage Server is now ONLINE. Listening on port 9001 ---
 
-[2025-11-18 19:44:54] [NM-Thread] Received trusted command: CREATE 1.txt
-[2025-11-18 19:44:54] [NM-Thread] Successfully created file: 1.txt
-[2025-11-18 19:45:02] [SS-Main] New connection accepted! Spawning thread...
-[2025-11-18 19:45:02] [SS-Thread] New client connected.
-[2025-11-18 19:45:02] [SS-Thread] Received command: WRITE 1.txt 0
-[2025-11-18 19:45:02] [SS-Thread] WRITE request: 1.txt sentence 0
-[2025-11-18 19:45:02] [AccessControl] Checking WRITE permission for file 1.txt
-[2025-11-18 19:45:02] [AccessControl] Client IP: 127.0.0.1
-[2025-11-18 19:45:02] [AccessControl] Connected to NM
-[2025-11-18 19:45:02] [AccessControl] Sent query: CHECK_ACCESS 127.0.0.1 1.txt WRITE
-[2025-11-18 19:45:02] [AccessControl] Received response (8 bytes): ACK:YES
+[2025-11-18 22:14:27] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:14:31] 
+--- LOGGING STARTED: Tue Nov 18 22:14:31 2025 ---
+[2025-11-18 22:14:31] Storage root set to: storage_root_9002/
+[2025-11-18 22:14:31] Checkpoint system initialized.
+[2025-11-18 22:14:31] Lock systems and checkpoints initialized.
+[2025-11-18 22:14:31] Storage Server (SS) starting up...
+[2025-11-18 22:14:31] Successfully connected to NM!
+[2025-11-18 22:14:31] Sending registration: REGISTER_SS 9002 9002
+[2025-11-18 22:14:31] Received from NM: ACK:SS_REGISTRATION_OK 1
 
-[2025-11-18 19:45:02] [AccessControl] Access GRANTED
-[2025-11-18 19:45:02] [SS-Thread] Will create new sentence 0
-[2025-11-18 19:45:02] [SS-Thread] Sentence validation passed for sentence 0
-[2025-11-18 19:45:02] [SS-Thread] Sentence lock acquired for 1.txt sentence 0
-[2025-11-18 19:45:02] [SS-Thread] Loaded file 1.txt, size=0, data=0x5627632fdc30
-[2025-11-18 19:45:02] [SS-Thread] Backup created: storage_root/1.txt.bak
-[2025-11-18 19:45:12] [SS-Thread] Client disconnected during WRITE
-[2025-11-18 19:45:12] [SS-Thread] Sentence lock released for 1.txt sentence 0
-[2025-11-18 19:45:12] [SS-Thread] Client disconnected.
-[2025-11-18 20:13:35] [NM-Thread] Name Server disconnected! Command thread shutting down.
+[2025-11-18 22:14:31] Assigned SS_ID: 1
+[2025-11-18 22:14:31] Registration complete. Private command line is active.
+[2025-11-18 22:14:31] [Main Thread] Starting public client server on port 9002...
+[2025-11-18 22:14:31] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-18 22:14:31] 
+--- Storage Server is now ONLINE. Listening on port 9002 ---
+
+[2025-11-18 22:14:33] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:14:33] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:14:38] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:14:38] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:14:43] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:14:43] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:14:45] [NM-Thread] Received trusted command: CREATE 1.txt
+[2025-11-18 22:14:45] [NM-Thread] Successfully created file: 1.txt
+[2025-11-18 22:14:48] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:14:48] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:14:53] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:14:53] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:14:58] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:14:58] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:15:04] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:15:04] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:15:05] [NM-Thread] Received trusted command: CREATE 2.txt
+[2025-11-18 22:15:05] [NM-Thread] Successfully created file: 2.txt
+[2025-11-18 22:15:05] [NM-Thread] Received trusted command: GET_CONTENT 2.txt
+[2025-11-18 22:15:05] [NM-Thread] Sent content of 2.txt to NM (17 bytes)
+[2025-11-18 22:15:09] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:15:09] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:15:14] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:15:14] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:15:19] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:15:19] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:15:24] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:15:24] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:15:29] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:15:29] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:15:34] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:15:34] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:15:40] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:15:40] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:15:45] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:15:45] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:15:50] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:15:50] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:15:55] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:15:55] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:16:00] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:16:00] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:16:05] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:16:05] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:16:11] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:16:11] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:16:16] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:16:16] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:16:21] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:16:21] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:16:26] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:16:26] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:16:31] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:16:31] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:16:34] [NM-Thread] Name Server disconnected! Command thread shutting down.
+[2025-11-18 22:16:34] [NM-Thread] Name Server disconnected! Command thread shutting down.
+[2025-11-18 22:19:07] 
+--- LOGGING STARTED: Tue Nov 18 22:19:07 2025 ---
+[2025-11-18 22:19:07] Storage root set to: storage_root_9002/
+[2025-11-18 22:19:07] Checkpoint system initialized.
+[2025-11-18 22:19:07] Lock systems and checkpoints initialized.
+[2025-11-18 22:19:07] Storage Server (SS) starting up...
+[2025-11-18 22:19:07] Successfully connected to NM!
+[2025-11-18 22:19:07] Sending registration: REGISTER_SS 9002 9002
+[2025-11-18 22:19:07] Received from NM: ACK:SS_REGISTRATION_OK 0
+
+[2025-11-18 22:19:07] Assigned SS_ID: 0
+[2025-11-18 22:19:07] Registration complete. Private command line is active.
+[2025-11-18 22:19:07] [Main Thread] Starting public client server on port 9002...
+[2025-11-18 22:19:07] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-18 22:19:07] 
+--- Storage Server is now ONLINE. Listening on port 9002 ---
+
+[2025-11-18 22:19:09] 
+--- LOGGING STARTED: Tue Nov 18 22:19:09 2025 ---
+[2025-11-18 22:19:09] Storage root set to: storage_root_9001/
+[2025-11-18 22:19:09] Checkpoint system initialized.
+[2025-11-18 22:19:09] Lock systems and checkpoints initialized.
+[2025-11-18 22:19:09] Storage Server (SS) starting up...
+[2025-11-18 22:19:09] Successfully connected to NM!
+[2025-11-18 22:19:09] Sending registration: REGISTER_SS 9001 9001
+[2025-11-18 22:19:09] Received from NM: ACK:SS_REGISTRATION_OK 1
+
+[2025-11-18 22:19:09] Assigned SS_ID: 1
+[2025-11-18 22:19:09] Registration complete. Private command line is active.
+[2025-11-18 22:19:09] [Main Thread] Starting public client server on port 9001...
+[2025-11-18 22:19:09] [NM-Thread] Command listener is running, waiting for NS commands.
+[2025-11-18 22:19:09] 
+--- Storage Server is now ONLINE. Listening on port 9001 ---
+
+[2025-11-18 22:19:09] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:19:09] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:19:14] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:19:14] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:19:19] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:19:19] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:19:24] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:19:24] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:19:28] [NM-Thread] Received trusted command: CREATE 4.txt
+[2025-11-18 22:19:28] [NM-Thread] Successfully created file: 4.txt
+[2025-11-18 22:19:29] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:19:29] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:19:35] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:19:35] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:19:40] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:19:40] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:19:43] [NM-Thread] Received trusted command: CREATE 3.txt
+[2025-11-18 22:19:43] [NM-Thread] Successfully created file: 3.txt
+[2025-11-18 22:19:43] [NM-Thread] Received trusted command: GET_CONTENT 3.txt
+[2025-11-18 22:19:43] [NM-Thread] Sent content of 3.txt to NM (17 bytes)
+[2025-11-18 22:19:45] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:19:45] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:19:50] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:19:50] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:19:55] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:19:55] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:20:00] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:20:00] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:20:06] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:20:06] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:20:11] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:20:11] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:20:16] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:20:16] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:20:19] [NM-Thread] Received trusted command: CREATE 5.txt
+[2025-11-18 22:20:19] [NM-Thread] Successfully created file: 5.txt
+[2025-11-18 22:20:21] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:20:21] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:20:26] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:20:26] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:20:31] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:20:31] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:20:36] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:20:36] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:20:42] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:20:42] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:20:47] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:20:47] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:20:52] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:20:52] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:20:57] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:20:57] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:21:02] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:21:02] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:21:07] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:21:07] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:21:13] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:21:13] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:21:18] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:21:18] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:21:23] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:21:23] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:21:28] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:21:28] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:21:33] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:21:33] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:21:38] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:21:38] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:21:43] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:21:43] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:21:49] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:21:49] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:21:54] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:21:54] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:21:59] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:21:59] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:22:04] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:22:04] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:22:09] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:22:09] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:22:14] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:22:14] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:22:20] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:22:20] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:22:25] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:22:25] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:22:30] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:22:30] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:22:35] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:22:35] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:22:40] [NM-Thread] Received trusted command: PING
+[2025-11-18 22:22:40] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:10:20] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:10:20] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:10:25] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:10:25] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:10:30] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:10:30] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:10:35] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:10:35] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:10:40] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:10:40] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:10:45] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:10:45] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:10:50] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:10:50] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:10:55] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:10:55] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:11:00] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:11:00] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:11:05] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:11:05] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:11:10] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:11:10] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:11:16] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:11:16] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:11:21] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:11:21] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:11:26] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:11:26] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:11:31] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:11:31] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:11:36] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:11:36] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:11:41] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:11:41] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:11:46] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:11:46] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:11:52] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:11:52] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:11:57] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:11:57] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:12:02] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:12:02] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:12:07] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:12:07] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:12:12] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:12:12] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:12:17] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:12:17] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:12:23] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:12:23] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:12:28] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:12:28] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:12:33] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:12:33] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:12:38] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:12:38] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:12:43] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:12:43] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:12:48] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:12:48] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:12:53] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:12:53] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:12:58] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:12:58] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:13:03] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:13:03] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:13:08] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:13:08] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:13:13] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:13:13] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:13:18] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:13:18] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:13:23] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:13:23] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:13:29] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:13:29] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:13:34] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:13:34] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:13:39] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:13:39] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:13:44] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:13:44] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:13:49] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:13:49] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:13:54] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:13:54] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:13:59] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:13:59] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:14:05] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:14:05] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:14:10] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:14:10] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:14:15] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:14:15] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:14:20] [NM-Thread] Received trusted command: PING
+[2025-11-19 09:14:20] [NM-Thread] Received trusted command: PING
