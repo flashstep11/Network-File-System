@@ -35,6 +35,17 @@ int connect_to_nm() {
         return -1;
     }
 
+    // Set connection timeout to 5 seconds
+    struct timeval timeout;
+    timeout.tv_sec = 5;
+    timeout.tv_usec = 0;
+    if (setsockopt(nm_socket, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
+        perror("Warning: Failed to set receive timeout");
+    }
+    if (setsockopt(nm_socket, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0) {
+        perror("Warning: Failed to set send timeout");
+    }
+
     struct sockaddr_in nm_addr;
     nm_addr.sin_family = AF_INET;
     nm_addr.sin_port = htons(NM_PORT);
@@ -45,12 +56,18 @@ int connect_to_nm() {
         return -1;
     }
 
+    printf("Attempting to connect to %s:%d...\n", nm_ip, NM_PORT);
     if (connect(nm_socket, (struct sockaddr*)&nm_addr, sizeof(nm_addr)) < 0) {
         perror("Connection to NM failed");
+        printf("\nTroubleshooting:\n");
+        printf("1. Is the Name Server running? Start it with: cd NM && ./name_server\n");
+        printf("2. Check firewall settings (port %d must be open)\n", NM_PORT);
+        printf("3. If NM is on different machine, verify the IP address\n");
         close(nm_socket);
         return -1;
     }
 
+    printf("✓ Connected to Name Server!\n");
     return 0;
 }
 

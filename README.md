@@ -91,14 +91,37 @@ cd client
 ./client <NM_IP_ADDRESS>   # e.g., ./client 192.168.1.100
 ```
 
-### Remote Client Support
-- **Same Machine:** All components (NM, SS, Client) on one laptop - just use `./client`
-- **Different Machine:** Client on different laptop from NM/SS:
-  1. Find NM machine's IP address (e.g., `192.168.1.100`)
-  2. Run: `./client 192.168.1.100`
-  3. ⚠️ **Note:** Client will connect to NM successfully, but accessing Storage Servers may fail because SS registration uses `127.0.0.1` (future enhancement needed)
+### Multi-Device/Network Setup ✅
 
-**Current Limitation:** Fully distributed setup (client on separate network) requires SS to register with actual IP addresses instead of localhost.
+**Good News:** The system **already supports multi-device deployment**!
+
+**How it works:**
+1. **NM auto-detects IPs**: When SS connects to NM, NM uses `getpeername()` to detect the SS's actual IP address
+2. **Dynamic routing**: NM tells clients the real IP of each SS (not hardcoded localhost)
+3. **Client flexibility**: Client can specify NM's IP address via command line
+
+**Setup for multiple devices:**
+1. **On Machine A (NM + SS):**
+   ```bash
+   cd NM && ./name_server &           # NM runs on port 8080
+   cd SS && ./storage_server 9001 &   # SS connects to NM
+   ```
+
+2. **On Machine B (Client):**
+   ```bash
+   cd client
+   ./client 192.168.1.100             # Use Machine A's IP
+   ```
+
+3. **Requirements:**
+   - All machines on same network
+   - Firewall allows connections on required ports
+   - NM machine IP is known to clients
+
+**Current Limitation for distributed SS:**
+- If you want SS on a separate machine from NM, it works automatically! ✅
+- SS registers with its real IP via `getpeername()`
+- Clients receive the correct SS IP from NM
 
 ### Example Session
 ```
