@@ -2669,6 +2669,47 @@ int main(int argc, char* argv[]) {
             close(new_socket);
             free(socket_ptr);
             continue;
+        } else if (strncmp(peek_buf, "CHECK_ACCESS_USER", 17) == 0) {
+            // Handle CHECK_ACCESS_USER synchronously (permission check by username)
+            char buffer[512];
+            ssize_t n = read(new_socket, buffer, sizeof(buffer) - 1);
+            if (n > 0) {
+                buffer[n] = '\0';
+                
+                // Parse: CHECK_ACCESS_USER <username> <filename> <mode>
+                char check_username[MAX_USERNAME_LEN], filename[MAX_FILENAME_LEN], mode[16];
+                if (sscanf(buffer, "CHECK_ACCESS_USER %63s %255s %15s", check_username, filename, mode) == 3) {
+                    nm_log("[CHECK_ACCESS_USER] User=%s File=%s Mode=%s\n", check_username, filename, mode);
+                    
+                    // Find file
+                    FileMetadata* file_info = file_lookup(&g_nm, filename);
+                    if (!file_info) {
+                        write(new_socket, "ACK:NO File not found\n", 23);
+                        nm_log("[CHECK_ACCESS_USER] File not found: %s\n", filename);
+                    } else {
+                        // Check permissions by username directly
+                        int allowed = 0;
+                        if (strcmp(mode, "READ") == 0) {
+                            allowed = acl_check_read(file_info, check_username);
+                        } else if (strcmp(mode, "WRITE") == 0) {
+                            allowed = acl_check_write(file_info, check_username);
+                        }
+                        
+                        if (allowed) {
+                            write(new_socket, "ACK:YES\n", 8);
+                            nm_log("[CHECK_ACCESS_USER] Granted %s access to %s for user %s\n", mode, filename, check_username);
+                        } else {
+                            write(new_socket, "ACK:NO No permission\n", 21);
+                            nm_log("[CHECK_ACCESS_USER] Denied %s access to %s for user %s\n", mode, filename, check_username);
+                        }
+                    }
+                } else {
+                    write(new_socket, "ACK:NO Bad request\n", 19);
+                }
+            }
+            close(new_socket);
+            free(socket_ptr);
+            continue;
         } else if (strncmp(peek_buf, "CHECK_ACCESS", 12) == 0) {
             // Handle CHECK_ACCESS synchronously (quick query from SS)
             char buffer[512];

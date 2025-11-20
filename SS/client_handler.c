@@ -34,20 +34,8 @@ void notify_nm_write(const char* filename) {
     logger("[REPLICATE] Notified NM about write to %s\n", filename);
 }
 
-int check_permissions(int client_socket, const char *filename, const char *mode) {
-    logger("[AccessControl] Checking %s permission for file %s\n", mode, filename);
-
-    // 1. Get Client IP Address
-    struct sockaddr_in addr;
-    socklen_t addr_size = sizeof(struct sockaddr_in);
-    if (getpeername(client_socket, (struct sockaddr *)&addr, &addr_size) < 0) {
-        logger("[AccessControl] getpeername failed\n");
-        perror("getpeername failed");
-        return 0; // Fail safe
-    }
-    char client_ip[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &addr.sin_addr, client_ip, INET_ADDRSTRLEN);
-    logger("[AccessControl] Client IP: %s\n", client_ip);
+int check_permissions_by_username(const char *username, const char *filename, const char *mode) {
+    logger("[AccessControl] Checking %s permission for file %s (user: %s)\n", mode, filename, username);
 
     // 2. Connect to NM
     int nm_sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -73,9 +61,9 @@ int check_permissions(int client_socket, const char *filename, const char *mode)
 
     logger("[AccessControl] Connected to NM\n");
 
-    // 3. Send Query: CHECK_ACCESS <IP> <FILENAME> <MODE>
+    // 3. Send Query: CHECK_ACCESS_USER <USERNAME> <FILENAME> <MODE>
     char query[512];
-    sprintf(query, "CHECK_ACCESS %s %s %s\n", client_ip, filename, mode);
+    sprintf(query, "CHECK_ACCESS_USER %s %s %s\n", username, filename, mode);
     write(nm_sock, query, strlen(query));
     logger("[AccessControl] Sent query: %s", query);
 
@@ -90,25 +78,27 @@ int check_permissions(int client_socket, const char *filename, const char *mode)
         return 1; // Allowed
     }
 
-    logger("[AccessControl] Denied access to %s for %s on file %s\n", client_ip, mode, filename);
+    logger("[AccessControl] Denied access to user %s for %s on file %s\n", username, mode, filename);
     return 0; // Denied
 }
 
-void handle_read_command(int client_socket, char* buffer, const char* username) {
-    char filename[256]; // Use 256 for a standard filename buffer
+void handle_read_command(int client_socket, char* buffer, const char* unused_username) {
+    (void)unused_username; // Mark as intentionally unused
+    char username[64];
+    char filename[256];
 
     // 1. --- Parse the command ---
-    // Command format: READ <filename>\n
-    if (sscanf(buffer, "READ %255s", filename) != 1) {
+    // Command format: READ <username> <filename>\n
+    if (sscanf(buffer, "READ %63s %255s", username, filename) != 2) {
         char *err = "ERR:400:BAD_READ_COMMAND_FORMAT\n";
         write(client_socket, err, strlen(err));
-        return; // Return from this function
+        return;
     }
 
-    logger("[SS-Thread] Read request for: %s\n", filename);
+    logger("[SS-Thread] Read request for: %s (user: %s)\n", filename, username);
 
     // 2. Check permissions
-    if (!check_permissions(client_socket, filename, "READ")) {
+    if (!check_permissions_by_username(username, filename, "READ")) {
         char *err = "ERR:403:ACCESS_DENIED\n";
         write(client_socket, err, strlen(err));
         return;
@@ -138,22 +128,22 @@ void handle_read_command(int client_socket, char* buffer, const char* username) 
         write(client_socket, err, strlen(err));
     }
 }
-void handle_write_command(int client_socket, char* buffer, const char* username) {
+void handle_write_command(int client_socket, char* buffer, const char* unused_username) {
+    (void)unused_username;
+    char username[64];
     char filename[256];
     int sentence_num;
     
-    // 1. Parse - Interactive mode: WRITE <filename> <sentence_num>
-    // Client will then send multiple "<word_index> <content>" lines
-    // Note: sentence_num is 0-indexed, word_index is 1-indexed
-    if (sscanf(buffer, "WRITE %255s %d", filename, &sentence_num) != 2) {
-        write(client_socket, "ERR:400:BAD_REQUEST (Usage: WRITE <filename> <sentence_num>)\n", 61);
+    // 1. Parse - Interactive mode: WRITE <username> <filename> <sentence_num>
+    if (sscanf(buffer, "WRITE %63s %255s %d", username, filename, &sentence_num) != 3) {
+        write(client_socket, "ERR:400:BAD_REQUEST (Usage: WRITE <username> <filename> <sentence_num>)\n", 73);
         return;
     }
     
-    logger("[SS-Thread] WRITE request: %s sentence %d\n", filename, sentence_num);
+    logger("[SS-Thread] WRITE request: %s sentence %d (user: %s)\n", filename, sentence_num, username);
 
     // 2. Check permissions
-    if (!check_permissions(client_socket, filename, "WRITE")) {
+    if (!check_permissions_by_username(username, filename, "WRITE")) {
         write(client_socket, "ERR:403:ACCESS_DENIED\n", 22);
         logger("[SS-Thread] WRITE denied - no permission\n");
         return;
@@ -920,19 +910,21 @@ void handle_write_command(int client_socket, char* buffer, const char* username)
     logger("[SS-Thread] Sentence lock released for %s sentence %d\n", filename, sentence_num);
 }
 
-void handle_stream_command(int client_socket, char* buffer, const char* username) {
+void handle_stream_command(int client_socket, char* buffer, const char* unused_username) {
+    (void)unused_username;
+    char username[64];
     char filename[256];
     
     // 1. --- Parse the command ---
-    // Command format: STREAM <filename>\n
-    if (sscanf(buffer, "STREAM %255s", filename) != 1) {
+    // Command format: STREAM <username> <filename>\n
+    if (sscanf(buffer, "STREAM %63s %255s", username, filename) != 2) {
         char *err = "ERR:400:BAD_COMMAND_FORMAT\n";
         write(client_socket, err, strlen(err));
-        return; // Return from this function
+        return;
     }
     
     // Check permissions
-    if (!check_permissions(client_socket, filename, "READ")) {
+    if (!check_permissions_by_username(username, filename, "READ")) {
         char *err = "ERR:403:ACCESS_DENIED\n";
         write(client_socket, err, strlen(err));
         return;
@@ -1004,17 +996,17 @@ void handle_stream_command(int client_socket, char* buffer, const char* username
 // ============= CHECKPOINT HANDLERS =============
 
 void handle_checkpoint_command(int client_socket, char* buffer) {
-    char filename[256], tag[64];
+    char username[64], filename[256], tag[64];
     
-    if (sscanf(buffer, "CHECKPOINT %255s %63s", filename, tag) != 2) {
-        write(client_socket, "ERR:400:BAD_REQUEST (Usage: CHECKPOINT <filename> <tag>)\n", 58);
+    if (sscanf(buffer, "CHECKPOINT %63s %255s %63s", username, filename, tag) != 3) {
+        write(client_socket, "ERR:400:BAD_REQUEST (Usage: CHECKPOINT <username> <filename> <tag>)\n", 69);
         return;
     }
     
-    logger("[SS-Thread] CHECKPOINT request: %s tag=%s\n", filename, tag);
+    logger("[SS-Thread] CHECKPOINT request: %s tag=%s (user: %s)\n", filename, tag, username);
     
     // Check permissions
-    if (!check_permissions(client_socket, filename, "WRITE")) {
+    if (!check_permissions_by_username(username, filename, "WRITE")) {
         write(client_socket, "ERR:403:ACCESS_DENIED\n", 22);
         return;
     }
@@ -1036,17 +1028,17 @@ void handle_checkpoint_command(int client_socket, char* buffer) {
 }
 
 void handle_viewcheckpoint_command(int client_socket, char* buffer) {
-    char filename[256], tag[64];
+    char username[64], filename[256], tag[64];
     
-    if (sscanf(buffer, "VIEWCHECKPOINT %255s %63s", filename, tag) != 2) {
-        write(client_socket, "ERR:400:BAD_REQUEST (Usage: VIEWCHECKPOINT <filename> <tag>)\n", 62);
+    if (sscanf(buffer, "VIEWCHECKPOINT %63s %255s %63s", username, filename, tag) != 3) {
+        write(client_socket, "ERR:400:BAD_REQUEST (Usage: VIEWCHECKPOINT <username> <filename> <tag>)\n", 73);
         return;
     }
     
-    logger("[SS-Thread] VIEWCHECKPOINT request: %s tag=%s\n", filename, tag);
+    logger("[SS-Thread] VIEWCHECKPOINT request: %s tag=%s (user: %s)\n", filename, tag, username);
     
     // Check permissions
-    if (!check_permissions(client_socket, filename, "READ")) {
+    if (!check_permissions_by_username(username, filename, "READ")) {
         write(client_socket, "ERR:403:ACCESS_DENIED\n", 22);
         return;
     }
@@ -1062,17 +1054,17 @@ void handle_viewcheckpoint_command(int client_socket, char* buffer) {
 }
 
 void handle_revert_command(int client_socket, char* buffer) {
-    char filename[256], tag[64];
+    char username[64], filename[256], tag[64];
     
-    if (sscanf(buffer, "REVERT %255s %63s", filename, tag) != 2) {
-        write(client_socket, "ERR:400:BAD_REQUEST (Usage: REVERT <filename> <tag>)\n", 54);
+    if (sscanf(buffer, "REVERT %63s %255s %63s", username, filename, tag) != 3) {
+        write(client_socket, "ERR:400:BAD_REQUEST (Usage: REVERT <username> <filename> <tag>)\n", 65);
         return;
     }
     
-    logger("[SS-Thread] REVERT request: %s tag=%s\n", filename, tag);
+    logger("[SS-Thread] REVERT request: %s tag=%s (user: %s)\n", filename, tag, username);
     
     // Check permissions
-    if (!check_permissions(client_socket, filename, "WRITE")) {
+    if (!check_permissions_by_username(username, filename, "WRITE")) {
         write(client_socket, "ERR:403:ACCESS_DENIED\n", 22);
         return;
     }
@@ -1094,17 +1086,17 @@ void handle_revert_command(int client_socket, char* buffer) {
 }
 
 void handle_listcheckpoints_command(int client_socket, char* buffer) {
-    char filename[256];
+    char username[64], filename[256];
     
-    if (sscanf(buffer, "LISTCHECKPOINTS %255s", filename) != 1) {
-        write(client_socket, "ERR:400:BAD_REQUEST (Usage: LISTCHECKPOINTS <filename>)\n", 57);
+    if (sscanf(buffer, "LISTCHECKPOINTS %63s %255s", username, filename) != 2) {
+        write(client_socket, "ERR:400:BAD_REQUEST (Usage: LISTCHECKPOINTS <username> <filename>)\n", 68);
         return;
     }
     
-    logger("[SS-Thread] LISTCHECKPOINTS request: %s\n", filename);
+    logger("[SS-Thread] LISTCHECKPOINTS request: %s (user: %s)\n", filename, username);
     
     // Check permissions
-    if (!check_permissions(client_socket, filename, "READ")) {
+    if (!check_permissions_by_username(username, filename, "READ")) {
         write(client_socket, "ERR:403:ACCESS_DENIED\n", 22);
         return;
     }
@@ -1134,19 +1126,20 @@ void handle_diff_command(int client_socket, char* buffer) {
 // ============= REPLACE COMMAND (BONUS) =============
 
 void handle_replace_command(int client_socket, char* buffer) {
+    char username[64];
     char filename[256];
     int sentence_num;
     
-    // Parse: REPLACE <filename> <sentence_num>
-    if (sscanf(buffer, "REPLACE %255s %d", filename, &sentence_num) != 2) {
-        write(client_socket, "ERR:400:BAD_REQUEST (Usage: REPLACE <filename> <sentence_num>)\n", 63);
+    // Parse: REPLACE <username> <filename> <sentence_num>
+    if (sscanf(buffer, "REPLACE %63s %255s %d", username, filename, &sentence_num) != 3) {
+        write(client_socket, "ERR:400:BAD_REQUEST (Usage: REPLACE <username> <filename> <sentence_num>)\n", 75);
         return;
     }
     
-    logger("[SS-Thread] REPLACE request: %s sentence %d\n", filename, sentence_num);
+    logger("[SS-Thread] REPLACE request: %s sentence %d (user: %s)\n", filename, sentence_num, username);
 
     // Check WRITE permissions (replacing requires write access)
-    if (!check_permissions(client_socket, filename, "WRITE")) {
+    if (!check_permissions_by_username(username, filename, "WRITE")) {
         write(client_socket, "ERR:403:ACCESS_DENIED\n", 22);
         logger("[SS-Thread] REPLACE denied - no permission\n");
         return;

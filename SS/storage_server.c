@@ -616,13 +616,15 @@ int main(int argc, char *argv[]) {
     }
     int my_port = atoi(argv[1]);
     
+    // CRITICAL: Initialize logger FIRST before any logger() calls
+    logger_init("storage_server.log");
+    
     // Accept NM IP as optional argument
     if (argc >= 3) {
         strncpy(g_nm_ip, argv[2], sizeof(g_nm_ip) - 1);
         g_nm_ip[sizeof(g_nm_ip) - 1] = '\0';
         logger("Using Name Server IP: %s\n", g_nm_ip);
     }
-    logger_init("storage_server.log");
     
     // Set storage root based on port to maintain separate directories
     snprintf(STORAGE_ROOT, sizeof(STORAGE_ROOT), "storage_root_%d/", my_port);

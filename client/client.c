@@ -148,8 +148,8 @@ void handle_read(const char* filename) {
                 return;
             }
 
-            // Send READ command to SS
-            snprintf(command, sizeof(command), "READ %s\n", filename);
+            // Send READ command to SS with username for permission check
+            snprintf(command, sizeof(command), "READ %s %s\n", username, filename);
             write(ss_socket, command, strlen(command));
 
             // Read content from SS
@@ -212,7 +212,7 @@ void handle_stream(const char* filename) {
                 return;
             }
 
-            snprintf(command, sizeof(command), "STREAM %s\n", filename);
+            snprintf(command, sizeof(command), "STREAM %s %s\n", username, filename);
             write(ss_socket, command, strlen(command));
 
             // Read word by word
@@ -271,7 +271,7 @@ void handle_write(const char* args) {
             }
 
             // Lock sentence
-            snprintf(command, sizeof(command), "WRITE %s %d\n", filename, sentence_num);
+            snprintf(command, sizeof(command), "WRITE %s %s %d\n", username, filename, sentence_num);
             write(ss_socket, command, strlen(command));
             
             n = read(ss_socket, response, sizeof(response) - 1);
@@ -438,7 +438,7 @@ void handle_replace(const char* args) {
             }
 
             // Send REPLACE command to SS
-            snprintf(command, sizeof(command), "REPLACE %s %d\n", filename, sentence_num);
+            snprintf(command, sizeof(command), "REPLACE %s %s %d\n", username, filename, sentence_num);
             write(ss_socket, command, strlen(command));
             
             // Read acknowledgment
@@ -543,7 +543,7 @@ void handle_checkpoint(const char* args) {
             
             if (connect(ss_socket, (struct sockaddr*)&ss_addr, sizeof(ss_addr)) == 0) {
                 // Send CHECKPOINT command to SS
-                snprintf(command, sizeof(command), "CHECKPOINT %s %s\n", filename, tag);
+                snprintf(command, sizeof(command), "CHECKPOINT %s %s %s\n", username, filename, tag);
                 write(ss_socket, command, strlen(command));
                 
                 // Read response from SS
@@ -593,7 +593,7 @@ void handle_viewcheckpoint(const char* args) {
             inet_pton(AF_INET, ss_ip, &ss_addr.sin_addr);
             
             if (connect(ss_socket, (struct sockaddr*)&ss_addr, sizeof(ss_addr)) == 0) {
-                snprintf(command, sizeof(command), "VIEWCHECKPOINT %s %s\n", filename, tag);
+                snprintf(command, sizeof(command), "VIEWCHECKPOINT %s %s %s\n", username, filename, tag);
                 write(ss_socket, command, strlen(command));
                 
                 // Read content from SS
@@ -645,7 +645,7 @@ void handle_revert(const char* args) {
             inet_pton(AF_INET, ss_ip, &ss_addr.sin_addr);
             
             if (connect(ss_socket, (struct sockaddr*)&ss_addr, sizeof(ss_addr)) == 0) {
-                snprintf(command, sizeof(command), "REVERT %s %s\n", filename, tag);
+                snprintf(command, sizeof(command), "REVERT %s %s %s\n", username, filename, tag);
                 write(ss_socket, command, strlen(command));
                 
                 n = read(ss_socket, response, sizeof(response) - 1);
@@ -694,7 +694,7 @@ void handle_listcheckpoints(const char* args) {
             inet_pton(AF_INET, ss_ip, &ss_addr.sin_addr);
             
             if (connect(ss_socket, (struct sockaddr*)&ss_addr, sizeof(ss_addr)) == 0) {
-                snprintf(command, sizeof(command), "LISTCHECKPOINTS %s\n", filename);
+                snprintf(command, sizeof(command), "LISTCHECKPOINTS %s %s\n", username, filename);
                 write(ss_socket, command, strlen(command));
                 
                 n = read(ss_socket, response, sizeof(response) - 1);
