@@ -12,13 +12,14 @@
 #include <readline/history.h>
 
 #define BUFFER_SIZE 8192
-#define NM_IP "127.0.0.1"
+#define DEFAULT_NM_IP "127.0.0.1"
 #define NM_PORT 8080
 
 int nm_socket = -1;
 char username[64];
 char client_ip[16];
 int client_nm_port;
+char nm_ip[16] = DEFAULT_NM_IP;  // Can be overridden by command line
 int client_ss_port;
 
 char* get_prompt() {
@@ -38,7 +39,7 @@ int connect_to_nm() {
     nm_addr.sin_family = AF_INET;
     nm_addr.sin_port = htons(NM_PORT);
     
-    if (inet_pton(AF_INET, NM_IP, &nm_addr.sin_addr) <= 0) {
+    if (inet_pton(AF_INET, nm_ip, &nm_addr.sin_addr) <= 0) {
         perror("Invalid NM IP");
         close(nm_socket);
         return -1;
@@ -124,8 +125,6 @@ void handle_read(const char* filename) {
         char ss_ip[16];
         int ss_port;
         if (sscanf(response, "SS_INFO:%15[^:]:%d", ss_ip, &ss_port) == 2) {
-            printf("Connecting to SS at %s:%d...\n", ss_ip, ss_port);
-            
             int ss_socket = connect_to_ss(ss_ip, ss_port);
             if (ss_socket < 0) {
                 printf("Failed to connect to SS\n");
@@ -137,14 +136,35 @@ void handle_read(const char* filename) {
             write(ss_socket, command, strlen(command));
 
             // Read content from SS
+            int content_printed = 0;
             while (1) {
                 n = read(ss_socket, response, sizeof(response) - 1);
                 if (n <= 0) break;
                 response[n] = '\0';
-                printf("%s", response);
-                if (strstr(response, "\nEOF\n") || strstr(response, "STOP")) break;
+                
+                // Check for EOF marker and stop before printing it
+                char* eof_marker = strstr(response, "\nEOF\n");
+                if (eof_marker) {
+                    *eof_marker = '\0';  // Truncate before EOF
+                    if (strlen(response) > 0) {
+                        printf("%s", response);
+                        content_printed = 1;
+                    }
+                    break;
+                }
+                
+                if (strlen(response) > 0) {
+                    printf("%s", response);
+                    content_printed = 1;
+                }
+                if (strstr(response, "STOP")) break;
             }
-            printf("\n");
+            
+            if (!content_printed) {
+                printf("(empty file)\n");
+            } else {
+                printf("\n");
+            }
             close(ss_socket);
         }
     } else {
@@ -730,7 +750,14 @@ void handle_diff(const char* args) {
 
 // ============= END CHECKPOINT HANDLERS =============
 
-int main() {
+int main(int argc, char* argv[]) {
+    // Parse command line arguments for NM IP
+    if (argc > 1) {
+        strncpy(nm_ip, argv[1], sizeof(nm_ip) - 1);
+        nm_ip[sizeof(nm_ip) - 1] = '\0';
+        printf("Using NM IP: %s\n", nm_ip);
+    }
+    
     printf("=========================================\n");
     printf("  Network File System - Client          \n");
     printf("=========================================\n\n");
@@ -749,7 +776,7 @@ int main() {
     client_nm_port = 5000 + (getpid() % 1000);
     client_ss_port = 6000 + (getpid() % 1000);
 
-    printf("Connecting to Name Server at %s:%d...\n", NM_IP, NM_PORT);
+    printf("Connecting to Name Server at %s:%d...\n", nm_ip, NM_PORT);
     if (connect_to_nm() < 0) {
         return 1;
     }

@@ -86,8 +86,19 @@ cd SS
 **Terminal 3 - Client:**
 ```bash
 cd client
-./client
+./client                    # Connect to localhost (127.0.0.1)
+# OR if NM is on different machine:
+./client <NM_IP_ADDRESS>   # e.g., ./client 192.168.1.100
 ```
+
+### Remote Client Support
+- **Same Machine:** All components (NM, SS, Client) on one laptop - just use `./client`
+- **Different Machine:** Client on different laptop from NM/SS:
+  1. Find NM machine's IP address (e.g., `192.168.1.100`)
+  2. Run: `./client 192.168.1.100`
+  3. ⚠️ **Note:** Client will connect to NM successfully, but accessing Storage Servers may fail because SS registration uses `127.0.0.1` (future enhancement needed)
+
+**Current Limitation:** Fully distributed setup (client on separate network) requires SS to register with actual IP addresses instead of localhost.
 
 ### Example Session
 ```

@@ -512,6 +512,7 @@ int ss_register(NameServer* nm, const char* ip, int nm_port, int client_port,
     nm_log("[SS%d] Registered %s (NM=%d, Client=%d)\n", ss_id, ip, nm_port, client_port);
     
     // Parse and register files from file_list
+    int registered_file_count = 0;
     if (file_list && strlen(file_list) > 0) {
         char* file_copy = strdup(file_list);
         char* token = strtok(file_copy, "\n");
@@ -521,11 +522,20 @@ int ss_register(NameServer* nm, const char* ip, int nm_port, int client_port,
                 FileMetadata* file_info = file_create_metadata(token, "system", ss_id);
                 if (file_info) {
                     trie_insert(nm->file_trie_root, token, file_info);
+                    registered_file_count++;
                 }
             }
             token = strtok(NULL, "\n");
         }
         free(file_copy);
+    }
+    
+    // Update the SS's file count to reflect pre-existing files
+    if (registered_file_count > 0) {
+        pthread_rwlock_wrlock(&nm->ss_lock);
+        ss->file_count = registered_file_count;
+        pthread_rwlock_unlock(&nm->ss_lock);
+        nm_log("[SS%d] Registered %d existing files, file_count set to %d\n", ss_id, registered_file_count, registered_file_count);
     }
     
     return ss_id;
@@ -817,15 +827,20 @@ int ss_send_command(StorageServer* ss, const char* command, char* response, int 
 
 // Replicate a file from primary SS to its backup buddy (async, no wait for ACK)
 void replicate_file_to_backup(int primary_ss_id, const char* filename) {
+    nm_log("[REPLICATE] Starting replication of %s from SS%d\n", filename, primary_ss_id);
+    
     pthread_rwlock_rdlock(&g_nm.ss_lock);
     
     if (primary_ss_id < 0 || primary_ss_id >= g_nm.ss_count) {
         pthread_rwlock_unlock(&g_nm.ss_lock);
+        nm_log("[REPLICATE] Invalid primary_ss_id: %d (ss_count=%d)\n", primary_ss_id, g_nm.ss_count);
         return;
     }
     
     StorageServer* primary = &g_nm.storage_servers[primary_ss_id];
     int backup_id = primary->backup_ss_id;
+    
+    nm_log("[REPLICATE] SS%d's backup buddy is SS%d\n", primary_ss_id, backup_id);
     
     if (backup_id < 0 || backup_id >= g_nm.ss_count) {
         pthread_rwlock_unlock(&g_nm.ss_lock);
@@ -851,9 +866,11 @@ void replicate_file_to_backup(int primary_ss_id, const char* filename) {
     
     char response[BUFFER_SIZE * 2];
     if (ss_send_command(primary, get_cmd, response, sizeof(response)) < 0) {
-        nm_log("[REPLICATE] Failed to get content from SS%d for %s\n", primary_ss_id, filename);
+        nm_log("[REPLICATE] Failed to get content from SS%d for %s (ss_send_command returned error)\n", primary_ss_id, filename);
         return;
     }
+    
+    nm_log("[REPLICATE] Got response from SS%d: %.50s...\n", primary_ss_id, response);
     
     // Parse response: "ACK:CONTENT\n<file_content>\nEOF\n"
     if (strncmp(response, "ACK:CONTENT\n", 12) != 0) {
@@ -875,7 +892,7 @@ void replicate_file_to_backup(int primary_ss_id, const char* filename) {
     int content_length = eof_marker - content_start;
     if (content_length < 0) content_length = 0;  // Handle empty files
     
-    nm_log("[REPLICATE] File %s content length: %d bytes\n", filename, content_length);
+    nm_log("[REPLICATE] File %s content length: %d bytes, sending to backup SS%d\n", filename, content_length, backup_id);
     
     // Now send REPLICATE command to backup SS using persistent connection
     char replicate_cmd[BUFFER_SIZE];
@@ -1027,17 +1044,23 @@ static void handle_create_command(Client* client, char* filename) {
     int min_files = INT_MAX;
     
     // Find the active SS with the least number of files (least-loaded)
+    int chosen_ss_id = -1;
     for (int i = 0; i < g_nm.ss_count; i++) {
         if (g_nm.storage_servers[i].is_active && g_nm.storage_servers[i].file_count < min_files) {
             ss = &g_nm.storage_servers[i];
+            chosen_ss_id = i;
             min_files = g_nm.storage_servers[i].file_count;
         }
     }
     pthread_rwlock_unlock(&g_nm.ss_lock);
-    if (!ss) {
+    
+    if (!ss || chosen_ss_id < 0) {
         send_error(client->socket_fd, ERR_SS_OFFLINE, "No SS available");
         return;
     }
+    
+    nm_log("[LoadBalance] Selecting SS%d (file_count=%d) for CREATE %s\n", chosen_ss_id, min_files, filename);
+    
     char command[BUFFER_SIZE];
     snprintf(command, sizeof(command), "CREATE %s\n", filename);
     char ss_response[BUFFER_SIZE];
@@ -1046,22 +1069,25 @@ static void handle_create_command(Client* client, char* filename) {
         return;
     }
     if (strncmp(ss_response, "ACK:", 4) == 0) {
-        FileMetadata* file_info = file_create_metadata(filename, client->username, ss->id);
+        FileMetadata* file_info = file_create_metadata(filename, client->username, chosen_ss_id);
         if (file_info) {
             file_add_to_registry(&g_nm, file_info);
             
             // Increment file count for this SS
             pthread_rwlock_wrlock(&g_nm.ss_lock);
-            ss->file_count++;
+            g_nm.storage_servers[chosen_ss_id].file_count++;
             pthread_rwlock_unlock(&g_nm.ss_lock);
             
+            nm_log("[CREATE] File %s created on SS%d (client_port=%d), new file_count=%d\n", 
+                   filename, chosen_ss_id, g_nm.storage_servers[chosen_ss_id].client_port, 
+                   g_nm.storage_servers[chosen_ss_id].file_count);
+            
+            // Replicate to backup
+            replicate_file_to_backup(chosen_ss_id, filename);
+            
             send_success(client->socket_fd, "CREATE_OK");
-            nm_log("[LoadBalance] Created file %s on SS%d (now has %d files)\n", 
-                   filename, ss->id, ss->file_count);
             nm_log_operation(client->ip, client->nm_port, client->username, "CREATE", filename, ERR_NONE);
             
-            // Replicate to backup SS (async)
-            replicate_file_to_backup(ss->id, filename);
             // Save metadata after creating file
             persist_save_metadata(&g_nm);
         } else {
@@ -1297,6 +1323,9 @@ static void handle_info_command(Client* client, char* filename) {
         send_error(client->socket_fd, ERR_FILE_NOT_FOUND, "File not found");
         return;
     }
+    
+    nm_log("[INFO] File %s is registered on SS%d\n", filename, file_info->ss_id);
+    
     StorageServer* ss = ss_get_by_id(&g_nm, file_info->ss_id);
     if (ss && ss->is_active) {
         char command[BUFFER_SIZE];
@@ -1598,7 +1627,17 @@ static void handle_move_command(Client* client, char* args) {
     // Check if source file exists
     FileMetadata* file_info = file_lookup(&g_nm, source);
     if (!file_info) {
-        send_error(client->socket_fd, ERR_FILE_NOT_FOUND, "Source file not found");
+        send_error(client->socket_fd, ERR_FILE_NOT_FOUND, "Source file not found. Use full path (e.g., folder/file.txt)");
+        return;
+    }
+    
+    // Verify source matches the stored path (enforce full path usage)
+    if (strcmp(file_info->filename, source) != 0) {
+        char error_msg[BUFFER_SIZE];
+        snprintf(error_msg, sizeof(error_msg), 
+                "Please use full path: '%s' instead of '%s'", 
+                file_info->filename, source);
+        send_error(client->socket_fd, ERR_UNKNOWN, error_msg);
         return;
     }
     
@@ -1927,6 +1966,11 @@ static void handle_view_command(Client* client, char* args) {
     int displayed = 0;
     for (int i = 0; i < file_count && offset < sizeof(response) - 200; i++) {
         FileMetadata* file = files[i];
+        
+        // Skip folders - VIEW should only show files
+        if (file->is_folder) {
+            continue;
+        }
         
         // Filter: VIEW and VIEW -l show only accessible files
         // VIEW -a and VIEW -al show all files
@@ -2370,6 +2414,8 @@ void* handle_ss_connection(void* arg) {
     getpeername(ss_socket, (struct sockaddr*)&addr, &addr_len);
     char ip[MAX_IP_LEN];
     inet_ntop(AF_INET, &addr.sin_addr, ip, MAX_IP_LEN);
+    
+    nm_log("[SS_REGISTRATION] Connection from IP: %s\n", ip);
     char* parse_ptr = buffer + 12;
     int nm_port, client_port;
     if (sscanf(parse_ptr, "%d %d", &nm_port, &client_port) != 2) {

@@ -251,6 +251,64 @@ void release_sentence_lock(const char* filename, int sentence_id) {
     pthread_mutex_unlock(&g_sentence_lock_manager->manager_lock);
 }
 
+// Check if sentence structure changed for a file
+// Returns 1 if any other locked sentences are now invalid
+int check_sentence_structure_changed(const char* filename, const char* file_content) {
+    pthread_mutex_lock(&g_sentence_lock_manager->manager_lock);
+    
+    int structure_changed = 0;
+    SentenceLockNode* curr = g_sentence_lock_manager->head;
+    
+    while (curr) {
+        if (strcmp(curr->filename, filename) == 0) {
+            // Check if this sentence still exists at the same index
+            int s_start = 0, s_end = 0;
+            if (!find_sentence(file_content, curr->sentence_id, &s_start, &s_end)) {
+                // Sentence no longer exists at this index!
+                logger("[SS-Lock] WARNING: Sentence %d of %s no longer exists after concurrent edit!\n", 
+                       curr->sentence_id, filename);
+                structure_changed = 1;
+            }
+        }
+        curr = curr->next;
+    }
+    
+    pthread_mutex_unlock(&g_sentence_lock_manager->manager_lock);
+    return structure_changed;
+}
+
+// Release ALL sentence locks for a file (called when structure changes)
+void release_all_sentence_locks_for_file(const char* filename) {
+    pthread_mutex_lock(&g_sentence_lock_manager->manager_lock);
+    
+    SentenceLockNode* curr = g_sentence_lock_manager->head;
+    SentenceLockNode* prev = NULL;
+    
+    while (curr) {
+        if (strcmp(curr->filename, filename) == 0) {
+            logger("[SS-Lock] Invalidating sentence lock %d on %s due to structure change\n", 
+                   curr->sentence_id, filename);
+            
+            SentenceLockNode* to_free = curr;
+            
+            if (prev) {
+                prev->next = curr->next;
+                curr = curr->next;
+            } else {
+                g_sentence_lock_manager->head = curr->next;
+                curr = g_sentence_lock_manager->head;
+            }
+            
+            free(to_free);
+        } else {
+            prev = curr;
+            curr = curr->next;
+        }
+    }
+    
+    pthread_mutex_unlock(&g_sentence_lock_manager->manager_lock);
+}
+
 int is_file_being_edited(const char* filename) {
     pthread_mutex_lock(&g_sentence_lock_manager->manager_lock);
     

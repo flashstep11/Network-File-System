@@ -1,0 +1,68 @@
+[2025-11-20 11:45:53] 
+========== NAME SERVER STARTED: Thu Nov 20 11:45:53 2025 ==========
+[2025-11-20 11:45:53] Name Server initialized successfully
+[2025-11-20 11:45:53] [PERSIST] No metadata file found (first run or empty system)
+[2025-11-20 11:45:53] Name Server listening on port 8080
+[2025-11-20 11:45:53] [HEARTBEAT] Monitoring thread launched
+[2025-11-20 11:45:53] [HEARTBEAT] Monitoring thread started
+[2025-11-20 11:45:57] [CONNECT] New connection from 127.0.0.1:60438
+[2025-11-20 11:45:57] [SS0] Registered 127.0.0.1 (NM=9001, Client=9001)
+[2025-11-20 11:45:57] [SS0] Registration complete, connection maintained for heartbeat
+[2025-11-20 11:46:00] [CONNECT] New connection from 127.0.0.1:59926
+[2025-11-20 11:46:00] [SS1] Paired with backup buddy SS0
+[2025-11-20 11:46:00] [SS1] Registered 127.0.0.1 (NM=9002, Client=9002)
+[2025-11-20 11:46:00] [SS1] Registration complete, connection maintained for heartbeat
+[2025-11-20 11:46:04] [CONNECT] New connection from 127.0.0.1:59932
+[2025-11-20 11:46:04] [CLIENT] vik @ 127.0.0.1:5507 registered
+[2025-11-20 11:46:06] [OP] User=vik IP=127.0.0.1:5507 Op=VIEW Details= Status=SUCCESS
+[2025-11-20 11:46:09] [LoadBalance] Selecting SS0 (file_count=0) for CREATE 1.txt
+[2025-11-20 11:46:09] [CREATE] File 1.txt created on SS0 (client_port=9001), new file_count=1
+[2025-11-20 11:46:09] [REPLICATE] Starting replication of 1.txt from SS0
+[2025-11-20 11:46:09] [REPLICATE] SS0's backup buddy is SS1
+[2025-11-20 11:46:09] [REPLICATE] Got response from SS0: ACK:CONTENT
+
+EOF
+...
+[2025-11-20 11:46:09] [REPLICATE] File 1.txt content length: 0 bytes, sending to backup SS1
+[2025-11-20 11:46:09] [REPLICATE] Replicated 1.txt from SS0 to SS1 (0 bytes)
+[2025-11-20 11:46:09] [OP] User=vik IP=127.0.0.1:5507 Op=CREATE Details=1.txt Status=SUCCESS
+[2025-11-20 11:46:09] [PERSIST] Saved 1 files and 0 access requests to nm_metadata.dat
+[2025-11-20 11:46:19] [LoadBalance] Selecting SS1 (file_count=0) for CREATE 2.txt
+[2025-11-20 11:46:19] [CREATE] File 2.txt created on SS1 (client_port=9002), new file_count=1
+[2025-11-20 11:46:19] [REPLICATE] Starting replication of 2.txt from SS1
+[2025-11-20 11:46:19] [REPLICATE] SS1's backup buddy is SS0
+[2025-11-20 11:46:19] [REPLICATE] Got response from SS1: ACK:CONTENT
+
+EOF
+...
+[2025-11-20 11:46:19] [REPLICATE] File 2.txt content length: 0 bytes, sending to backup SS0
+[2025-11-20 11:46:19] [REPLICATE] Replicated 2.txt from SS1 to SS0 (0 bytes)
+[2025-11-20 11:46:19] [OP] User=vik IP=127.0.0.1:5507 Op=CREATE Details=2.txt Status=SUCCESS
+[2025-11-20 11:46:19] [PERSIST] Saved 2 files and 0 access requests to nm_metadata.dat
+[2025-11-20 11:46:26] [INFO] File 2.txt is registered on SS1
+[2025-11-20 11:46:26] [OP] User=vik IP=127.0.0.1:5507 Op=INFO Details=2.txt Status=SUCCESS
+[2025-11-20 11:47:11] [OP] User=vik IP=127.0.0.1:5507 Op=WRITE Details=2.txt Status=SUCCESS
+[2025-11-20 11:47:11] [CONNECT] New connection from 127.0.0.1:45170
+[2025-11-20 11:47:11] [CHECK_ACCESS] IP=127.0.0.1 File=2.txt Mode=WRITE
+[2025-11-20 11:47:11] [CHECK_ACCESS] Granted WRITE access to 2.txt for vik (IP: 127.0.0.1)
+[2025-11-20 11:47:27] [CONNECT] New connection from 127.0.0.1:59066
+[2025-11-20 11:47:27] [NOTIFY_WRITE] SS1 wrote to 2.txt, triggering replication
+[2025-11-20 11:47:27] [REPLICATE] Starting replication of 2.txt from SS1
+[2025-11-20 11:47:27] [REPLICATE] SS1's backup buddy is SS0
+[2025-11-20 11:47:27] [REPLICATE] Got response from SS1: ACK:CONTENT
+Hello Bye. 
+EOF
+...
+[2025-11-20 11:47:27] [REPLICATE] File 2.txt content length: 11 bytes, sending to backup SS0
+[2025-11-20 11:47:27] [REPLICATE] Backup SS0 unexpected response: G
+PONG
+
+[2025-11-20 11:49:14] [OP] User=vik IP=127.0.0.1:5507 Op=READ Details=2.txt Status=SUCCESS
+[2025-11-20 11:49:14] [CONNECT] New connection from 127.0.0.1:46602
+[2025-11-20 11:49:14] [CHECK_ACCESS] IP=127.0.0.1 File=2.txt Mode=READ
+[2025-11-20 11:49:14] [CHECK_ACCESS] Granted READ access to 2.txt for vik (IP: 127.0.0.1)
+[2025-11-20 11:53:24] [CLIENT] vik disconnected
+[2025-11-20 11:53:25] [HEARTBEAT] SS1 connection broken: Broken pipe
+[2025-11-20 11:53:30] [HEARTBEAT] SS0 connection broken: Broken pipe
+[2025-11-20 11:53:32] [SS1] Connection handler exiting
+[2025-11-20 11:53:40] [SS0] Connection handler exiting

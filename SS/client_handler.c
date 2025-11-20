@@ -283,6 +283,14 @@ void handle_write_command(int client_socket, char* buffer, const char* username)
         return;
     }
     
+    // CRITICAL: Save original sentence count for validation
+    int original_sentence_count = 0;
+    int tmp_s = 0, tmp_e = 0;
+    while (find_sentence(file_data, original_sentence_count, &tmp_s, &tmp_e)) {
+        original_sentence_count++;
+    }
+    logger("[SS-Thread] Original sentence count: %d\n", original_sentence_count);
+    
     // UNLOCK file mutex - we're done reading, now edit in memory
     pthread_mutex_unlock(f_mutex);
     free(file_data); // Don't need original anymore
@@ -291,7 +299,53 @@ void handle_write_command(int client_socket, char* buffer, const char* username)
     char edit_buffer[1024];
     while (1) {
         memset(edit_buffer, 0, sizeof(edit_buffer));
+        
+        // Set socket to non-blocking with timeout so we can periodically check validity
+        struct timeval tv;
+        tv.tv_sec = 1;  // Check every 1 second
+        tv.tv_usec = 0;
+        setsockopt(client_socket, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+        
         ssize_t n = read(client_socket, edit_buffer, sizeof(edit_buffer) - 1);
+        
+        // If timeout (no data), check if sentence structure changed
+        if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+            // Timeout - check validity
+            pthread_mutex_lock(f_mutex);
+            long check_size;
+            char* current_file_data = read_file_to_string(full_path, &check_size);
+            pthread_mutex_unlock(f_mutex);
+            
+            if (current_file_data) {
+                // Count sentences in current file
+                int file_sentence_count = 0;
+                int tmp_s = 0, tmp_e = 0;
+                while (find_sentence(current_file_data, file_sentence_count, &tmp_s, &tmp_e)) {
+                    file_sentence_count++;
+                }
+                
+                // If file sentence count differs from ORIGINAL, someone else changed structure!
+                if (file_sentence_count != original_sentence_count) {
+                    free(current_file_data);
+                    
+                    const char* msg = "\n⚠️  ERROR: File structure changed by another user.\nSentence boundaries have shifted. Disconnecting...\n";
+                    write(client_socket, msg, strlen(msg));
+                    logger("[SS-Thread] CONCURRENT EDIT DETECTED: File sentence count changed from %d to %d\n", 
+                           original_sentence_count, file_sentence_count);
+                    
+                    // Abort this edit session
+                    free(working_data);
+                    release_sentence_lock(filename, sentence_num);
+                    close(client_socket);
+                    pthread_exit(NULL);
+                }
+                
+                free(current_file_data);
+            }
+            
+            // No data yet, loop again
+            continue;
+        }
         
         if (n <= 0) {
             logger("[SS-Thread] Client disconnected during WRITE\n");
@@ -307,14 +361,62 @@ void handle_write_command(int client_socket, char* buffer, const char* username)
         if (strncmp(edit_buffer, "ETIRW", 5) == 0) {
             logger("[SS-Thread] ETIRW received, finalizing write\n");
             
-            // Lock file mutex ONLY for writing
+            // CRITICAL: Before writing, validate our working_data is still valid!
+            // Another user might have changed sentence structure while we were editing
             pthread_mutex_lock(f_mutex);
             
-            // Write working data to file
+            // Read current file state
+            long check_size;
+            char* current_file_data = read_file_to_string(full_path, &check_size);
+            
+            if (current_file_data) {
+                // Count sentences in current file
+                int file_sentence_count = 0;
+                int tmp_s = 0, tmp_e = 0;
+                while (find_sentence(current_file_data, file_sentence_count, &tmp_s, &tmp_e)) {
+                    file_sentence_count++;
+                }
+                
+          // If file sentence count differs from ORIGINAL, someone else changed structure!
+          if (file_sentence_count != original_sentence_count) {
+              // Improved logging for debugging: record both counts before aborting
+              logger("[SS-Thread] ETIRW VALIDATION: original=%d, current_file=%d, filename=%s, sentence=%d\n",
+                  original_sentence_count, file_sentence_count, filename, sentence_num);
+
+              free(current_file_data);
+              pthread_mutex_unlock(f_mutex);
+                    
+              const char* msg = "ERROR: Cannot save - another user changed the file structure (added/removed delimiters).\nYour edits are discarded.\n";
+              write(client_socket, msg, strlen(msg));
+              logger("[SS-Thread] ETIRW BLOCKED: File sentence count changed from %d to %d by another user\n", 
+                  original_sentence_count, file_sentence_count);
+                    
+              // Abort without saving
+              free(working_data);
+              release_sentence_lock(filename, sentence_num);
+              close(client_socket);
+              pthread_exit(NULL);
+          }
+                
+                free(current_file_data);
+            }
+            
+            // Validation passed - safe to write
             FILE *fp = fopen(full_path, "w");
             if (fp) {
                 fprintf(fp, "%s", working_data);
                 fclose(fp);
+                
+                // CRITICAL: Check if sentence structure changed
+                // If so, invalidate all other sentence locks on this file
+                extern int check_sentence_structure_changed(const char*, const char*);
+                extern void release_all_sentence_locks_for_file(const char*);
+                
+                if (check_sentence_structure_changed(filename, working_data)) {
+                    logger("[SS-Thread] Sentence structure changed in %s, invalidating other locks\n", filename);
+                    release_all_sentence_locks_for_file(filename);
+                }
+                
                 pthread_mutex_unlock(f_mutex);
                 
                 write(client_socket, "ACK:WRITE_COMPLETE All changes saved\n", 38);
@@ -429,6 +531,49 @@ void handle_write_command(int client_socket, char* buffer, const char* username)
             
             // Handle empty file or append operation
             size_t current_len = strlen(working_data);
+            
+            // CRITICAL: Re-validate sentence still exists at this index
+            // (Another concurrent write might have added delimiters and shifted indices)
+            pthread_mutex_lock(f_mutex);
+            long check_size;
+            char* current_file_data = read_file_to_string(full_path, &check_size);
+            pthread_mutex_unlock(f_mutex);
+            
+            if (current_file_data) {
+                // Count sentences in current file
+                int file_sentence_count = 0;
+                int tmp_s = 0, tmp_e = 0;
+                while (find_sentence(current_file_data, file_sentence_count, &tmp_s, &tmp_e)) {
+                    file_sentence_count++;
+                }
+
+                logger("[SS-Thread] Per-update VALIDATION: file_sentence_count=%d, original=%d, editing sentence=%d\n",
+                       file_sentence_count, original_sentence_count, sentence_num);
+
+                // If file sentence count differs from ORIGINAL, someone else changed structure!
+                if (file_sentence_count != original_sentence_count) {
+                    free(current_file_data);
+
+                    write(client_socket, "ERROR: Sentence structure changed due to concurrent edit. Your edits are discarded.\n", 80);
+                    logger("[SS-Thread] CONCURRENT EDIT CONFLICT: Detected during per-update (sentence %d) file_count %d != original %d\n",
+                           sentence_num, file_sentence_count, original_sentence_count);
+
+                    // Free word tokens
+                    for (int i = 0; i < word_count; i++) {
+                        free(words[i]);
+                    }
+                    if (before_delimiter) free(before_delimiter);
+                    if (after_delimiter) free(after_delimiter);
+
+                    // Abort this edit session
+                    free(working_data);
+                    release_sentence_lock(filename, sentence_num);
+                    close(client_socket);
+                    pthread_exit(NULL);
+                }
+
+                free(current_file_data);
+            }
             
             // Try to find the sentence first
             int s_start = 0, s_end = 0;
@@ -1072,6 +1217,15 @@ void handle_replace_command(int client_socket, char* buffer) {
     
     // Make a working copy
     char* working_data = strdup(file_data);
+    
+    // CRITICAL: Save original sentence count for validation
+    int original_sentence_count = 0;
+    int tmp_s = 0, tmp_e = 0;
+    while (find_sentence(file_data, original_sentence_count, &tmp_s, &tmp_e)) {
+        original_sentence_count++;
+    }
+    logger("[SS-Thread] Original sentence count (REPLACE): %d\n", original_sentence_count);
+    
     free(file_data);
     
     // Unlock - we're done reading
@@ -1089,7 +1243,53 @@ void handle_replace_command(int client_socket, char* buffer) {
     
     while (1) {
         memset(edit_buffer, 0, sizeof(edit_buffer));
+        
+        // Set socket to non-blocking with timeout so we can periodically check validity
+        struct timeval tv;
+        tv.tv_sec = 1;  // Check every 1 second
+        tv.tv_usec = 0;
+        setsockopt(client_socket, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+        
         ssize_t n = read(client_socket, edit_buffer, sizeof(edit_buffer) - 1);
+        
+        // If timeout (no data), check if sentence structure changed
+        if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+            // Timeout - check validity
+            pthread_mutex_lock(f_mutex);
+            long check_size;
+            char* current_file_data = read_file_to_string(full_path, &check_size);
+            pthread_mutex_unlock(f_mutex);
+            
+            if (current_file_data) {
+                // Count sentences in current file
+                int file_sentence_count = 0;
+                int tmp_s = 0, tmp_e = 0;
+                while (find_sentence(current_file_data, file_sentence_count, &tmp_s, &tmp_e)) {
+                    file_sentence_count++;
+                }
+                
+                // If file sentence count differs from ORIGINAL, someone else changed structure!
+                if (file_sentence_count != original_sentence_count) {
+                    free(current_file_data);
+                    
+                    const char* msg = "\n⚠️  ERROR: File structure changed by another user.\nSentence boundaries have shifted. Disconnecting...\n";
+                    write(client_socket, msg, strlen(msg));
+                    logger("[SS-Thread] CONCURRENT EDIT DETECTED in REPLACE: File sentence count changed from %d to %d\n", 
+                           original_sentence_count, file_sentence_count);
+                    
+                    // Abort this edit session
+                    free(working_data);
+                    release_sentence_lock(filename, sentence_num);
+                    close(client_socket);
+                    pthread_exit(NULL);
+                }
+                
+                free(current_file_data);
+            }
+            
+            // No data yet, loop again
+            continue;
+        }
         
         if (n <= 0) {
             logger("[SS-Thread] Client disconnected during REPLACE\n");
@@ -1104,14 +1304,61 @@ void handle_replace_command(int client_socket, char* buffer) {
         if (strncmp(edit_buffer, "ECALPER", 7) == 0) {
             logger("[SS-Thread] ECALPER received, finalizing replace\n");
             
-            // Lock ONLY for writing
+            // CRITICAL: Before writing, validate our working_data is still valid!
             pthread_mutex_lock(f_mutex);
             
-            // Write working data to file
+            // Read current file state
+            long check_size;
+            char* current_file_data = read_file_to_string(full_path, &check_size);
+            
+            if (current_file_data) {
+                // Count sentences in current file
+                int file_sentence_count = 0;
+                int tmp_s = 0, tmp_e = 0;
+                while (find_sentence(current_file_data, file_sentence_count, &tmp_s, &tmp_e)) {
+                    file_sentence_count++;
+                }
+                
+          // If file sentence count differs from ORIGINAL, someone else changed structure!
+          if (file_sentence_count != original_sentence_count) {
+              // Improved logging for debugging: record both counts before aborting
+              logger("[SS-Thread] ECALPER VALIDATION: original=%d, current_file=%d, filename=%s, sentence=%d\n",
+                  original_sentence_count, file_sentence_count, filename, sentence_num);
+
+              free(current_file_data);
+              pthread_mutex_unlock(f_mutex);
+                    
+              const char* msg = "ERROR: Cannot save - another user changed the file structure (added/removed delimiters).\nYour edits are discarded.\n";
+              write(client_socket, msg, strlen(msg));
+              logger("[SS-Thread] ECALPER BLOCKED: File sentence count changed from %d to %d by another user\n", 
+                  original_sentence_count, file_sentence_count);
+                    
+              // Abort without saving
+              free(working_data);
+              release_sentence_lock(filename, sentence_num);
+              close(client_socket);
+              pthread_exit(NULL);
+          }
+                
+                free(current_file_data);
+            }
+            
+            // Validation passed - safe to write
             FILE *fp = fopen(full_path, "w");
             if (fp) {
                 fprintf(fp, "%s", working_data);
                 fclose(fp);
+                
+                // CRITICAL: Check if sentence structure changed
+                // If so, invalidate all other sentence locks on this file
+                extern int check_sentence_structure_changed(const char*, const char*);
+                extern void release_all_sentence_locks_for_file(const char*);
+                
+                if (check_sentence_structure_changed(filename, working_data)) {
+                    logger("[SS-Thread] Sentence structure changed in %s, invalidating other locks\n", filename);
+                    release_all_sentence_locks_for_file(filename);
+                }
+                
                 pthread_mutex_unlock(f_mutex);
                 
                 write(client_socket, "ACK:REPLACE_COMPLETE All changes saved.\n", 41);
@@ -1153,6 +1400,42 @@ void handle_replace_command(int client_socket, char* buffer) {
         }
         
         logger("[SS-Thread] Replace word %d with '%s'\n", word_index, content);
+        
+        // CRITICAL: Re-validate sentence still exists at this index
+        // (Another concurrent write might have added delimiters and shifted indices)
+        pthread_mutex_lock(f_mutex);
+        long check_size;
+        char* current_file_data = read_file_to_string(full_path, &check_size);
+        pthread_mutex_unlock(f_mutex);
+        
+            if (current_file_data) {
+                // Count sentences in current file
+                int file_sentence_count = 0;
+                int tmp_s = 0, tmp_e = 0;
+                while (find_sentence(current_file_data, file_sentence_count, &tmp_s, &tmp_e)) {
+                    file_sentence_count++;
+                }
+
+                logger("[SS-Thread] REPLACE per-update VALIDATION: file=%d, original=%d, sentence=%d\n",
+                       file_sentence_count, original_sentence_count, sentence_num);
+
+                // If file sentence count differs from ORIGINAL, someone else changed structure!
+                if (file_sentence_count != original_sentence_count) {
+                    free(current_file_data);
+
+                    write(client_socket, "ERROR: Sentence structure changed due to concurrent edit. Your edits are discarded.\n", 80);
+                    logger("[SS-Thread] CONCURRENT EDIT CONFLICT in REPLACE: file_count %d != original %d (sentence %d)\n",
+                           file_sentence_count, original_sentence_count, sentence_num);
+
+                    // Abort this edit session
+                    free(working_data);
+                    release_sentence_lock(filename, sentence_num);
+                    close(client_socket);
+                    pthread_exit(NULL);
+                }
+
+                free(current_file_data);
+            }
         
         // Find the sentence again (it may have changed)
         find_sentence(working_data, sentence_num, &s_start, &s_end);
