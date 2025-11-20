@@ -80,7 +80,9 @@ cd NM
 **Terminal 2 - Storage Server:**
 ```bash
 cd SS
-./storage_server 9001
+./storage_server 9001                    # Connect to localhost (127.0.0.1)
+# OR if NM is on different machine:
+./storage_server 9001 <NM_IP_ADDRESS>   # e.g., ./storage_server 9001 192.168.1.100
 ```
 
 **Terminal 3 - Client:**

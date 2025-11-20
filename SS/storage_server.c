@@ -609,10 +609,19 @@ char* diff_checkpoints(const char* filename, const char* tag1, const char* tag2)
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        printf("Usage: ./storage_server <port>\n");
+        printf("Usage: ./storage_server <port> [nm_ip]\n");
+        printf("  <port>   : Port for this storage server\n");
+        printf("  [nm_ip]  : IP address of Name Server (default: 127.0.0.1)\n");
         return -1;
     }
     int my_port = atoi(argv[1]);
+    
+    // Accept NM IP as optional argument
+    if (argc >= 3) {
+        strncpy(g_nm_ip, argv[2], sizeof(g_nm_ip) - 1);
+        g_nm_ip[sizeof(g_nm_ip) - 1] = '\0';
+        logger("Using Name Server IP: %s\n", g_nm_ip);
+    }
     logger_init("storage_server.log");
     
     // Set storage root based on port to maintain separate directories
@@ -638,11 +647,12 @@ int main(int argc, char *argv[]) {
     }
     nm_addr.sin_family = AF_INET;
     nm_addr.sin_port = htons(NM_PORT);
-    if(inet_pton(AF_INET, NM_IP, &nm_addr.sin_addr) <= 0) {
+    if(inet_pton(AF_INET, g_nm_ip, &nm_addr.sin_addr) <= 0) {
         perror("Invalid NM IP address");
         close(nm_socket);
         return -1;
     }
+    logger("Connecting to Name Server at %s:%d...\n", g_nm_ip, NM_PORT);
     if (connect(nm_socket, (struct sockaddr *)&nm_addr, sizeof(nm_addr)) < 0) {
         perror("Connection to NM Failed. Is the NM running?");
         close(nm_socket);

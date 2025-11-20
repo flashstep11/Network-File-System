@@ -59,8 +59,8 @@ int check_permissions(int client_socket, const char *filename, const char *mode)
     struct sockaddr_in nm_addr;
     nm_addr.sin_family = AF_INET;
     nm_addr.sin_port = htons(NM_PORT);
-    if (inet_pton(AF_INET, NM_IP, &nm_addr.sin_addr) <= 0) {
-        logger("[AccessControl] Invalid NM IP\n");
+    if (inet_pton(AF_INET, g_nm_ip, &nm_addr.sin_addr) <= 0) {
+        logger("[AccessControl] Invalid NM IP: %s\n", g_nm_ip);
         close(nm_sock);
         return 0;
     }
@@ -404,30 +404,38 @@ void handle_write_command(int client_socket, char* buffer, const char* username)
             // Validation passed - safe to write
             FILE *fp = fopen(full_path, "w");
             if (fp) {
-                fprintf(fp, "%s", working_data);
-                fclose(fp);
+                int write_result = fprintf(fp, "%s", working_data);
+                int close_result = fclose(fp);
                 
-                // CRITICAL: Check if sentence structure changed
-                // If so, invalidate all other sentence locks on this file
-                extern int check_sentence_structure_changed(const char*, const char*);
-                extern void release_all_sentence_locks_for_file(const char*);
-                
-                if (check_sentence_structure_changed(filename, working_data)) {
-                    logger("[SS-Thread] Sentence structure changed in %s, invalidating other locks\n", filename);
-                    release_all_sentence_locks_for_file(filename);
+                if (write_result < 0 || close_result != 0) {
+                    pthread_mutex_unlock(f_mutex);
+                    logger("[SS-Thread] Failed to write file %s: fprintf=%d, fclose=%d, errno=%d (%s)\n", 
+                           filename, write_result, close_result, errno, strerror(errno));
+                    write(client_socket, "ERR:500:WRITE_FAILED Could not save file\n", 42);
+                } else {
+                    // CRITICAL: Check if sentence structure changed
+                    // If so, invalidate all other sentence locks on this file
+                    extern int check_sentence_structure_changed(const char*, const char*);
+                    extern void release_all_sentence_locks_for_file(const char*);
+                    
+                    if (check_sentence_structure_changed(filename, working_data)) {
+                        logger("[SS-Thread] Sentence structure changed in %s, invalidating other locks\n", filename);
+                        release_all_sentence_locks_for_file(filename);
+                    }
+                    
+                    pthread_mutex_unlock(f_mutex);
+                    
+                    write(client_socket, "ACK:WRITE_COMPLETE All changes saved\n", 38);
+                    logger("[SS-Thread] File %s updated successfully (wrote %d bytes)\n", filename, write_result);
+                    
+                    // Notify NM for replication (async)
+                    notify_nm_write(filename);
                 }
-                
-                pthread_mutex_unlock(f_mutex);
-                
-                write(client_socket, "ACK:WRITE_COMPLETE All changes saved\n", 38);
-                logger("[SS-Thread] File %s updated successfully\n", filename);
-                
-                // Notify NM for replication (async)
-                notify_nm_write(filename);
             } else {
                 pthread_mutex_unlock(f_mutex);
+                logger("[SS-Thread] Failed to open file %s for writing: errno=%d (%s)\n", 
+                       filename, errno, strerror(errno));
                 write(client_socket, "ERR:500:WRITE_FAILED Could not save file\n", 42);
-                logger("[SS-Thread] Failed to write file %s\n", filename);
             }
             break;
         }
