@@ -1,4 +1,3 @@
-// client.c - Network File System Client
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,6 +27,7 @@ char* get_prompt() {
     return prompt;
 }
 
+// Connects to Name Server with 5 second timeout to avoid hanging
 int connect_to_nm() {
     nm_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (nm_socket < 0) {
@@ -35,7 +35,7 @@ int connect_to_nm() {
         return -1;
     }
 
-    // Set connection timeout to 5 seconds
+    // 5 second timeout prevents infinite wait if NM is down
     struct timeval timeout;
     timeout.tv_sec = 5;
     timeout.tv_usec = 0;
@@ -189,6 +189,7 @@ void handle_read(const char* filename) {
     }
 }
 
+// STREAM: Displays file word-by-word from Storage Server
 void handle_stream(const char* filename) {
     char command[256];
     snprintf(command, sizeof(command), "STREAM %s\n", filename);
@@ -201,6 +202,12 @@ void handle_stream(const char* filename) {
         return;
     }
     response[n] = '\0';
+
+    // Early error check prevents infinite loop (bug fix for deleted files)
+    if (strncmp(response, "ERR:", 4) == 0) {
+        printf("%s", response);
+        return;
+    }
 
     if (strncmp(response, "SS_INFO:", 8) == 0) {
         char ss_ip[16];
@@ -215,17 +222,31 @@ void handle_stream(const char* filename) {
             snprintf(command, sizeof(command), "STREAM %s %s\n", username, filename);
             write(ss_socket, command, strlen(command));
 
-            // Read word by word
+            // 30 second timeout to detect SS issues (prevents hanging)
+            struct timeval tv;
+            tv.tv_sec = 30;
+            tv.tv_usec = 0;
+            setsockopt(ss_socket, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
             while (1) {
                 n = read(ss_socket, response, sizeof(response) - 1);
                 if (n <= 0) {
-                    printf("\n✗ Connection lost during streaming\n");
+                    if (n == 0) {
+                        printf("\n"); // Clean end
+                    } else {
+                        printf("\n✗ Connection lost or timeout during streaming\n");
+                    }
                     break;
                 }
                 response[n] = '\0';
                 
-                if (strstr(response, "STREAM_END") || strstr(response, "EOF") || strstr(response, "STOP")) {
+                // Check for end markers
+                if (strstr(response, "STREAM_END") || strstr(response, "EOF") || 
+                    strstr(response, "STOP") || strncmp(response, "ERR:", 4) == 0) {
                     printf("\n");
+                    if (strncmp(response, "ERR:", 4) == 0) {
+                        printf("%s", response);
+                    }
                     break;
                 }
                 

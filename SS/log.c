@@ -1,4 +1,4 @@
-// log.c
+
 
 #include "defs.h" // Includes all system headers
 #include "log.h"  // Includes its own declarations

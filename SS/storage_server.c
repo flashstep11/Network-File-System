@@ -1,29 +1,25 @@
 
-// storage_server.c
-
-// 1. Include headers
 #include "defs.h"
 #include "log.h"
-#include "client_handler.h" // <-- Include your new handler
+#include "client_handler.h"
 #include "nm_handler.h"
-// 2. --- Global Variable DEFINITION ---
-// LockManager* g_lock_manager;
-// Global Instances
+
+// Sentence-level locking manager (key for concurrent write support)
 SentenceLockManager* g_sentence_lock_manager;
 
-// Dynamic storage root path (set based on port)
+// Storage root changes per SS instance (storage_root_8081, storage_root_8082, etc.)
 char STORAGE_ROOT[64] = "storage_root/";
 
-// SS identity for replication notifications
+// SS identity set during registration
 int g_ss_id = -1;
 char g_nm_ip[32] = NM_IP;
 int g_nm_port = NM_PORT;
 
-// Checkpoint global variables
+// Checkpointing system globals
 FileCheckpoints* g_checkpoints_head = NULL;
 pthread_mutex_t g_checkpoints_lock = PTHREAD_MUTEX_INITIALIZER;
 
-// A simple list to hold physical file mutexes
+// File-level mutexes (for read consistency, sentence locks handle write concurrency)
 typedef struct FileMutexNode {
     char filename[256];
     pthread_mutex_t mutex;

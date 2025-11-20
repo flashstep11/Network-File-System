@@ -1,4 +1,3 @@
-// nm_handler.c
 
 #include "defs.h"
 #include "log.h"

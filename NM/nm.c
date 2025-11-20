@@ -3,13 +3,12 @@
 #include "nm.h"
 #include "persistence.h"
 
-// ======================== GLOBALS ========================
+// Global variables - NM state and logging
 NameServer g_nm;
 FILE* g_log_file = NULL;
 pthread_mutex_t g_log_lock = PTHREAD_MUTEX_INITIALIZER;
 
-// ======================== LOGGING MODULE ========================
-
+// Logging functions - timestamps and writes to both console and file
 void nm_log_init(const char* log_filename) {
     g_log_file = fopen(log_filename, "a");
     if (g_log_file == NULL) {
@@ -86,8 +85,8 @@ void nm_log_cleanup() {
     }
 }
 
-// ======================== TRIE MODULE ========================
-
+// Trie data structure for O(m) file lookups (m = filename length)
+// Better than linear O(n) search through all files
 TrieNode* trie_create_node(void) {
     TrieNode* node = (TrieNode*)calloc(1, sizeof(TrieNode));
     if (!node) return NULL;
@@ -169,7 +168,8 @@ void trie_free(TrieNode* node) {
     free(node);
 }
 
-// ======================== LRU CACHE MODULE ========================
+// LRU cache for recently accessed files - O(1) lookup, evicts least recently used
+// Used with trie for fast path resolution (trie finds node, cache stores file metadata)
 
 LRUCache* cache_create(int capacity) {
     LRUCache* cache = (LRUCache*)malloc(sizeof(LRUCache));
@@ -838,6 +838,8 @@ int ss_send_command(StorageServer* ss, const char* command, char* response, int 
 }
 
 // Replicate a file from primary SS to its backup buddy (async, no wait for ACK)
+// Copies file from primary SS to its backup buddy (0↔1, 2↔3 pairing)
+// Runs after CREATE and triggered periodically to keep backups in sync
 void replicate_file_to_backup(int primary_ss_id, const char* filename) {
     nm_log("[REPLICATE] Starting replication of %s from SS%d\n", filename, primary_ss_id);
     
@@ -872,7 +874,7 @@ void replicate_file_to_backup(int primary_ss_id, const char* filename) {
     
     pthread_rwlock_unlock(&g_nm.ss_lock);
     
-    // First, get the file content from primary SS
+    // Get file content from primary first
     char get_cmd[BUFFER_SIZE];
     snprintf(get_cmd, sizeof(get_cmd), "GET_CONTENT %s\n", filename);
     
@@ -932,13 +934,25 @@ void replicate_file_to_backup(int primary_ss_id, const char* filename) {
     int attempts = 0;
     int got_ready = 0;
     
+    // Set socket timeout for reading
+    struct timeval tv;
+    tv.tv_sec = 2;  // 2 second timeout
+    tv.tv_usec = 0;
+    setsockopt(backup_sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    
     while (attempts < 5) {
         memset(ack, 0, sizeof(ack));
         int n = read(backup_sock, ack, sizeof(ack) - 1);
         
         if (n <= 0) {
+            if (n == 0 || errno == EAGAIN || errno == EWOULDBLOCK) {
+                // Timeout or disconnection
+                pthread_mutex_unlock(&backup->lock);
+                nm_log("[REPLICATE] Backup SS%d read timeout or disconnected\n", backup_id);
+                return;
+            }
             pthread_mutex_unlock(&backup->lock);
-            nm_log("[REPLICATE] Backup SS%d connection lost\n", backup_id);
+            nm_log("[REPLICATE] Backup SS%d connection error: %s\n", backup_id, strerror(errno));
             return;
         }
         
@@ -1039,12 +1053,10 @@ void client_disconnect(NameServer* nm, int socket_fd) {
     pthread_rwlock_unlock(&nm->client_lock);
 }
 
-// ======================== FORWARD DECLARATIONS ========================
 static void trie_collect_files(TrieNode* node, FileMetadata** files, int* count, int max_count);
 
-// ======================== COMMAND HANDLERS (Part 1 of 2) ========================
-// Due to size, splitting into logical sections
-
+// CREATE: Load balance by picking SS with fewest files
+// Sends command to chosen SS and adds metadata to trie
 static void handle_create_command(Client* client, char* filename) {
     FileMetadata* existing = file_lookup(&g_nm, filename);
     if (existing) {
@@ -1055,7 +1067,7 @@ static void handle_create_command(Client* client, char* filename) {
     StorageServer* ss = NULL;
     int min_files = INT_MAX;
     
-    // Find the active SS with the least number of files (least-loaded)
+    // Load balancing: choose least loaded SS
     int chosen_ss_id = -1;
     for (int i = 0; i < g_nm.ss_count; i++) {
         if (g_nm.storage_servers[i].is_active && g_nm.storage_servers[i].file_count < min_files) {
@@ -1329,6 +1341,7 @@ static void handle_delete_command(Client* client, char* filename) {
     }
 }
 
+// INFO: Returns file metadata, with automatic failover to backup if primary SS offline
 static void handle_info_command(Client* client, char* filename) {
     FileMetadata* file_info = file_lookup(&g_nm, filename);
     if (!file_info) {
@@ -1338,7 +1351,23 @@ static void handle_info_command(Client* client, char* filename) {
     
     nm_log("[INFO] File %s is registered on SS%d\n", filename, file_info->ss_id);
     
+    // Failover logic: use backup SS if primary is down
     StorageServer* ss = ss_get_by_id(&g_nm, file_info->ss_id);
+    int active_ss_id = file_info->ss_id;
+    
+    if (!ss || !ss->is_active) {
+        // Primary offline, try backup
+        if (ss && ss->backup_ss_id >= 0) {
+            StorageServer* backup_ss = ss_get_by_id(&g_nm, ss->backup_ss_id);
+            if (backup_ss && backup_ss->is_active) {
+                ss = backup_ss;
+                active_ss_id = ss->backup_ss_id;
+                nm_log("[INFO] Primary SS%d offline, using backup SS%d\n", 
+                       file_info->ss_id, active_ss_id);
+            }
+        }
+    }
+    
     if (ss && ss->is_active) {
         char command[BUFFER_SIZE];
         snprintf(command, sizeof(command), "GET_INFO %s\n", filename);
@@ -1363,13 +1392,17 @@ static void handle_info_command(Client* client, char* filename) {
     strftime(modified_str, 26, "%Y-%m-%d %H:%M:%S", tm_info);
     tm_info = localtime(&file_info->last_accessed);
     strftime(accessed_str, 26, "%Y-%m-%d %H:%M:%S", tm_info);
+    
+    // Show which SS is currently serving (primary or backup)
+    const char* ss_status = (active_ss_id == file_info->ss_id) ? "" : " (BACKUP - Primary offline)";
+    
     int offset = snprintf(response, sizeof(response),
                          "FILE INFO:\nFilename: %s\nOwner: %s\nSize: %ld bytes\n"
                          "Created: %s\nModified: %s\nAccessed: %s\n"
-                         "Storage Server: SS%d (%s:%d)\nAccess Control:\n",
+                         "Storage Server: SS%d (%s:%d)%s\nAccess Control:\n",
                          file_info->filename, file_info->owner, file_info->file_size,
                          created_str, modified_str, accessed_str,
-                         file_info->ss_id, ss ? ss->ip : "unknown", ss ? ss->client_port : 0);
+                         active_ss_id, ss ? ss->ip : "unknown", ss ? ss->client_port : 0, ss_status);
     AccessEntry* ace = file_info->acl;
     while (ace && offset < sizeof(response) - 100) {
         offset += snprintf(response + offset, sizeof(response) - offset,
@@ -2481,14 +2514,14 @@ void* handle_ss_connection(void* arg) {
     return NULL;
 }
 
-// ======================== HEARTBEAT MONITORING ========================
-
+// Monitors all SS connections every 5 seconds with PING messages
+// Marks SS as offline if PING fails (handles disconnections gracefully)
 void* heartbeat_monitor(void* arg) {
     NameServer* nm = (NameServer*)arg;
     nm_log("[HEARTBEAT] Monitoring thread started\n");
     
     while (nm->running) {
-        sleep(5);  // Check every 5 seconds
+        sleep(5);
         
         pthread_rwlock_rdlock(&nm->ss_lock);
         int ss_count = nm->ss_count;
@@ -2501,25 +2534,33 @@ void* heartbeat_monitor(void* arg) {
             int socket_fd = ss->socket_fd;
             pthread_rwlock_unlock(&nm->ss_lock);
             
-            if (!is_active) continue;
+            if (!is_active || socket_fd < 0) continue;
             
-            // Send PING to keep connection alive and detect failures
-            // The SS will read and respond with PONG on its side
+            pthread_mutex_lock(&ss->lock);
+            
+            // Validate socket still open while holding lock (prevents race condition)
+            if (ss->socket_fd < 0 || !ss->is_active) {
+                pthread_mutex_unlock(&ss->lock);
+                continue;
+            }
+            
             char ping_msg[] = "PING\n";
-            ssize_t sent = send(socket_fd, ping_msg, strlen(ping_msg), MSG_NOSIGNAL);
+            // MSG_DONTWAIT prevents blocking, MSG_NOSIGNAL prevents SIGPIPE crash
+            ssize_t sent = send(ss->socket_fd, ping_msg, strlen(ping_msg), MSG_NOSIGNAL | MSG_DONTWAIT);
             
             if (sent < 0) {
                 // Connection failed - mark as inactive
-                if (errno == EPIPE || errno == ECONNRESET || errno == ENOTCONN) {
-                    pthread_mutex_lock(&ss->lock);
+                if (errno == EPIPE || errno == ECONNRESET || errno == ENOTCONN || 
+                    errno == EBADF || errno == EINVAL) {
                     ss->is_active = 0;
-                    pthread_mutex_unlock(&ss->lock);
-                    nm_log("[HEARTBEAT] SS%d connection broken: %s\n", i, strerror(errno));
-                } else {
+                    nm_log("[HEARTBEAT] SS%d marked offline: %s\n", i, strerror(errno));
+                } else if (errno != EAGAIN && errno != EWOULDBLOCK) {
                     // Temporary error, log but don't mark as failed
                     nm_log("[HEARTBEAT] SS%d send warning: %s\n", i, strerror(errno));
                 }
             }
+            
+            pthread_mutex_unlock(&ss->lock);
         }
     }
     
@@ -2588,6 +2629,10 @@ void nm_cleanup(NameServer* nm) {
 }
 
 int main(int argc, char* argv[]) {
+    // Critical: Ignore SIGPIPE to prevent crashes when SS disconnects during write
+    // Without this, NM crashes when heartbeat sends to closed socket
+    signal(SIGPIPE, SIG_IGN);
+    
     printf("=========================================\n");
     printf("  Name Server (NM) - Network File System \n");
     printf("=========================================\n\n");

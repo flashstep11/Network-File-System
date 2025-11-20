@@ -1,4 +1,3 @@
-// nm.h - All Name Server definitions (consolidated)
 
 #ifndef NM_H
 #define NM_H
@@ -14,6 +13,7 @@
 #include <time.h>
 #include <stdarg.h>
 #include <errno.h>
+#include <signal.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <limits.h>
@@ -53,160 +53,171 @@ typedef struct FileMetadata {
     pthread_rwlock_t lock;
 } FileMetadata;
 
+// Trie node for O(m) file path lookups (m = path length)
+// 128-way branching for ASCII characters
 typedef struct TrieNode {
-    struct TrieNode* children[128];
-    FileMetadata* file_info;
-    int is_end_of_word;
+    struct TrieNode* children[128];   // ASCII character map
+    FileMetadata* file_info;          // Non-NULL if this is end of path
+    int is_end_of_word;               // 1 if valid filename ends here
 } TrieNode;
 
+// Storage Server state (registered during SS startup)
 typedef struct StorageServer {
-    int id;
-    char ip[MAX_IP_LEN];
-    int nm_port;
-    int client_port;
-    int is_active;
-    int socket_fd;
-    time_t last_heartbeat;
-    int backup_ss_id;  // ID of backup buddy for replication (-1 if none)
-    int file_count;  // Track number of files on this SS
-    pthread_mutex_t lock;
+    int id;                           // Assigned by NM (0, 1, 2, 3...)
+    char ip[MAX_IP_LEN];              // Auto-detected via getpeername()
+    int nm_port;                      // Port for NM commands
+    int client_port;                  // Port for client file operations
+    int is_active;                    // 1 = online, 0 = offline (heartbeat failed)
+    int socket_fd;                    // Persistent connection to SS
+    time_t last_heartbeat;            // Last PING response time
+    int backup_ss_id;                 // Backup buddy (0↔1, 2↔3) for replication
+    int file_count;                   // For load balancing (pick SS with min files)
+    pthread_mutex_t lock;             // Protects this SS struct
 } StorageServer;
 
+// Client session (registered during login)
 typedef struct Client {
-    char username[MAX_USERNAME_LEN];
-    char ip[MAX_IP_LEN];
-    int nm_port;
-    int ss_port;
-    int socket_fd;
-    time_t connected_time;
-    int is_active;
-    pthread_mutex_t lock;
+    char username[MAX_USERNAME_LEN];  // Username for ACL checks
+    char ip[MAX_IP_LEN];              // Client IP address
+    int nm_port;                      // Client's NM port (for mapping IP to user)
+    int ss_port;                      // Client's SS port
+    int socket_fd;                    // Connection socket (closed after each command)
+    time_t connected_time;            // Session start time
+    int is_active;                    // 1 = logged in, 0 = disconnected
+    pthread_mutex_t lock;             // Protects this client struct
 } Client;
 
+// LRU cache node (doubly-linked list)
 typedef struct CacheNode {
     char filename[MAX_FILENAME_LEN];
-    FileMetadata* file_info;
-    struct CacheNode* prev;
-    struct CacheNode* next;
-    time_t timestamp;
+    FileMetadata* file_info;          // Pointer to actual metadata (not copied)
+    struct CacheNode* prev;           // For O(1) removal
+    struct CacheNode* next;           // For O(1) insertion
+    time_t timestamp;                 // Last access time
 } CacheNode;
 
+// LRU cache for hot files (avoids repeated trie traversals)
 typedef struct LRUCache {
-    CacheNode* head;
-    CacheNode* tail;
-    int size;
-    int capacity;
-    pthread_mutex_t lock;
+    CacheNode* head;                  // Most recently used
+    CacheNode* tail;                  // Least recently used (evict first)
+    int size;                         // Current entries
+    int capacity;                     // Max entries (LRU_CACHE_SIZE)
+    pthread_mutex_t lock;             // Thread-safe cache access
 } LRUCache;
 
-// Access request structure for bonus feature [5]
+// Access request for GRANT command (bonus feature)
+// Users request access, owner approves with GRANT
 typedef struct AccessRequest {
-    char username[MAX_USERNAME_LEN];      // Who is requesting
-    char filename[MAX_FILENAME_LEN];      // Which file
-    char flag[8];                         // "-R" or "-W"
-    time_t request_time;
-    int is_active;                        // 1 if pending, 0 if processed
+    char username[MAX_USERNAME_LEN];      // Who wants access
+    char filename[MAX_FILENAME_LEN];      // To which file
+    char flag[8];                         // "-R" (read) or "-W" (write)
+    time_t request_time;                  // When requested
+    int is_active;                        // 1 = pending, 0 = approved/denied
 } AccessRequest;
 
 #define MAX_ACCESS_REQUESTS 200
 
+// Main Name Server state - the central brain of NFS
 typedef struct NameServer {
+    // Storage Servers (0-3 typically, paired as 0↔1, 2↔3 for replication)
     StorageServer storage_servers[MAX_STORAGE_SERVERS];
-    int ss_count;
-    pthread_rwlock_t ss_lock;
+    int ss_count;                         // Number of registered SS
+    pthread_rwlock_t ss_lock;             // Protects ss_count and array
     
+    // Clients (logged in users)
     Client clients[MAX_CLIENTS];
-    int client_count;
-    pthread_rwlock_t client_lock;
+    int client_count;                     // Number of active clients
+    pthread_rwlock_t client_lock;         // Protects client_count and array
     
-    TrieNode* file_trie_root;
-    pthread_rwlock_t trie_lock;
+    // File registry (trie for fast lookup + LRU cache)
+    TrieNode* file_trie_root;             // O(m) path lookup
+    pthread_rwlock_t trie_lock;           // Protects trie operations
     
-    LRUCache* search_cache;
+    LRUCache* search_cache;               // Hot files for O(1) access
     
-    // Access requests (bonus feature)
+    // Access request queue (bonus feature)
     AccessRequest access_requests[MAX_ACCESS_REQUESTS];
     int request_count;
-    pthread_rwlock_t request_lock;
+    pthread_rwlock_t request_lock;        // Protects request array
     
-    int server_socket;
-    int running;
+    int server_socket;                    // NM listening socket (port 8080)
+    int running;                          // 1 = active, 0 = shutdown
 } NameServer;
 
-// ======================== GLOBALS ========================
+// Global Name Server instance (single instance per NM process)
 extern NameServer g_nm;
-extern FILE* g_log_file;
-extern pthread_mutex_t g_log_lock;
+extern FILE* g_log_file;                  // name_server.log
+extern pthread_mutex_t g_log_lock;        // Thread-safe logging
 
-// ======================== FUNCTION PROTOTYPES ========================
+// Function prototypes organized by subsystem
 
-// Logging
-void nm_log_init(const char* log_filename);
-void nm_log(const char* format, ...);
+// === Logging subsystem ===
+void nm_log_init(const char* log_filename);             // Initialize log file
+void nm_log(const char* format, ...);                   // Thread-safe logging
 void nm_log_operation(const char* client_ip, int client_port, const char* username, 
                       const char* operation, const char* details, int status);
-const char* error_code_to_string(int error_code);
-void send_error(int socket_fd, int error_code, const char* message);
-void send_success(int socket_fd, const char* message);
-void nm_log_cleanup();
+const char* error_code_to_string(int error_code);       // ERR_FILE_NOT_FOUND → "File not found"
+void send_error(int socket_fd, int error_code, const char* message);  // Send ERR:code:msg
+void send_success(int socket_fd, const char* message);  // Send ACK:msg
+void nm_log_cleanup();                                  // Close log file
 
-// Trie operations
-TrieNode* trie_create_node(void);
-void trie_insert(TrieNode* root, const char* filename, FileMetadata* file_info);
-FileMetadata* trie_search(TrieNode* root, const char* filename);
-void trie_delete(TrieNode* root, const char* filename);
-void trie_free(TrieNode* node);
+// === Trie operations (file path lookup) ===
+TrieNode* trie_create_node(void);                       // Allocate new trie node
+void trie_insert(TrieNode* root, const char* filename, FileMetadata* file_info);  // Add file
+FileMetadata* trie_search(TrieNode* root, const char* filename);  // Find file (O(m))
+void trie_delete(TrieNode* root, const char* filename); // Remove file from trie
+void trie_free(TrieNode* node);                         // Recursive cleanup
 
-// LRU Cache operations
-LRUCache* cache_create(int capacity);
-FileMetadata* cache_get(LRUCache* cache, const char* filename);
-void cache_put(LRUCache* cache, const char* filename, FileMetadata* file_info);
-void cache_invalidate(LRUCache* cache, const char* filename);
-void cache_free(LRUCache* cache);
+// === LRU Cache (hot file optimization) ===
+LRUCache* cache_create(int capacity);                   // Initialize cache
+FileMetadata* cache_get(LRUCache* cache, const char* filename);  // O(1) lookup
+void cache_put(LRUCache* cache, const char* filename, FileMetadata* file_info);  // Add/update
+void cache_invalidate(LRUCache* cache, const char* filename);  // Remove from cache
+void cache_free(LRUCache* cache);                       // Cleanup
 
-// Storage Server management
+// === Storage Server management ===
 int ss_register(NameServer* nm, const char* ip, int nm_port, int client_port, 
-                const char* file_list, int socket_fd);
-StorageServer* ss_get_by_id(NameServer* nm, int ss_id);
-StorageServer* ss_get_for_file(NameServer* nm, const char* filename);
-void ss_mark_inactive(NameServer* nm, int ss_id);
-int ss_send_command(StorageServer* ss, const char* command, char* response, int response_size);
+                const char* file_list, int socket_fd);  // Register new SS
+StorageServer* ss_get_by_id(NameServer* nm, int ss_id); // Get SS by ID
+StorageServer* ss_get_for_file(NameServer* nm, const char* filename);  // Which SS has file?
+void ss_mark_inactive(NameServer* nm, int ss_id);       // Mark SS offline (heartbeat failed)
+int ss_send_command(StorageServer* ss, const char* command, char* response, int response_size);  // Send cmd to SS
 
-// Client management
+// === Client management ===
 int client_register(NameServer* nm, const char* username, const char* ip, 
-                    int nm_port, int ss_port, int socket_fd);
-Client* client_get_by_socket(NameServer* nm, int socket_fd);
-void client_disconnect(NameServer* nm, int socket_fd);
+                    int nm_port, int ss_port, int socket_fd);  // Register client login
+Client* client_get_by_socket(NameServer* nm, int socket_fd);  // Find client by socket
+void client_disconnect(NameServer* nm, int socket_fd);  // Handle logout
 
-// File operations
-FileMetadata* file_create_metadata(const char* filename, const char* owner, int ss_id);
-int file_add_to_registry(NameServer* nm, FileMetadata* file_info);
-FileMetadata* file_lookup(NameServer* nm, const char* filename);
-int file_delete_from_registry(NameServer* nm, const char* filename);
-void file_update_stats(FileMetadata* file_info, long size, int words, int chars);
+// === File metadata operations ===
+FileMetadata* file_create_metadata(const char* filename, const char* owner, int ss_id);  // New file metadata
+int file_add_to_registry(NameServer* nm, FileMetadata* file_info);  // Add to trie
+FileMetadata* file_lookup(NameServer* nm, const char* filename);  // Search trie + cache
+int file_delete_from_registry(NameServer* nm, const char* filename);  // Remove from registry
+void file_update_stats(FileMetadata* file_info, long size, int words, int chars);  // Update metadata
 
-// Access control
-int acl_check_read(FileMetadata* file_info, const char* username);
-int acl_check_write(FileMetadata* file_info, const char* username);
-int acl_add_access(FileMetadata* file_info, const char* username, int read, int write);
-int acl_remove_access(FileMetadata* file_info, const char* username);
+// === Access Control List (ACL) ===
+int acl_check_read(FileMetadata* file_info, const char* username);   // Can user read?
+int acl_check_write(FileMetadata* file_info, const char* username);  // Can user write?
+int acl_add_access(FileMetadata* file_info, const char* username, int read, int write);  // Grant permission
+int acl_remove_access(FileMetadata* file_info, const char* username);  // Revoke permission
 
-// Access request management (bonus feature [5])
-int request_add(NameServer* nm, const char* username, const char* filename, const char* flag);
-int request_exists(NameServer* nm, const char* username, const char* filename);
-int request_remove(NameServer* nm, const char* username, const char* filename);
-void request_get_for_owner(NameServer* nm, const char* owner, AccessRequest* results, int* count, int max_count);
+// === Access request queue (bonus: REQUEST/GRANT) ===
+int request_add(NameServer* nm, const char* username, const char* filename, const char* flag);  // Add request
+int request_exists(NameServer* nm, const char* username, const char* filename);  // Check pending request
+int request_remove(NameServer* nm, const char* username, const char* filename);  // Remove request (approved/denied)
+void request_get_for_owner(NameServer* nm, const char* owner, AccessRequest* results, int* count, int max_count);  // List requests
 
-// Notification system (bonus: The Unique Factor)
+// === Notification system (bonus: real-time alerts) ===
 void notify_clients_editing(NameServer* nm, const char* filename, const char* editor_username, 
-                            const char* action, int sentence_idx);
+                            const char* action, int sentence_idx);  // Notify concurrent editors
 
-// Command handlers (pthread functions return void*)
-void* handle_client_connection(void* arg);
-void* handle_ss_connection(void* arg);
+// === Connection handlers (thread entry points) ===
+void* handle_client_connection(void* arg);              // Client command handler thread
+void* handle_ss_connection(void* arg);                  // SS registration thread
 
-// Main NM functions
-void nm_init(NameServer* nm);
-void nm_cleanup(NameServer* nm);
+// === Lifecycle ===
+void nm_init(NameServer* nm);                           // Initialize NM state
+void nm_cleanup(NameServer* nm);                        // Shutdown and cleanup
 
 #endif // NM_H

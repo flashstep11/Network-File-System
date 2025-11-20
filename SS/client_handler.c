@@ -1,8 +1,8 @@
-#include "defs.h" // This has all your system headers
-#include "log.h"  // For the logger
-#include "client_handler.h" // For its own declaration
+#include "defs.h"
+#include "log.h"
+#include "client_handler.h"
 
-// Notify NM about a file write for replication (async - fire and forget)
+// Async notification to NM when file is written (triggers replication to backup SS)
 void notify_nm_write(const char* filename) {
     if (g_ss_id < 0) {
         logger("[REPLICATE] SS_ID not set, skipping replication notification\n");
@@ -128,13 +128,15 @@ void handle_read_command(int client_socket, char* buffer, const char* unused_use
         write(client_socket, err, strlen(err));
     }
 }
+// WRITE: Interactive word-by-word editing with sentence-level locking
+// Key feature: Only locks ONE sentence at a time (30 bonus points requirement)
+// Validates sentence exists/can be created BEFORE acquiring lock
 void handle_write_command(int client_socket, char* buffer, const char* unused_username) {
     (void)unused_username;
     char username[64];
     char filename[256];
     int sentence_num;
     
-    // 1. Parse - Interactive mode: WRITE <username> <filename> <sentence_num>
     if (sscanf(buffer, "WRITE %63s %255s %d", username, filename, &sentence_num) != 3) {
         write(client_socket, "ERR:400:BAD_REQUEST (Usage: WRITE <username> <filename> <sentence_num>)\n", 73);
         return;
@@ -142,15 +144,14 @@ void handle_write_command(int client_socket, char* buffer, const char* unused_us
     
     logger("[SS-Thread] WRITE request: %s sentence %d (user: %s)\n", filename, sentence_num, username);
 
-    // 2. Check permissions
+    // Check permissions with NM
     if (!check_permissions_by_username(username, filename, "WRITE")) {
         write(client_socket, "ERR:403:ACCESS_DENIED\n", 22);
         logger("[SS-Thread] WRITE denied - no permission\n");
         return;
     }
 
-    // 3. PRE-VALIDATION: Check if sentence exists before acquiring lock
-    // Load file to validate sentence exists (or if it's sentence 0 which can be created)
+    // Pre-validate sentence exists BEFORE acquiring lock (prevents lock waste)
     char full_path[512];
     get_full_path(full_path, sizeof(full_path), filename);
     
@@ -211,10 +212,10 @@ void handle_write_command(int client_socket, char* buffer, const char* unused_us
         logger("[SS-Thread] Will create new sentence %d\n", sentence_num);
     }
     
-    free(temp_data); // Free the temporary validation data
+    free(temp_data);
     logger("[SS-Thread] Sentence validation passed for sentence %d\n", sentence_num);
 
-    // 4. SENTENCE LOCK (The Critical Requirement)
+    // Acquire sentence lock - only this sentence is locked, others remain accessible
     if (!acquire_sentence_lock(filename, sentence_num)) {
         char *err = "ERR:423:SENTENCE_LOCKED_BY_ANOTHER_USER\n";
         write(client_socket, err, strlen(err));
@@ -224,11 +225,11 @@ void handle_write_command(int client_socket, char* buffer, const char* unused_us
     
     logger("[SS-Thread] Sentence lock acquired for %s sentence %d\n", filename, sentence_num);
     
-    // Send ACK to client to start interactive editing
+    // Send ACK to start interactive editing
     const char* ack_msg = "ACK:SENTENCE_LOCKED Enter word updates (word_index content) or ETIRW to finish\n";
     write(client_socket, ack_msg, strlen(ack_msg));
 
-    // 5. Load file and create backup
+    // Load file - file mutex only for reading, sentence lock for writing
     pthread_mutex_t* f_mutex = get_file_mutex(filename);
     if (!f_mutex) {
         write(client_socket, "ERR:500:INTERNAL_ERROR\n", 23);
@@ -1597,7 +1598,7 @@ void *handle_client_request(void *arg) {
 
     // 3. Handle client disconnect
     if (read_size == 0) {
-        logger("[SS-Thread] Client disconnected.\n");
+        logger("[SS-Thread] Client connection closed (command completed).\n");
     } else if (read_size == -1) {
         perror("[SS-Thread] read failed");
     }

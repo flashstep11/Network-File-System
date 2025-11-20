@@ -1,3 +1,6 @@
+// defs.h - Storage Server data structures and utility functions
+// Includes sentence-level locking and checkpoint system for file versioning
+
 #ifndef DEFS_H
 #define DEFS_H
 
@@ -17,19 +20,18 @@
 
 #define NM_IP "127.0.0.1"
 #define NM_PORT 8080
-#define BUFFER_SIZE 4096 // Increased for larger files
-#define MAX_CLIENTS 10
+#define BUFFER_SIZE 4096                 // Increased for large file operations
+#define MAX_CLIENTS 10                   // Max concurrent client connections per SS
 
-// Dynamic storage root - set per SS instance
+// Storage root changes per SS (e.g., storage_root_8081, storage_root_8082)
 extern char STORAGE_ROOT[64];
 
-// Helper to get full path
+// Helper: Construct full filesystem path from virtual path
 static inline void get_full_path(char *dest, size_t dest_size, const char *filename) {
     snprintf(dest, dest_size, "%s%s", STORAGE_ROOT, filename);
 }
 
-// Helper to extract base filename (for virtual folder support)
-// Extracts just the filename from a path like "folder/subfolder/file.txt" -> "file.txt"
+// Helper: Extract filename from path ("folder/file.txt" → "file.txt")
 static inline void get_base_filename(char *dest, size_t dest_size, const char *path) {
     const char* last_slash = strrchr(path, '/');
     if (last_slash) {
@@ -40,69 +42,70 @@ static inline void get_base_filename(char *dest, size_t dest_size, const char *p
     dest[dest_size - 1] = '\0';
 }
 
-// --- NEW LOCKING STRUCTURES ---
-
-// A node representing ONE locked sentence
+// Sentence lock node (linked list tracking active locks)
+// KEY: Allows concurrent writes to DIFFERENT sentences (30 bonus points)
 typedef struct SentenceLockNode {
-    char filename[256];
-    int sentence_id;
-    struct SentenceLockNode* next;
+    char filename[256];              // Which file
+    int sentence_id;                 // Which sentence (0, 1, 2...)
+    struct SentenceLockNode* next;   // Next locked sentence
 } SentenceLockNode;
 
-// A simplified manager that tracks ALL active sentence locks
+// Sentence lock manager (global registry of all locks)
 typedef struct {
-    SentenceLockNode* head;
-    pthread_mutex_t manager_lock; // Protects the linked list itself
+    SentenceLockNode* head;          // Linked list of active locks
+    pthread_mutex_t manager_lock;    // Protects list operations
 } SentenceLockManager;
 
-// Global pointers
 extern SentenceLockManager* g_sentence_lock_manager; 
 
-// Global SS info for replication notifications
-extern int g_ss_id;
-extern char g_nm_ip[32];
-extern int g_nm_port;
+// SS identity (set during NM registration)
+extern int g_ss_id;                  // SS0, SS1, SS2, SS3
+extern char g_nm_ip[32];             // NM IP for callbacks
+extern int g_nm_port;                // NM port (8080)
 
-// --- CHECKPOINT STRUCTURES ---
+// Checkpoint system for file versioning (CREATE <tag>, REVERT <tag>, DIFF)
 typedef struct CheckpointNode {
-    char tag[64];                  // Checkpoint tag/name
-    char* content;                 // Saved file content
-    time_t timestamp;              // When checkpoint was created
-    struct CheckpointNode* next;
+    char tag[64];                    // User-defined tag name
+    char* content;                   // Snapshot of file content
+    time_t timestamp;                // When checkpoint was created
+    struct CheckpointNode* next;     // Next checkpoint for this file
 } CheckpointNode;
 
 typedef struct FileCheckpoints {
-    char filename[256];
-    CheckpointNode* checkpoints;   // Linked list of checkpoints
-    pthread_mutex_t lock;          // Protect checkpoint list
-    struct FileCheckpoints* next;
+    char filename[256];              // Which file
+    CheckpointNode* checkpoints;     // Linked list of versions
+    pthread_mutex_t lock;            // Protects checkpoint operations
+    struct FileCheckpoints* next;    // Next file in global list
 } FileCheckpoints;
 
-// Global checkpoint manager
 extern FileCheckpoints* g_checkpoints_head;
 extern pthread_mutex_t g_checkpoints_lock;
 
-// Function Prototypes
-void logger(const char* format, ...); // Assuming log.h exists
-char* read_file_to_string(const char *filename, long *out_size);
-int find_sentence(const char *content, int sentence_num, int *start, int *end);
-int find_word(const char *content, int sent_start, int sent_end, int word_index, int *word_start, int *word_end);
+// === Function prototypes ===
 
-// Locking Functions
-void init_sentence_locks();
-int acquire_sentence_lock(const char* filename, int sentence_id);
-void release_sentence_lock(const char* filename, int sentence_id);
-int is_file_being_edited(const char* filename);
+// Logging
+void logger(const char* format, ...);                    // Thread-safe SS logging
 
-// Checkpoint Functions
-void init_checkpoints();
-int create_checkpoint(const char* filename, const char* tag);
-char* get_checkpoint_content(const char* filename, const char* tag);
-int revert_to_checkpoint(const char* filename, const char* tag);
-char* list_checkpoints(const char* filename);
-char* diff_checkpoints(const char* filename, const char* tag1, const char* tag2);
+// File parsing utilities
+char* read_file_to_string(const char *filename, long *out_size);  // Load entire file
+int find_sentence(const char *content, int sentence_num, int *start, int *end);  // Locate sentence by index
+int find_word(const char *content, int sent_start, int sent_end, int word_index, int *word_start, int *word_end);  // Locate word
 
-// We still need a way to get a physical mutex for the file to prevent data corruption
-pthread_mutex_t* get_file_mutex(const char* filename);
+// Sentence locking (critical for concurrent WRITE support)
+void init_sentence_locks();                              // Initialize lock manager
+int acquire_sentence_lock(const char* filename, int sentence_id);  // Try lock (0=fail, 1=success)
+void release_sentence_lock(const char* filename, int sentence_id);  // Release lock
+int is_file_being_edited(const char* filename);         // Check if any sentence locked
+
+// Checkpoint/versioning functions
+void init_checkpoints();                                 // Initialize checkpoint system
+int create_checkpoint(const char* filename, const char* tag);  // Save current version
+char* get_checkpoint_content(const char* filename, const char* tag);  // Retrieve version
+int revert_to_checkpoint(const char* filename, const char* tag);  // Restore version
+char* list_checkpoints(const char* filename);           // List all tags
+char* diff_checkpoints(const char* filename, const char* tag1, const char* tag2);  // Compare versions
+
+// File mutex (for read consistency, sentence locks handle write concurrency)
+pthread_mutex_t* get_file_mutex(const char* filename);  // Get or create file mutex
 
 #endif

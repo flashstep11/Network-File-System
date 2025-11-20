@@ -1,25 +1,9 @@
-// persistence.c - Persistent storage for Name Server metadata
 
 #include "persistence.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-
-// File format (binary for simplicity):
-// [HEADER: "NMDATA\n" (8 bytes)]
-// [VERSION: 1 (4 bytes)]
-// [FILE_COUNT (4 bytes)]
-// For each file:
-//   [filename length (4 bytes)][filename (variable)]
-//   [owner length (4 bytes)][owner (variable)]
-//   [ss_id (4 bytes)]
-//   [created_time (8 bytes)][last_modified (8 bytes)][last_accessed (8 bytes)]
-//   [file_size (8 bytes)][word_count (4 bytes)][char_count (4 bytes)]
-//   [ACL_COUNT (4 bytes)]
-//   For each ACL entry:
-//     [username length (4 bytes)][username (variable)]
-//     [can_read (1 byte)][can_write (1 byte)]
 
 int persist_save_file_entry(FILE* fp, FileMetadata* file_info) {
     if (!fp || !file_info) return -1;
