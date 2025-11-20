@@ -367,6 +367,12 @@ void file_update_stats(FileMetadata* file_info, long size, int words, int chars)
 
 int acl_check_read(FileMetadata* file_info, const char* username) {
     if (!file_info || !username) return 0;
+    
+    // Owner always has read access
+    if (strcmp(file_info->owner, username) == 0) {
+        return 1;
+    }
+    
     pthread_rwlock_rdlock(&file_info->lock);
     AccessEntry* current = file_info->acl;
     while (current) {
@@ -383,6 +389,12 @@ int acl_check_read(FileMetadata* file_info, const char* username) {
 
 int acl_check_write(FileMetadata* file_info, const char* username) {
     if (!file_info || !username) return 0;
+    
+    // Owner always has write access
+    if (strcmp(file_info->owner, username) == 0) {
+        return 1;
+    }
+    
     pthread_rwlock_rdlock(&file_info->lock);
     AccessEntry* current = file_info->acl;
     while (current) {
@@ -2629,7 +2641,7 @@ int main(int argc, char* argv[]) {
         inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, MAX_IP_LEN);
         int client_port = ntohs(client_addr.sin_port);
         nm_log("[CONNECT] New connection from %s:%d\n", client_ip, client_port);
-        char peek_buf[16];
+        char peek_buf[32];  // Increased to handle CHECK_ACCESS_USER (17 chars)
         ssize_t peek_size = recv(new_socket, peek_buf, sizeof(peek_buf), MSG_PEEK);
         if (peek_size <= 0) {
             close(new_socket);
